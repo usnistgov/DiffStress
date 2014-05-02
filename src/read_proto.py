@@ -78,17 +78,31 @@ class ProtoExp:
             if path==None: path = '.'
             fref = '%s%s%s'%(path,sep,fref)
 
-            print fref
+            #print fref
 
             flab, e1, e2 = np.loadtxt(
                 fref,skiprows=2,dtype='str').T
 
-            e1 = np.array(e1)
-            e2 = np.array(e2)
+            e1 = np.array(e1,dtype='float')
+            e2 = np.array(e2,dtype='float')
+
+            # assuming that it is a BB mode
+            self.flow = mech.FlowCurve()
+            self.flow.get_strain(e1,0,0)
+            self.flow.get_strain(e2,1,1)
+            e3 = - e1 - e2
+            self.flow.get_strain(e3,2,2)
+            self.flow.set_zero_shear_strain()
+            self.flow.get_vm_strain()
 
             self.nscan = len(flab)
             self.P_scan = []
-            self.flow = mech.FlowCurve()
+
+            nphis = []; npsis=[]
+
+            self.phis = []
+            self.psis = []
+
             for i in range(self.nscan):
                 dum = '%s%s%sData*.txt'%(path,sep,flab[i])
                 fs = glob(dum)
@@ -96,21 +110,155 @@ class ProtoExp:
                 self.P_scan.append(ProtoScan())
                 for iphi in range(nphi):
                     self.P_scan[i].add_phi(ProtoPhi(fn=fs[iphi]))
-            self.nphi = nphi
+                self.P_scan[i].get_dspc_avg()
+                self.P_scan[i].get_epshkl_davg()
+
+                #for i in range(self.nscan):
+                nphis.append(self.P_scan[i].nphi)
+                for j in range(len(self.P_scan[i].protophi)):
+                    npsis.append(self.P_scan[i].protophi[j].npsi)
+                    self.phis.append(self.P_scan[i].protophi[j].phi)
+                    self.psis.append(self.P_scan[i].protophi[j].psis)
+
+            nphis=np.unique(nphis)
+            npsis=np.unique(npsis)
+            self.phis=np.unique(self.phis)
+            self.psis=np.unique(np.array(self.psis))
+
+            if (len(nphis)!=1): 
+                raise IOError, 'phi setting is not uniform'
+            if (len(npsis)!=1): 
+                raise IOError, 'phi setting is not uniform'
+
+            self.nphis=nphis[0]
+            self.npsis=npsis[0]
+
+        self.phi= self.phis
+        self.psi= self.psis
+
+        self.nphi = len(self.phis)
+        self.nphis = self.nphi
+        self.npsi = len(self.psis)
+        self.npsis = self.npsi
+
+
+    def list(self):
+        print '#--------------------------------------------#'
+        print '%8s %4i'%('nphis:', self.nphis),
+        for i in range(len(self.phis)):
+            print '%+4i'%self.phis[i],
+        print ''
+        print '%8s %4i'%('npsis:', self.npsis), 
+        for i in range(3):
+            print '%+4.1f'%self.psis[i],
+        print ' ... ',
+        for i in range(1):
+            print '%+4.1f'%self.psis[-i-1],
+        print ''
+        print '%8s %3i'%('nsteps:', len(self.P_scan))
+        print '%8s'%'E_{VM}:',
+        for i in range(3):
+            print '%4.2f'%(self.flow.epsilon_vm[i]),
+        print ' ...' ,
+        for i in range(1):
+            print '%4.2f'%(self.flow.epsilon_vm[-i-1]),
+        print 
+        print '#--------------------------------------------#'
+
+    def get_ehkl(self):
+        nstp = self.flow.nstp
+        nphi = self.nphi
+        npsi = self.npsi
+        ehkl = np.zeros((nstp,nphi,npsi))
+        for istp in range(nstp):
+            P = self.P_scan[istp]
+            d_avg = P.d_avg
+            for iphi in range(nphi):
+                p_phi = P.protophi[iphi]
+                for ipsi in range(npsi):
+                    p_psi = p_phi.ppscans[ipsi]
+                    ehkl[istp,iphi,ipsi]\
+                        = (p_psi.dspc-d_avg)/d_avg
+        self.ehkl = ehkl
+
+    def assign_d0(self,d0=None):
+        nstp = self.flow.nstp
+        nphi = self.nphi
+        npsi = self.npsi
+        ehkl = np.zeros((nstp,nphi,npsi))
+        for istp in range(nstp):
+            P = self.P_scan[istp]
+            for iphi in range(nphi):
+                p_phi = P.protophi[iphi]
+                for ipsi in range(npsi):
+                    p_psi = p_phi.ppscans[ipsi]
+                    ehkl[istp,iphi,ipsi]\
+                        = (p_psi.dspc-d0)/d0
+        self.ehkl=ehkl
+
+    def plot_all(self):
+        from MP.lib import mpl_lib
+        wide_fig = mpl_lib.wide_fig
+        tune_xy_lim = mpl_lib.tune_xy_lim
+        from MP.lib import axes_label
+        from MP.lib import mpl_lib
+        import matplotlib as mpl
+        import matplotlib.cm as cm
+
+        figs = wide_fig(nw=self.nphi,w0=0,w1=0,
+                        left=0.2,right=0.15)
+
+        mx = max(self.flow.epsilon_vm)
+        mn = min(self.flow.epsilon_vm)
+
+        norm = mpl.colors.Normalize(vmin=mn,vmax=mx)
+        cmap = cm.gist_rainbow
+        #cmap = cm.jet
+        m = cm.ScalarMappable(norm=norm, cmap=cmap)
+
+        for i in range(self.flow.nstp):
+            eps = self.flow.epsilon_vm[i] 
+            cl = m.to_rgba(eps)
+            for j in range(self.nphi):
+                #X = np.sin(self.psi*np.pi/180.)**2
+                X = self.psi
+                Y = []
+                for ipsi in range(self.npsi):
+                    y = self.P_scan[i].protophi[j].\
+                        ppscans[ipsi].dspc
+                    Y.append(y)
+                figs.axes[j].plot(X,Y,'-x',color=cl)
+                if i==0:
+                    figs.axes[j].set_title(
+                        r'$\phi: %3.1f^\circ{}$'%self.phi[j])
+
+        deco = axes_label.__deco__
+        rm_inner =mpl_lib.rm_inner
+        ticks_bin_u = mpl_lib.ticks_bins_ax_u
+
+        ticks_bin_u(figs.axes,n=4)
+        deco(figs.axes[0],iopt=4)
+        tune_xy_lim(figs.axes)
+        rm_inner(figs.axes)
+
+        b = figs.axes[-1].get_position()
+        axcb = figs.add_axes([0.88,b.y0,0.03,b.y1-b.y0])
+        cb = mpl.colorbar.ColorbarBase(axcb,cmap=cmap,
+                                       spacing='proprotional',
+                                       format='%3.1f')
+
+        axcb.set_ylabel('Equivalent Strain')
 
     def plot(self,istps=[-1]):
         ps = []
         nstps = len(istps)
         for istp in range(len(istps)):
             ps.append(self.P_scan[istp])
-            
+
 
         import matplotlib.pyplot as plt
         import MP
-        reload(MP)
         from MP.lib import mpl_lib
-        reload(mpl_lib)
-
         wide_fig = mpl_lib.wide_fig
         rm_lab   = mpl_lib.rm_lab
         rm_inner = mpl_lib.rm_inner
@@ -118,17 +266,18 @@ class ProtoExp:
         ticks_bins_ax_u = mpl_lib.ticks_bins_ax_u
         tune_xy_lim  = mpl_lib.tune_xy_lim
 
-        figs = wide_fig(nw=self.nphi,
+        figs = wide_fig(nw=self.nphis,
                         nh=len(istps),
-                        w0=0,w1=0,left=0.15)
+                        w0=0,w1=0,left=0.15,h0=0,h1=0,
+                        up=0.1,down=0.1)
         # axest = []
         # for i in range(len(figs.axes)):
         #     tax = figs.axes[i].twinx()
         #     axest.append(tax)
 
         for istp in range(nstps):
-            for iphi in range(self.nphi):
-                iax = self.nphi * istp + iphi
+            for iphi in range(self.nphis):
+                iax = self.nphis * istp + iphi
                 X = []
                 Y = []; Y0 = []
                 for ipsi in range(ps[istp].protophi[iphi].npsi):
@@ -141,7 +290,7 @@ class ProtoExp:
                          ppscans[ipsi].ints
                     X.append(x); Y.append(y)
                     Y0.append(y0)
-                    
+
 
                 figs.axes[iax].plot(X,Y,'-x')
                 #axest[iax].plot(X,Y0,'-gx',alpha=0.5)
@@ -155,9 +304,6 @@ class ProtoExp:
         #tune_xy_lim = mpl_lib.tune_xy_lim(axest)
         rm_inner(figs.axes)
 
-
-
-
 class ProtoScan:
     """
     a set of protophi taken at a state of interest
@@ -168,6 +314,23 @@ class ProtoScan:
     def add_phi(self,protophi):
         self.protophi.append(protophi)
         self.nphi = len(self.protophi)
+    def get_dspc_avg(self):
+        dspc = []
+        for i in range(len(self.protophi)):
+            ps = self.protophi[i].ppscans
+            for j in range(len(ps)):
+                dspc.append(ps[j].dspc)
+        dspc = np.array(dspc)
+        self.dspc_avg = np.average(dspc)
+        self.d_avg = np.average(dspc)
+    def get_epshkl_davg(self):
+        self.get_dspc_avg()
+        for i in range(len(self.protophi)):
+            ps = self.protophi[i].ppscans
+            for j in range(len(ps)):
+                ps[j].epshkl = (ps[j].dspc - self.d_avg)/self.d_avg
+
+
 
 class ProtoPhi:
     """
@@ -267,3 +430,8 @@ class PhiPsiScan:
         self.th2=th2
         self.fwhm=fwhm
         self.ints=ints
+        self.xy_coord()
+    def xy_coord(self):
+        from phikhi import psikhi2cart
+        conv = psikhi2cart.conv
+        self.x, self.y = conv(p=self.phi,k=self.psi)
