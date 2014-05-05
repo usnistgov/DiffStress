@@ -34,14 +34,26 @@ class SF:
             self.npsi = len(self.psi)
     def add_flow(self,eps,i,j):
         self.flow.get_strain(eps,i,j)
-    def add_iso_sf(self,phis,psis,E,nu):
-        E  = 2.1e9
+
+    def get_iso_sf(self,E,nu):
+        self.add_iso_sf
+        self.sf_old = self.sf.copy()
+        self.sf = self.sf_iso.copy()
+
+    def restore_sf(self):
+        self.sf = self.sf_old.copy()
+
+    def add_iso_sf(self,E,nu):
+        E  = 2.04e9
         nu = 0.3
-        self.sf_iso = np.zeros((len(phis),len(psis),3,3))
-        for iphi in range(len(phis)):
-            for ipsi in range(len(psis)):
+        phi = self.phi
+        psi = self.psi
+        self.sf_iso = np.zeros((len(phi),len(psi),3,3))
+        for iphi in range(len(phi)):
+            for ipsi in range(len(psi)):
                 self.sf_iso[iphi,ipsi,:,:] = calc_iso_sf(
                     phis[iphi],psis[ipsi],nu,E)
+
     def interp_strain(self,epsilon_vm):
         self.sf_old = self.sf.copy()
         self.flow.get_vm_strain()
