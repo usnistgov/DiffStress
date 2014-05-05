@@ -36,23 +36,26 @@ class SF:
         self.flow.get_strain(eps,i,j)
 
     def get_iso_sf(self,E,nu):
-        self.add_iso_sf
+        self.add_iso_sf(E=E,nu=nu)
+        sf_new = np.zeros(self.sf.shape)
+        sf_new[:] = self.sf_iso.copy()
         self.sf_old = self.sf.copy()
-        self.sf = self.sf_iso.copy()
+        self.sf = sf_new.copy()
 
     def restore_sf(self):
         self.sf = self.sf_old.copy()
 
     def add_iso_sf(self,E,nu):
-        E  = 2.04e9
+        E  = 204e9
         nu = 0.3
-        phi = self.phi
-        psi = self.psi
-        self.sf_iso = np.zeros((len(phi),len(psi),3,3))
+        phi = self.phi.copy()
+        psi = self.psi.copy()
+        self.sf_iso = np.zeros((len(phi),len(psi),6))
         for iphi in range(len(phi)):
             for ipsi in range(len(psi)):
-                self.sf_iso[iphi,ipsi,:,:] = calc_iso_sf(
-                    phis[iphi],psis[ipsi],nu,E)
+                self.sf_iso[iphi,ipsi] = calc_iso_sf(
+                    phi=phi[iphi],psi=psi[ipsi],
+                    nu=nu,Y=E,iopt=1).copy()
 
     def interp_strain(self,epsilon_vm):
         self.sf_old = self.sf.copy()
@@ -182,9 +185,9 @@ class SF:
         ticks_bin_u = mpl_lib.ticks_bins_ax_u
 
         deco(figs.axes[0],iopt=1)
+        mpl_lib.tune_xy_lim(figs.axes)
         rm_inner(figs.axes)
         ticks_bin_u(figs.axes,n=4)
-
 
         b = figs.axes[-1].get_position()
         axcb = figs.add_axes([0.88,b.y0,0.03,b.y1-b.y0])
@@ -289,7 +292,6 @@ class IG:
         import matplotlib as mpl
         import matplotlib.cm as cm
 
-
         figs = wide_fig(nw=self.nphi,w0=0,w1=0,
                         left=0.2,right=0.15)
 
@@ -319,6 +321,7 @@ class IG:
         ticks_bin_u = mpl_lib.ticks_bins_ax_u
 
         deco(figs.axes[0],iopt=2)
+        mpl_lib.tune_xy_lim(figs.axes)
         rm_inner(figs.axes)
         ticks_bin_u(figs.axes,n=4)
 
@@ -329,24 +332,53 @@ class IG:
                                        format='%3.1f')
         axcb.set_ylabel('Equivalent Strain')
 
-def calc_iso_sf(phi,psi,nu,Y):
+def calc_iso_sf(phi,psi,nu,Y,iopt=0):
     """
     Calculate the isotropic elastic stress factor
+    iopt=0: return sf[3,3]
+    else:   return sf[6]
     """
+    phi = phi * np.pi / 180.
+    psi = psi * np.pi / 180.
+
     sin = np.sin
     cos = np.cos
 
     sf = np.zeros((3,3))
-    nuy = (1+nu) / Y
-    sf[0,0] = nuy * (sin(psi)**2) * (cos(phi)**2) - nu / Y
-    sf[1,1] = nuy * (sin(psi)**2) * (sin(phi)**2) - nu / Y
-    sf[2,2] = nuy * (cos(psi)**2)                 - nu / Y
-    sf[0,1] = nuy * (sin(psi)**2) * sin(2*phi)
-    sf[0,2] = nuy * sin(2*psi)    * cos(phi)
-    sf[1,2] = nuy * sin(2*pis)    * sin(phi)
+    sf6 = np.zeros((6,))
+    nuy = (1. + nu) / Y
+
+    S1 = -nu/Y
+    S2 = 2*(1+nu)/Y
+
+    # sf[0,0] = nuy * (sin(psi)**2) * (cos(phi)**2) - nu / Y
+    # sf[1,1] = nuy * (sin(psi)**2) * (sin(phi)**2) - nu / Y
+    # sf[2,2] = nuy * (cos(psi)**2)                 - nu / Y
+    # sf[0,1] = nuy * (sin(psi)**2) * sin(2*phi)
+    # sf[0,2] = nuy * sin(2*psi)    * cos(phi)
+    # sf[1,2] = nuy * sin(2*psi)    * sin(phi)
+
+    # 2011/JAC/Gnaeupel-Herold, Creuziger, and Iadicola
+    sf[0,0] = S1  + 0.5 * S2 * (cos(phi)**2) * (sin(psi)**2)
+    sf[1,1] = S1  + 0.5 * S2 * (sin(phi)**2) * (sin(psi)**2)
+    sf[2,2] = S1  + 0.5 * S2 *                 (cos(psi)**2)
+    sf[0,1] = 0.5 * 0.5 * S2 *  sin(2*phi)   * (sin(psi)**2)
+    sf[0,2] = 0.5 * 0.5 * S2 *  cos(phi)     *  sin(2*psi)
+    sf[1,2] = 0.5 * 0.5 * S2 *  sin(phi)     *  sin(2*psi)
 
     # Apply symmetry
     sf[1,0] = sf[0,1]
     sf[2,0] = sf[0,2]
     sf[1,2] = sf[2,1]
-    return sf
+
+    if iopt==0:
+        return sf
+
+    from MP.mat import voigt
+    vij = voigt.vij
+    for i in range(3):
+        for j in range(3):
+            k = vij[i,j]
+            sf6[k] = sf[i,j]
+
+    return sf6
