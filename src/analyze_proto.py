@@ -6,7 +6,7 @@ wide_fig=mpl_lib.wide_fig
 fancy_legend = mpl_lib.fancy_legend
 
 def main_reader(path='../dat/23JUL12', fref='Bsteel_BB_00.txt',
-         fn_sf ='YJ_Bsteel_BB.sff',icheck=True):
+                fn_sf ='YJ_Bsteel_BB.sff',icheck=False):
     EXP, SF, IG = rs_exp.read_main(path,fref,fn_sf,icheck)
 
     ## interpolate based on experimental phis, psis, IG
@@ -47,8 +47,10 @@ def main_reader(path='../dat/23JUL12', fref='Bsteel_BB_00.txt',
 class StressAnalysis:
     def __init__(self,
                  path='/Users/yj/repo/rs_pack/dat/23Jul12',
-                 fref='Bsteel_BB_00.txt',fn_sf='YJ_Bsteel_BB.sff'):
-        self.EXP,self.SF,self.IG=main_reader(path,fref,fn_sf,icheck=True)
+                 fref='Bsteel_BB_00.txt',
+                 fn_sf='YJ_Bsteel_BB.sff'):
+        self.EXP,self.SF,self.IG=main_reader(
+            path,fref,fn_sf,icheck=False)
         self.EXP.get_ehkl() # get ehkl based on d_avg
         self.nstp = self.EXP.flow.nstp
 
@@ -138,9 +140,10 @@ class StressAnalysis:
         fmin = optimize.leastsq
         self.istp=istp
 
-        print '#----------------------#'
-        print ' epsilon_{VM} %4.2f'%self.EXP.flow.epsilon_vm[istp]
-        print ' ivo:', ivo
+        # print '#----------------------#'
+        # print ' epsilon_{VM} %4.2f'%self.EXP.flow.epsilon_vm[istp]
+        # print ' ivo:', ivo
+
         # --core
         # dat = fmin(self.f_least_Ei,[100,100,0,0,0,0],ivo,
         #            full_output=True)
@@ -177,7 +180,8 @@ class StressAnalysis:
 
 
 def main(path='/Users/yj/repo/rs_pack/dat/23Jul12',
-         fref='Bsteel_BB_00.txt',fn_sf='YJ_Bsteel_BB.sff'):
+         fref='Bsteel_BB_00.txt',fn_sf='YJ_Bsteel_BB.sff',
+         iso_SF=False,ind_plot=False):
     """
     """
     from MP.mat import mech
@@ -195,6 +199,11 @@ def main(path='/Users/yj/repo/rs_pack/dat/23Jul12',
     mystress.nstp
     mystress.EXP.plot_all()
 
+
+    # isotropic stress factor?
+    if iso_SF: mystress.SF.get_iso_sf(E=204e9,nu=0.3)
+
+    # calc stress
     eps_vm = mystress.EXP.flow.epsilon_vm
     dknot = []
     s11 = []; s22 = []
@@ -249,6 +258,7 @@ def main(path='/Users/yj/repo/rs_pack/dat/23Jul12',
             ax.plot(x,y_fit,'--',color=c.to_rgba(eps_vm[istp]))
             ax.plot(x,y_exp,'x',color=c.to_rgba(eps_vm[istp]))
 
+    deco(ax=figs.axes[0],iopt=5)
     rm_inner(figs.axes)
     ticks_bin_u(figs.axes)
     tune_xy_lim(figs.axes)
@@ -262,58 +272,65 @@ def main(path='/Users/yj/repo/rs_pack/dat/23Jul12',
 
 #------------------------------------------------------------#
     # Save fitted curves into individual plots to pdf files
-    import matplotlib.pyplot as plt
-    plt.ioff()
-    from matplotlib.backends.backend_pdf import PdfPages
-    pdf_pages = PdfPages('Fit_results.pdf')
-    x = mystress.EXP.psi
-    for istp in range(mystress.EXP.flow.nstp):
-        figx = wide_fig(nw=mystress.EXP.nphi+1,w0=0,w1=0,left=0.2,
-                        right=0.15)
-        for iphi in range(mystress.EXP.nphi):
-            x = mystress.EXP.psi
-            ax = figx.axes[iphi]
-            ax.set_title(
-                r'$\phi: %3.1f^\circ{}$'%mystress.EXP.phi[iphi])
+    if ind_plot:
+        import matplotlib.pyplot as plt
+        plt.ioff()
+        from matplotlib.backends.backend_pdf import PdfPages
+        pdf_pages = PdfPages('Fit_results.pdf')
+        x = mystress.EXP.psi
+        for istp in range(mystress.EXP.flow.nstp):
+            figx = wide_fig(nw=mystress.EXP.nphi+1,
+                            w0=0,w1=0,left=0.2,
+                            right=0.15)
+            for iphi in range(mystress.EXP.nphi):
+                x = mystress.EXP.psi
+                ax = figx.axes[iphi]
+                ax.set_title(
+                    r'$\phi: %3.1f^\circ{}$'%\
+                    mystress.EXP.phi[iphi])
 
-            y_fit = Eis[istp,iphi]
-            y1=eps[istp,iphi] # e^{hkl}
-            y0=igs[istp,iphi] # e^{ig}
-            y_exp = y1-y0
-            ax.plot(x,y_fit,'r-',label='Fitting')#,color=c.to_rgba(eps_vm[istp]))
-            ax.plot(x,y_exp,'bx',
-                    label=r'$\varepsilon^{hkl}-\varepsilon^{IG}$'
-            )#,color=c.to_rgba(eps_vm[istp]))
+                y_fit = Eis[istp,iphi]
+                y1=eps[istp,iphi] # e^{hkl}
+                y0=igs[istp,iphi] # e^{ig}
+                y_exp = y1-y0
+                ax.plot(x,y_fit,'r-',label='Fitting')
+                ax.plot(x,y_exp,'bx',
+                        label=r'$\varepsilon^{hkl}'\
+                        '-\varepsilon^{IG}$')
 
-        ax = figx.axes[-1]
-        ax = ax.twinx()
-        eqv(ax,ft=8)
-        ax.plot(eps_vm,mystress.flow.sigma_vm,'b-')
-        ax.plot(eps_vm[istp],mystress.flow.sigma_vm[istp],'ro')
+            ax = figx.axes[-1]
+            eqv(ax,ft=8)
+            ax = ax.twinx()
+            eqv(ax,ft=8)
+            ax.plot(eps_vm,mystress.flow.sigma_vm,'b-')
+            ax.plot(eps_vm[istp],
+                    mystress.flow.sigma_vm[istp],'ro')
 
-        for i in range(len(figx.axes)-2):
-            figx.axes[i].set_ylim(-0.0008,0.0004)
+            for i in range(len(figx.axes)-2):
+                figx.axes[i].set_ylim(-0.0008,0.0004)
 
-        fancy_legend(figx.axes[0])
-        rm_inner(figx.axes[:4])
-        ticks_bin_u(figx.axes[:4])
+            fancy_legend(figx.axes[0])
+            rm_inner(figx.axes[:4])
+            ticks_bin_u(figx.axes[:4])
 
-        #tune_xy_lim(figx.axes)
-        deco(figx.axes[0],iopt=5)
-        ax.set_xlim(0.,1)
-        rm_lab(ax=figx.axes[-2],axis='y')
+            #tune_xy_lim(figx.axes)
+            ax.set_xlim(0.,1)
+            rm_lab(ax=figx.axes[-2],axis='y')
+            deco(figx.axes[0],iopt=5)
 
-        pdf_pages.savefig(figx)
-        plt.close(figx)
-    pdf_pages.close()
-    plt.ion()
+            pdf_pages.savefig(figx)
+            plt.close(figx)
+        pdf_pages.close()
+        plt.ion()
 #------------------------------------------------------------#
     ## flow stress curve plotting
 
-    figs = wide_fig(nw=2)
+    figs = wide_fig(nw=2,w1=0.2)
     figs.axes[0].plot(eps_vm, mystress.flow.sigma_vm,'x')
     figs.axes[1].plot(eps_vm, dknot,'o')
     eqv(figs.axes[0],ft=8)
+    eqv(figs.axes[1],ft=8)
+    figs.axes[1].set_ylabel(r'$d_o$',dict(fontsize=8))
 
 #------------------------------------------------------------#
     ## flow stress in plane stress space
