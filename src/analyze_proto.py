@@ -7,6 +7,7 @@ fancy_legend = mpl_lib.fancy_legend
 
 def main_reader(path='../dat/23JUL12', fref='Bsteel_BB_00.txt',
                 fn_sf ='YJ_Bsteel_BB.sff',icheck=False):
+    import copy
     EXP, SF, IG = rs_exp.read_main(path,fref,fn_sf,icheck)
 
     ## interpolate based on experimental phis, psis, IG
@@ -18,6 +19,11 @@ def main_reader(path='../dat/23JUL12', fref='Bsteel_BB_00.txt',
     print
     print '#-----------------------------------------------------#'
     print ' Interpolate SF and IG for matching with D-spacings'
+
+    SF_orig = copy.deepcopy(SF)
+    IG_orig = copy.deepcopy(IG)
+    SF_orig.flow.get_vm_strain()
+    IG_orig.flow.get_vm_strain()
 
     SF.interp_strain(EXP.flow.epsilon_vm)
     IG.interp_strain(EXP.flow.epsilon_vm)
@@ -42,15 +48,16 @@ def main_reader(path='../dat/23JUL12', fref='Bsteel_BB_00.txt',
 
     #EXP.plot(istps=np.arange(EXP.flow.nstp)[::7])
 
-    return EXP, SF, IG
+    return EXP, SF, IG, SF_orig, IG_orig
 
 class StressAnalysis:
     def __init__(self,
                  path='/Users/yj/repo/rs_pack/dat/23Jul12',
                  fref='Bsteel_BB_00.txt',
                  fn_sf='YJ_Bsteel_BB.sff'):
-        self.EXP,self.SF,self.IG=main_reader(
-            path,fref,fn_sf,icheck=False)
+        self.EXP,self.SF,self.IG,self.SF_orig,self.IG_orig\
+            = main_reader(path,fref,fn_sf,icheck=False)
+
         self.EXP.get_ehkl() # get ehkl based on d_avg
         self.nstp = self.EXP.flow.nstp
 
@@ -65,7 +72,7 @@ class StressAnalysis:
         plt.close('all')
         nphi = self.EXP.nphi
         npsi = self.EXP.npsi
-        figs = wide_fig(ifig=3031,nw=nphi)
+        figs = wide_fig(nw=nphi)
         # calculate Ei based on the current stress & SF
         Ei = np.zeros((nphi, npsi))
         for iphi in range(nphi):
@@ -156,9 +163,9 @@ class StressAnalysis:
         d0 = dat[0][0]
 
         #print 'stress:', stress
-        print 'd0:', d0
+        #print 'd0:', d0
 
-        print '#----------------------#'
+        #print '#----------------------#'
         cov_x, infodict, mesg, ier = dat[1:]
         if not(ier in [1,2,3,4]):
             raise IOError, "solution was not found"
@@ -198,7 +205,6 @@ def main(path='/Users/yj/repo/rs_pack/dat/23Jul12',
     mystress = StressAnalysis(path=path,fref=fref,fn_sf=fn_sf)
     mystress.nstp
     mystress.EXP.plot_all()
-
 
     # isotropic stress factor?
     if iso_SF: mystress.SF.get_iso_sf(E=204e9,nu=0.3)
