@@ -49,8 +49,7 @@ def check(EXP=None):
 def read_main(path='../dat/23JUL12',fref='Bsteel_BB_00.txt',
               fn_sf='YJ_Bsteel_BB.sff',
               icheck=False):
-    import read_proto
-    import os
+    import read_proto, os
     ExpProto = read_proto.ProtoExp(path,fref)
     if icheck:check(ExpProto)
 
