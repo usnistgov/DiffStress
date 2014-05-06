@@ -203,7 +203,9 @@ class ProtoExp:
         from MP.lib import axes_label
         from MP.lib import mpl_lib
         import matplotlib as mpl
-        import matplotlib.cm as cm
+        deco = axes_label.__deco__
+        rm_inner =mpl_lib.rm_inner
+        ticks_bin_u = mpl_lib.ticks_bins_ax_u
 
         figs = wide_fig(nw=self.nphi,w0=0,w1=0,
                         left=0.2,right=0.15,
@@ -211,15 +213,12 @@ class ProtoExp:
 
         mx = max(self.flow.epsilon_vm)
         mn = min(self.flow.epsilon_vm)
-
-        norm = mpl.colors.Normalize(vmin=mn,vmax=mx)
-        cmap = cm.gist_rainbow
-        #cmap = cm.jet
-        m = cm.ScalarMappable(norm=norm, cmap=cmap)
+        cmap, c = mpl_lib.norm_cmap(
+            mx = mx, mn=mn)
 
         for i in range(self.flow.nstp):
             eps = self.flow.epsilon_vm[i] 
-            cl = m.to_rgba(eps)
+            cl = c.to_rgba(eps)
             for j in range(self.nphi):
                 #X = np.sin(self.psi*np.pi/180.)**2
                 X = self.psi
@@ -233,9 +232,7 @@ class ProtoExp:
                     figs.axes[j].set_title(
                         r'$\phi: %3.1f^\circ{}$'%self.phi[j])
 
-        deco = axes_label.__deco__
-        rm_inner =mpl_lib.rm_inner
-        ticks_bin_u = mpl_lib.ticks_bins_ax_u
+
 
         ticks_bin_u(figs.axes,n=4)
         deco(figs.axes[0],iopt=4)
@@ -244,11 +241,8 @@ class ProtoExp:
 
         b = figs.axes[-1].get_position()
         axcb = figs.add_axes([0.88,b.y0,0.03,b.y1-b.y0])
-        cb = mpl.colorbar.ColorbarBase(axcb,cmap=cmap,
-                                       spacing='proprotional',
-                                       format='%3.1f')
-
-        axcb.set_ylabel('Equivalent Strain')
+        mpl_lib.add_cb(axcb,cmap=cmap,filled=True,
+                       ylab='Equivalent Strain')
 
     def plot(self,istps=[-1]):
         ps = []
