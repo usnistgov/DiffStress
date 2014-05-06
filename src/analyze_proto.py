@@ -192,10 +192,13 @@ class StressAnalysis:
 
 def main(path='/Users/yj/repo/rs_pack/dat/23Jul12',
          fref='Bsteel_BB_00.txt',fn_sf='YJ_Bsteel_BB.sff',
-         fexp='/Users/yj/repo/evpsc-dev/exp_dat/Bsteel/bulge/EXP_BULGE_JINKIM.txt',
+         fexp=None,
          iso_SF=False,ind_plot=False):
     """
     """
+    if fexp==None:
+        fexp='/Users/yj/repo/evpsc-dev/'\
+            'exp_dat/Bsteel/bulge/EXP_BULGE_JINKIM.txt',
     from MP.mat import mech
     from MP.lib import axes_label
     from MP.lib import mpl_lib
@@ -281,10 +284,8 @@ def main(path='/Users/yj/repo/rs_pack/dat/23Jul12',
 
     b = figs.axes[-1].get_position()
     axcb = figs.add_axes([0.88,b.y0,0.03,b.y1-b.y0])
-    cb = mpl.colorbar.ColorbarBase(axcb,cmap=cmap,
-                                   spacing='proprotional',
-                                   format='%3.1f')
-    axcb.set_ylabel('Equivalent Strain')
+    mpl_lib.add_cb(axcb,cmap=cmap,filled=True,
+                   ylab='Equivalent Strain')
 
     RS_graphs.savefig(plt.gcf())
 
