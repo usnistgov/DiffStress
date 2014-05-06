@@ -206,7 +206,8 @@ class ProtoExp:
         import matplotlib.cm as cm
 
         figs = wide_fig(nw=self.nphi,w0=0,w1=0,
-                        left=0.2,right=0.15)
+                        left=0.2,right=0.15,
+                        useOffset=False)
 
         mx = max(self.flow.epsilon_vm)
         mn = min(self.flow.epsilon_vm)

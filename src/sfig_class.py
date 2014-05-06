@@ -128,12 +128,12 @@ class SF:
             try:
                 j = phi_old.index(phi_new[i])
             except ValueError:
-                print i
-                print 'Mirror?'
-                print 'Is this okay to set -phi = phi?'
+                #print i
+                #print 'Mirror?'
+                #print 'Is this okay to set -phi = phi?'
+                #print 'Warning!!!> Go ahead only',
+                #print ' if you know what you are getting to'
                 j = phi_old.index(abs(phi_new[i]))
-                print 'Warning!!!> Go ahead only',
-                print ' if you know what you are getting to'
                 ind.append(j)
             else: ind.append(j)
 
@@ -158,22 +158,21 @@ class SF:
         mx = max(self.flow.epsilon_vm)
         mn = min(self.flow.epsilon_vm)
 
-        norm = mpl.colors.Normalize(vmin=mn,vmax=mx)
-        cmap = cm.gist_rainbow
-        #cmap = cm.jet
-        m = cm.ScalarMappable(norm=norm, cmap=cmap)
-
+        cmap, c = mpl_lib.norm_cmap(mx=mx,mn=mn)
+        colors=[]
+        self.flow.nstp = len(self.flow.epsilon_vm)
         for i in range(self.nphi):
-            for j in range(self.nstp):
+            for j in range(self.flow.nstp):
                 eps = self.flow.epsilon_vm[j] 
-                cl = m.to_rgba(eps)
+                cl = c.to_rgba(eps)
+                if i==0: colors.append(cl)
 
                 l, = figs.axes[i].plot(
                     sin(self.psi*np.pi/180.)**2,
-                    self.sf[j,i,:,0],'-+',color=cl)
+                    self.sf[j,i,:,0],'-',color=cl)
                 figs.axes[i].plot(
                     sin(self.psi*np.pi/180.)**2,
-                    self.sf[j,i,:,1],'-x',color=cl)
+                    self.sf[j,i,:,1],'--',color=cl)
 
                 if j==0:
                     figs.axes[i].set_title(
@@ -189,12 +188,12 @@ class SF:
         rm_inner(figs.axes)
         ticks_bin_u(figs.axes,n=4)
 
+        # color bar
         b = figs.axes[-1].get_position()
         axcb = figs.add_axes([0.88,b.y0,0.03,b.y1-b.y0])
-        cb = mpl.colorbar.ColorbarBase(axcb,cmap=cmap,
-                                       spacing='proprotional',
-                                       format='%3.1f')
-        axcb.set_ylabel('Equivalent Strain')
+        mpl_lib.add_cb(ax=axcb,filled=False,
+                       levels=self.flow.epsilon_vm,
+                       colors=colors,ylab='Equivalent strain')
 
 class IG:
     def add_data(self,ig,phi,psi):
@@ -268,12 +267,13 @@ class IG:
             try:
                 j = phi_old.index(phi_new[i])
             except ValueError:
-                print i
-                print 'Mirror?'
-                print 'Is this okay to set -phi = phi?'
+                # print i
+                # print 'Mirror?'
+                # print 'Is this okay to set -phi = phi?'
+                # print 'Warning!!!> Go ahead only',
+                # print ' if you know what you are getting to'
                 j = phi_old.index(abs(phi_new[i]))
-                print 'Warning!!!> Go ahead only',
-                print ' if you know what you are getting to'
+
                 ind.append(j)
             else: ind.append(j)
 
@@ -298,15 +298,13 @@ class IG:
         mx = max(self.flow.epsilon_vm)
         mn = min(self.flow.epsilon_vm)
 
-        norm = mpl.colors.Normalize(vmin=mn,vmax=mx)
-        cmap = cm.gist_rainbow
-        #cmap = cm.jet
-        m = cm.ScalarMappable(norm=norm, cmap=cmap)
-
+        cmap, c = mpl_lib.norm_cmap(mx=mx,mn=mn)
+        colors=[]
         for i in range(self.nphi):
             for j in range(self.nstp):
                 eps = self.flow.epsilon_vm[j] 
-                cl = m.to_rgba(eps)
+                cl = c.to_rgba(eps)
+                if i==0: colors.append(cl)
 
                 figs.axes[i].plot(
                     sin(self.psi*np.pi/180.)**2,
@@ -325,12 +323,12 @@ class IG:
         rm_inner(figs.axes)
         ticks_bin_u(figs.axes,n=4)
 
+        # color bar
         b = figs.axes[-1].get_position()
         axcb = figs.add_axes([0.88,b.y0,0.03,b.y1-b.y0])
-        cb = mpl.colorbar.ColorbarBase(axcb,cmap=cmap,
-                                       spacing='proprotional',
-                                       format='%3.1f')
-        axcb.set_ylabel('Equivalent Strain')
+        mpl_lib.add_cb(ax=axcb,filled=False,
+                       levels=self.flow.epsilon_vm,
+                       colors=colors,ylab='Equivalent strain')
 
 def calc_iso_sf(phi,psi,nu,Y,iopt=0):
     """
