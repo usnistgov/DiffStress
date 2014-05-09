@@ -8,7 +8,8 @@ sin = np.sin
 cos = np.cos
 
 def ex(ifig=50,
-       exp_ref=['exp_dat/Bsteel/EXP_BULGE_JINKIM.txt','exp_dat/Bsteel/uni/avgstr_000.txt'],
+       exp_ref=['exp_dat/Bsteel/EXP_BULGE_JINKIM.txt',
+                'exp_dat/Bsteel/uni/avgstr_000.txt'],
        exp_lab=['Exp bulge','Exp uniaxiai'],
        mod_ref='STR_STR.OUT'):
     """
@@ -84,14 +85,21 @@ def ex_consistency(
     from rs import filter_psi
     from rs import psi_reso, psi_reso2
     from matplotlib import pyplot as plt
-
+    from matplotlib.backends.backend_pdf import PdfPages
+    fe=PdfPages('all_ehkl_fits.pdf')
+    fs=PdfPages('all_stress_factors.pdf')
     from MP.lib import mpl_lib # mpl_lib is a module
+    from MP.lib import axes_label
+    from MP.mat import mech # mech is a module
+
     wide_fig = mpl_lib.wide_fig
     fancy_legend = mpl_lib.fancy_legend
-    from MP.mat import mech # mech is a module
+
     FlowCurve = mech.FlowCurve
 
-    fig1 = wide_fig(ifig,nw=3,nh=1,left=0.2,uw=3.5,w0=0,w1=0.3,right=0,iarange=True)
+    fig1 = wide_fig(ifig,nw=3,nh=1,left=0.2,
+                    uw=3.5,w0=0,w1=0.3,right=0,iarange=True)
+
     ax1 = fig1.axes[0]
     ax2 = fig1.axes[1]
     ax3 = fig1.axes[2]
@@ -106,8 +114,10 @@ def ex_consistency(
     flow_weight.get_model(fn=mod_ref)
     #flow_weight = model_rs.dat_model.flow
     flow_weight.get_eqv()
+
     ax1.plot(flow_weight.epsilon_vm,flow_weight.sigma_vm,
              'b--',label='Average',alpha=1.0)
+    axes_label.__eqv__(ax1,ft=10)
 
     # stress3x3 = model_rs.dat_model.flow.sigma
     # strain3x3 = model_rs.dat_model.flow.epsilon
@@ -116,17 +126,18 @@ def ex_consistency(
     # ax1.plot(x_weight,y_weight,
     #          'bx',label='Average',alpha=1.0)
 
-    ax1.set_xlabel(r'$\bar{E}^{\mathrm{eq}}$',dict(fontsize=12))
-    ax1.set_ylabel(r'$\bar{\Sigma}^{\mathrm{eq}}}$',dict(fontsize=12))
+    # ax1.set_xlabel(r'$\bar{E}^{\mathrm{eq}}$',dict(fontsize=12))
+    # ax1.set_ylabel(r'$\bar{\Sigma}^{\mathrm{eq}}}$',dict(fontsize=12))
 
+    ## plot all stress factors at individual deformation levels
     stress = []
-    print '%10s%11s%11s%11s%11s%11s'%('S11','S22','S33','S23','S11','S11')
-    for istp in range(model_rs.dat_model.nstp): # istp is the computational step
-                          # at which the SF probing was
-                          # performed.
-    # for istp in range(1):
-    #     istp = model_rs.dat_model.nstp-1
-
+    print '%10s%11s%11s%11s%11s%11s'%('S11','S22','S33','S23','S13','S12')
+    for istp in range(model_rs.dat_model.nstp):
+        # istp is the computational step
+        # at which the SF probing was
+        # performed.
+        # for istp in range(1):
+        #     istp = model_rs.dat_model.nstp-1
         """
         sf (nstp, k, nphi,npsi)
         ig (nstp, nphi, npsi)
@@ -172,12 +183,21 @@ def ex_consistency(
         stress.append(dsa_sigma)
         #-----------------------------------#
 
+        plt.ioff()
+        f1,f2=__model_fit_plot__(
+            model_rs,ifig=ifig+istp*2+10,
+            istp=istp, nxphi=nxphi)
+        fe.savefig(f2);fs.savefig(f1)
+        plt.close(f1);plt.close(f2)
+        plt.ion()
+
         if (istep!=None and istp==istep) or\
            (istep==None and istp==model_rs.dat_model.nstp-1):
-
             fig2,fig3=__model_fit_plot__(
                 model_rs,ifig=ifig+istp*2+10,
                 istp=istp, nxphi=nxphi)
+
+    fe.close(); fs.close()
 
     stress=np.array(stress).T # diffraction stress
     flow_dsa = FlowCurve(name='Diffraction Stress')
@@ -225,8 +245,6 @@ def ex_consistency(
     ax2.set_yticks(np.linspace(300,700,3),dict(fontsize=4))
     ax2.grid('on')
     plt.show()
-
-
 
     ## save figures
     fig1.savefig('flow.pdf')
@@ -424,3 +442,31 @@ def __model_fit_plot_3d__(container,istp,nxphi=None):
     ax3d.set_ylabel(r'$\phi$')
     ax3d.set_xlim(-1,1)
     ax3d.set_ylim(-1,1)
+
+
+
+def sf_scan(fn='sf_ph1.out',npair=1):
+    import MP.read_blocks as rb
+    from MP.mat import voigt
+    from MP.lib import mpl_lib
+
+    wide_fig = mpl_lib.wide_fig
+    figs=wide_fig(nw=2)
+    ijv = voigt.ijv
+    read=rb.read_sf_scan
+    sig,eps=read(fn=fn)
+    print len(sig),len(eps)
+    nstp = len(sig)
+    if np.mod(nstp,npair)!=0:
+        raise IOError, 'Cannot be paired with given npair...'
+
+    for i in range(nstp/npair):
+        for j in range(npair):
+            s = sig[i*npair+j]
+            e = eps[i*npair+j]
+            for k in range(2):
+                figs.axes[k].plot(s[k], e[10])
+                figs.axes[k].plot(s[k], e[1])
+                figs.axes[k].plot(s[k], e[100])
+                figs.axes[k].plot(s[k], e[200])
+            
