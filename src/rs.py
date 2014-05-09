@@ -505,7 +505,7 @@ class DiffDat:
                 for j in range(self.nphi):
                     for k in range(self.npsi):
                         if self.ngr[i,j,k]==0:
-                            print i,j,k
+                            #print i,j,k
                             self.mask(istp=i,iphi=j,ipsi=k)
 
     def mask(self,istp,iphi,ipsi):

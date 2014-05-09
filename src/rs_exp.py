@@ -90,7 +90,8 @@ def read_IGSF(fn='YJ_Bsteel_BB.sff'):
 
         IG.add_flow(eps_macro,0,0)
         IG.add_flow(eps_macro,1,1)
-        IG.flow.set_zero_epsilon_ij(2,2)
+        IG.add_flow(-eps_macro*2,2,2)
+        #IG.flow.set_zero_epsilon_ij(2,2)
         IG.flow.set_zero_shear_strain()
 
     return SF, IG
