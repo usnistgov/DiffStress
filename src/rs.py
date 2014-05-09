@@ -987,8 +987,8 @@ class ResidualStress:
         """
         from scipy import optimize
         fmin = optimize.leastsq
-        dat=fmin(self.f_least,[0,0,0,0,0,0],ivo,
-                 full_output=True)
+        dat=fmin(self.f_least,[0,0,0,0,0,0],args=(ivo),
+                 full_output=True,xtol=1e-12,ftol=1e-12,maxfev=1000)
         stress=dat[0]
         cov_x, infodict, mesg, ier = dat[1:]
         if not(ier in [1,2,3,4]):

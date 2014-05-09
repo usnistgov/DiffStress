@@ -88,6 +88,7 @@ def ex_consistency(
     from matplotlib.backends.backend_pdf import PdfPages
     fe=PdfPages('all_ehkl_fits.pdf')
     fs=PdfPages('all_stress_factors.pdf')
+    f_er=PdfPages('all_Ei-ehkl-e0.pdf')
     from MP.lib import mpl_lib # mpl_lib is a module
     from MP.lib import axes_label
     from MP.mat import mech # mech is a module
@@ -115,7 +116,7 @@ def ex_consistency(
     flow_weight.get_eqv()
 
 
-    if len(flow_weight.evpsc_vm)<50: lc='bx'
+    if len(flow_weight.epsilon_vm)<50: lc='bx'
     else: lc='b-'
     ax1.plot(flow_weight.epsilon_vm,flow_weight.sigma_vm,
              lc,label='Average',alpha=1.0)
@@ -186,20 +187,20 @@ def ex_consistency(
         #-----------------------------------#
 
         plt.ioff()
-        f1,f2=__model_fit_plot__(
+        f1,f2,f3=__model_fit_plot__(
             model_rs,ifig=ifig+istp*2+10,
             istp=istp, nxphi=nxphi)
-        fe.savefig(f2);fs.savefig(f1)
-        plt.close(f1);plt.close(f2)
+        fe.savefig(f2);fs.savefig(f1); f_er.savefig(f3)
+        plt.close(f1);plt.close(f2); plt.close(f3)
         plt.ion()
 
         if (istep!=None and istp==istep) or\
            (istep==None and istp==model_rs.dat_model.nstp-1):
-            fig2,fig3=__model_fit_plot__(
+            fig2,fig3,fig4=__model_fit_plot__(
                 model_rs,ifig=ifig+istp*2+10,
                 istp=istp, nxphi=nxphi)
 
-    fe.close(); fs.close()
+    fe.close(); fs.close(); f_er.close()
 
     stress=np.array(stress).T # diffraction stress
     flow_dsa = FlowCurve(name='Diffraction Stress')
@@ -299,9 +300,14 @@ def __model_fit_plot__(container,ifig,istp,nxphi=None):
                    w0=0.00,ws=0.5,w1=0.0,uw=3.0,
                    left=0.12,right=0.10)
 
+
+    fige= wide_fig(ifig+2,nw=nphi,
+                   w0=0.00,ws=0.5,w1=0.0,uw=3.0,
+                   left=0.12,right=0.10)
+
     #axeig = fig.axes[:nphi]
     axes= fig.axes[:nphi]#nphi:nphi*2]
-    #ax_er= fig.axes[nphi*2:nphi*3]
+    ax_er= fige.axes[:nphi]
 
     axesf = figs.axes
     axesv = []
@@ -323,7 +329,7 @@ def __model_fit_plot__(container,ifig,istp,nxphi=None):
         ax=axes[iphi]
         av=axesv[iphi]
         #ag=axeig[iphi]
-        #ae=ax_er[iphi]
+        ae=ax_er[iphi]
 
         x=sin(psis)**2
         xv = sin(container.dat_model.psi)**2
@@ -346,11 +352,12 @@ def __model_fit_plot__(container,ifig,istp,nxphi=None):
         #     x,eps0[iphi]*1e6,'+',color='k',
         #     label=r'$\varepsilon_{\mathrm{IG}}^{hkl}$')
 
-        # ae.plot(
-        #     x,np.abs(((eps0[iphi]-tdat[iphi]))/tdat[iphi]),
-        #     'r--',label='Error')
+        ae.plot(
+            x,Ei[iphi]*1e6-y,
+            'r--',label=r'$E_{i} - \varepsilon^{hkl}-\varepsilon^{hkl}_0$')
 
         __deco__(ax=ax,iopt=0)
+        __deco__(ax=ae,iopt=0)
         #__deco__(ax=ag,iopt=2)
 
         if iphi==0:
@@ -395,7 +402,7 @@ def __model_fit_plot__(container,ifig,istp,nxphi=None):
 
     #fig.tight_layout()
     #figs.tight_layout()
-    return fig, figs
+    return fig, figs, fige
 
 def __model_fit_plot_3d__(container,istp,nxphi=None):
     import phikhi.psikhi2cart as pk
