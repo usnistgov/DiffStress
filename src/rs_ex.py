@@ -97,9 +97,8 @@ def ex_consistency(
 
     FlowCurve = mech.FlowCurve
 
-    fig1 = wide_fig(ifig,nw=3,nh=1,left=0.2,
-                    uw=3.5,w0=0,w1=0.3,right=0,iarange=True)
-
+    fig1 = wide_fig(ifig,nw=3,nh=1,left=0.2,uw=3.5,
+                    w0=0,w1=0.3,right=0,iarange=True)
     ax1 = fig1.axes[0]
     ax2 = fig1.axes[1]
     ax3 = fig1.axes[2]
@@ -115,8 +114,11 @@ def ex_consistency(
     #flow_weight = model_rs.dat_model.flow
     flow_weight.get_eqv()
 
+
+    if len(flow_weight.evpsc_vm)<50: lc='bx'
+    else: lc='b-'
     ax1.plot(flow_weight.epsilon_vm,flow_weight.sigma_vm,
-             'b--',label='Average',alpha=1.0)
+             lc,label='Average',alpha=1.0)
     axes_label.__eqv__(ax1,ft=10)
 
     # stress3x3 = model_rs.dat_model.flow.sigma
