@@ -2,6 +2,8 @@
 import matplotlib.pyplot as plt
 import numpy as np
 from MP.mat import mech
+from MP import read_blocks
+rb=read_blocks.main
 FlowCurve = mech.FlowCurve
 cos = np.cos
 sin = np.sin
@@ -14,7 +16,8 @@ def reader(fn='igstrain_load_ph1.out',isort=False,icheck=False):
     print npb
     ds = open(fn).read()
     d = ds.split('npb')[1]
-    d = np.loadtxt(fn,skiprows=2).T
+#    d = np.loadtxt(fn,skiprows=2).T
+    d = rb(fn,skiprows=2)
 
     steps = np.unique(d[0])
     nstp = len(steps)
@@ -749,7 +752,8 @@ class ResidualStress:
                     self.sfm[istp,k,iphi,:] = y[:]
 
         # stress/strain states
-        dstr=np.loadtxt(fnmod_str,skiprows=1).T
+#        dstr=np.loadtxt(fnmod_str,skiprows=1).T
+        dstr=rb(fnmod_str,skiprows=1)
         if len(dstr.shape)==1:
             dstr = np.array([dstr]).T
 
