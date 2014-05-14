@@ -182,6 +182,9 @@ class ProtoExp:
         self.ehkl = ehkl
 
     def assign_d0(self,d0=None):
+        """
+        Assign d0 and calculate eps_{hkl}
+        """
         nstp = self.flow.nstp
         nphi = self.nphi
         npsi = self.npsi
