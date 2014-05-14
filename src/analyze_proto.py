@@ -126,6 +126,11 @@ class StressAnalysis:
         self.EXP.assign_d0(d0)
         return self.f_least_Ei(stress=array[1:],ivo=ivo)
 
+    def f_least_Ei_fixed_d0(self,array=[0,0,0,0,0,0],
+                            ivo=None,d0=None):
+        self.EXP.assign_d0(d0)
+        return self.f_least_Ei(stress=array,ivo=ivo)
+
     def f_least_Ei(self,stress=[0,0,0,0,0,0],ivo=None):
         self.sigma=np.array(stress)
         nphi = self.EXP.nphi
@@ -145,7 +150,7 @@ class StressAnalysis:
     def residuals(self,a,x,y,f):
         return y-f(x,a)
 
-    def find_sigma(self,ivo=None,istp=0,iplot=False):
+    def find_sigma(self,ivo=None,istp=0,iplot=False,d0=1.1710):
         from scipy import optimize
         fmin = optimize.leastsq
         self.istp=istp
@@ -156,13 +161,20 @@ class StressAnalysis:
         # --core
         # dat = fmin(self.f_least_Ei,[100,100,0,0,0,0],ivo,
         #            full_output=True)
-        dat = fmin(self.f_least_Ei_d0,
-                   [1.704,100,100,0,0,0,0],ivo,
-                   full_output=True)
 
-        # --core
-        stress = dat[0][1:]
-        d0 = dat[0][0]
+
+        # dat = fmin(self.f_least_Ei_d0,
+        #            [1.1710,100,100,0,0,0,0],ivo,
+        #            full_output=True)
+        # ## --core
+        # stress = dat[0][1:]
+        # d0 = dat[0][0]
+
+
+        dat = fmin(self.f_least_Ei_fixed_d0,
+                   [100,100,0,0,0,0],args=(ivo,d0),
+                   full_output=True)
+        stress=dat[0]
 
 
         #print 'stress:', stress
@@ -193,7 +205,9 @@ class StressAnalysis:
 def main(path='/Users/yj/repo/rs_pack/dat/23Jul12',
          fref='Bsteel_BB_00.txt',fn_sf='YJ_Bsteel_BB.sff',
          fexp=None,
-         iso_SF=False,ind_plot=False):
+         iso_SF=False,
+         ishow=False,
+         ind_plot=False):
     """
     """
     if fexp==None:
@@ -345,8 +359,8 @@ def main(path='/Users/yj/repo/rs_pack/dat/23Jul12',
     figs = wide_fig(nw=2,w1=0.2)
     figs.axes[0].plot(eps_vm, mystress.flow.sigma_vm,'x')
     figs.axes[1].plot(eps_vm, dknot,'o')
-    eqv(figs.axes[0],ft=8)
-    eqv(figs.axes[1],ft=8)
+    eqv(figs.axes[0],ft=8,zero_xy=True)
+    eqv(figs.axes[1],ft=8,zero_xy=False)
     figs.axes[1].set_ylabel(r'$\mathrm{d}_o$',dict(fontsize=12))
     RS_graphs.savefig(plt.gcf())
 
@@ -363,6 +377,6 @@ def main(path='/Users/yj/repo/rs_pack/dat/23Jul12',
     axes_label.__plane__(ax=figs.axes[1],ft=10,iopt=1)
     RS_graphs.savefig(plt.gcf())
     RS_graphs.close()
-    plt.close('all')
+    if not(ishow): plt.close('all')
     plt.ion()
     return mystress
