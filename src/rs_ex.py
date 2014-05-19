@@ -69,7 +69,8 @@ def ex_consistency(
         sin2psimx=None,
         iscatter=False,
         psimx=None,
-        psi_nbin=1,ig_sub=True,
+        psi_nbin=1,
+        ig_sub=True,
         istep=None):
     """
     Consistency check between 'weighted average' stress and the stress obtained
@@ -92,6 +93,7 @@ def ex_consistency(
     wide_fig = mpl_lib.wide_fig
     fancy_legend = mpl_lib.fancy_legend
     FlowCurve = mech.FlowCurve
+
     fe   = PdfPages('all_ehkl_fits.pdf')
     fs   = PdfPages('all_stress_factors.pdf')
     f_er = PdfPages('all_Ei-ehkl-e0.pdf')
@@ -113,7 +115,6 @@ def ex_consistency(
     #flow_weight = model_rs.dat_model.flow
     flow_weight.get_eqv()
 
-
     if len(flow_weight.epsilon_vm)<50: lc='bx'
     else: lc='b-'
     ax1.plot(flow_weight.epsilon_vm,flow_weight.sigma_vm,
@@ -134,8 +135,11 @@ def ex_consistency(
         model_rs.sf   = model_rs.dat_model.sf[istp]
         model_rs.eps0 = model_rs.dat_model.ig[istp]
         model_rs.ehkl = model_rs.dat_model.ehkl[istp]
+
+        ## whether or not intergranular strain is subtracted.
         if ig_sub: model_rs.tdat = model_rs.ehkl - model_rs.eps0
         else: model_rs.tdat = model_rs.ehkl
+
         tdat_ref = model_rs.tdat[::]
         if iscatter:
             tdat_scatter = []

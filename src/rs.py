@@ -589,8 +589,9 @@ class ResidualStress:
     def __init__(self,
                  mod_ext=None,
                  fnmod_epshkl='int_els_ph1.out',
-                 fnmod_ig='igstrain_unload_ph1.out',
-                 #fnmod_ig='igstrain_load_ph1.out',
+                 #fnmod_ig='igstrain_unload_ph1.out',
+                 fnmod_ig='igstrain_fbulk_ph1.out',
+                 #fnmod_ig='igstrain_bix_ph1.out',
                  fnmod_sf='igstrain_fbulk_ph1.out',
                  fnmod_str='STR_STR.OUT',
 
@@ -708,6 +709,7 @@ class ResidualStress:
         ## Selective use of psi should be possible for
         ## parametric study
         """
+        from RS import pepshkl
         from pepshkl import reader2 as reader_sf
         from ssort import sh as sort
         # eps^hkl from model
@@ -718,31 +720,41 @@ class ResidualStress:
         self.psism = self.psism * pi / 180.
         self.phism = self.phism * pi / 180.
         self.ndatm = len(self.phism) * len(self.psism)
-        ehklm = datm[2] # last state... steps
-
+        ehklm = datm[2] # last state... steps, datm[2] -> epshkl
         ngr = datm[3]; vf = datm[4]
         ehklm_sorted = np.zeros((len(self.stepsm),self.nphim,self.npsim))
 
         # ig strain from model
         if fnmod_ig!=None:
-            try: self.eps0m = reader(fn=fnmod_ig,isort=True)[2]
+            #eps0m should be in dimension of: (nstp,nphi,nspi)
+            try:
+                self.eps0m = reader(fn=fnmod_ig,isort=True)[2]
             except:
-                t,dum = reader2(fn=fnmod_ig,iopt=1)
+                print 'fnmod_ig is not readable by reader method in rs.py module'
+                print 'trial with reader2 method in pepshkl.py module is performed'
+                t,dum = reader_sf(fn=fnmod_ig,iopt=1)
                 # t[0] ! ehkl
                 # t[1] ! e (macro)
-                t[2] ! ehkle    (ehkl - emacro)
+                # t[2] ! ehkle    (ehkl - emacro)
                 # t[3] ! fhkl
                 # t[4] ! fbulk
                 # t[5] ! ige       e(hkl) - f_hkl*Sij
                 # t[6] ! Sij
                 # t[7] ! phi
                 # t[8] ! psi
+                # t[2] ![nst,nsf, nphi, npsi]
+                self.eps0m=t[5][:,0,:,:]
 
-                t[2] ![nst,nsf, nphi, npsi]
-
+                # t = reader_sf(fn=fnmod_ig,iopt=2)
+                # # t[0] # ehkl
+                # # t[1] # e (macro)
+                # # t[2] # ehkle:  e - macro
+                # # t[3] # ige e(hkl) - F^hkl_ij * Sij(ij=1,1 and 2,2)
+                # self.eps0m = t[2]
 
         elif fnmod_ig==None:
             self.eps0m = np.zeros(self.ehklm.shape)
+
         # stress factor from model
         t, usf = reader_sf(fn=fnmod_sf)
         sfm = t[3] # [istp,k,phi,psi]
