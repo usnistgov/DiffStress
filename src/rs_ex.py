@@ -115,7 +115,7 @@ def ex_consistency(
     flow_weight.get_eqv()
 
 
-    if len(flow_weight.evpsc_vm)<50: lc='bx'
+    if len(flow_weight.epsilon_vm)<50: lc='bx'
     else: lc='b-'
     ax1.plot(flow_weight.epsilon_vm,flow_weight.sigma_vm,
              lc,label='Average',alpha=1.0)

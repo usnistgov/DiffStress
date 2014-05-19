@@ -589,6 +589,7 @@ class ResidualStress:
     def __init__(self,
                  mod_ext=None,
                  fnmod_epshkl='int_els_ph1.out',
+                 #fnmod_ig='igstrain_load_ph1.out',
                  fnmod_ig='igstrain_unload_ph1.out',
                  fnmod_sf='igstrain_fbulk_ph1.out',
                  fnmod_str='STR_STR.OUT',

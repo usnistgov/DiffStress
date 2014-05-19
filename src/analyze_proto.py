@@ -150,7 +150,7 @@ class StressAnalysis:
     def residuals(self,a,x,y,f):
         return y-f(x,a)
 
-    def find_sigma(self,ivo=None,istp=0,iplot=False,d0=1.1710):
+    def find_sigma(self,ivo=None,istp=0,iplot=False):
         from scipy import optimize
         fmin = optimize.leastsq
         self.istp=istp
@@ -159,28 +159,19 @@ class StressAnalysis:
         # print ' epsilon_{VM} %4.2f'%self.EXP.flow.epsilon_vm[istp]
         # print ' ivo:', ivo
         # --core
-        # dat = fmin(self.f_least_Ei,[100,100,0,0,0,0],ivo,
-        #            full_output=True)
 
-
-        # dat = fmin(self.f_least_Ei_d0,
-        #            [1.1710,100,100,0,0,0,0],ivo,
-        #            full_output=True)
-        # ## --core
-        # stress = dat[0][1:]
-        # d0 = dat[0][0]
-
-
-        dat = fmin(self.f_least_Ei_fixed_d0,
-                   [100,100,0,0,0,0],args=(ivo,d0),
+        dat = fmin(self.f_least_Ei_d0,
+                   [1.1710,100,100,0,0,0,0],ivo,
                    full_output=True)
-        stress=dat[0]
+        ## --core
+        stress = dat[0][1:]
+        d0 = dat[0][0]
 
+        # dat = fmin(self.f_least_Ei_fixed_d0,
+        #            [100,100,0,0,0,0],args=(ivo,d0),
+        #            full_output=True)
+        # stress=dat[0]
 
-        #print 'stress:', stress
-        #print 'd0:', d0
-
-        #print '#----------------------#'
         cov_x, infodict, mesg, ier = dat[1:]
         if not(ier in [1,2,3,4]):
             raise IOError, "solution was not found"
@@ -245,8 +236,9 @@ def main(path='/Users/yj/repo/rs_pack/dat/23Jul12',
     Eis = []; eps = []; igs = []
 
     for istp in range(mystress.nstp):
-        stress, d0 = mystress.find_sigma(ivo=[0,1],
-                            istp=istp,iplot=False)
+        stress, d0 = mystress.find_sigma(
+            ivo=[0,1],istp=istp,iplot=False)
+
         dknot.append(d0)
         s11.append(stress[0])
         s22.append(stress[1])
@@ -330,9 +322,9 @@ def main(path='/Users/yj/repo/rs_pack/dat/23Jul12',
                         '-\varepsilon^{IG}$')
 
             ax = figx.axes[-1]
-            eqv(ax,ft=8)
+            eqv(ax,ft=8,zero_xy=False)
             ax = ax.twinx()
-            eqv(ax,ft=8)
+            eqv(ax,ft=8,zero_xy=False)
             ax.plot(eps_vm,mystress.flow.sigma_vm,'b-')
             ax.plot(eps_vm[istp],
                     mystress.flow.sigma_vm[istp],'ro')
