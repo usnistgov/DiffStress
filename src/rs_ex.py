@@ -86,17 +86,15 @@ def ex_consistency(
     from rs import psi_reso, psi_reso2
     from matplotlib import pyplot as plt
     from matplotlib.backends.backend_pdf import PdfPages
-    fe=PdfPages('all_ehkl_fits.pdf')
-    fs=PdfPages('all_stress_factors.pdf')
-    f_er=PdfPages('all_Ei-ehkl-e0.pdf')
     from MP.lib import mpl_lib # mpl_lib is a module
     from MP.lib import axes_label
     from MP.mat import mech # mech is a module
-
     wide_fig = mpl_lib.wide_fig
     fancy_legend = mpl_lib.fancy_legend
-
     FlowCurve = mech.FlowCurve
+    fe   = PdfPages('all_ehkl_fits.pdf')
+    fs   = PdfPages('all_stress_factors.pdf')
+    f_er = PdfPages('all_Ei-ehkl-e0.pdf')
 
     fig1 = wide_fig(ifig,nw=3,nh=1,left=0.2,uw=3.5,
                     w0=0,w1=0.3,right=0,iarange=True)
@@ -122,25 +120,10 @@ def ex_consistency(
              lc,label='Average',alpha=1.0)
     axes_label.__eqv__(ax1,ft=10)
 
-    # stress3x3 = model_rs.dat_model.flow.sigma
-    # strain3x3 = model_rs.dat_model.flow.epsilon
-    # x_weight = strain3x3[0,0] + strain3x3[1,1]
-    # y_weight = (stress3x3[0,0]+stress3x3[1,1])/2.
-    # ax1.plot(x_weight,y_weight,
-    #          'bx',label='Average',alpha=1.0)
-
-    # ax1.set_xlabel(r'$\bar{E}^{\mathrm{eq}}$',dict(fontsize=12))
-    # ax1.set_ylabel(r'$\bar{\Sigma}^{\mathrm{eq}}}$',dict(fontsize=12))
-
     ## plot all stress factors at individual deformation levels
     stress = []
     print '%10s%11s%11s%11s%11s%11s'%('S11','S22','S33','S23','S13','S12')
     for istp in range(model_rs.dat_model.nstp):
-        # istp is the computational step
-        # at which the SF probing was
-        # performed.
-        # for istp in range(1):
-        #     istp = model_rs.dat_model.nstp-1
         """
         sf (nstp, k, nphi,npsi)
         ig (nstp, nphi, npsi)
@@ -151,20 +134,16 @@ def ex_consistency(
         model_rs.sf   = model_rs.dat_model.sf[istp]
         model_rs.eps0 = model_rs.dat_model.ig[istp]
         model_rs.ehkl = model_rs.dat_model.ehkl[istp]
-        if ig_sub:
-            model_rs.tdat = model_rs.ehkl - model_rs.eps0
+        if ig_sub: model_rs.tdat = model_rs.ehkl - model_rs.eps0
         else: model_rs.tdat = model_rs.ehkl
-
         tdat_ref = model_rs.tdat[::]
-
         if iscatter:
             tdat_scatter = []
             for iphi in range(len(tdat_ref)):
                 dum = u_epshkl(tdat_ref[iphi],sigma=5e-5)
                 tdat_scatter.append(dum)
             tdat_scatter = np.array(tdat_scatter)
-            model_rs.tdat=tdat_scatter
-
+            model_rs.tdat = tdat_scatter
         model_rs.phis = model_rs.dat_model.phi
         model_rs.psis = model_rs.dat_model.psi
         model_rs.nphi = len(model_rs.phis)
@@ -180,25 +159,34 @@ def ex_consistency(
         ## coeff.
         # model_rs.coeff() # assign sf to cffs
         ## find the sigma ...
-        dsa_sigma = model_rs.find_sigma(ivo=[0,1])
+
+        s11 = model_rs.dat_model.flow.sigma[0,0][istp]
+        s22 = model_rs.dat_model.flow.sigma[1,1][istp]
+        dsa_sigma = model_rs.find_sigma(
+            ivo=[0,1],
+            init_guess=[s11,s22,0,0,0,0])
+
         for i in range(6): print '%+10.1f'%(dsa_sigma[i]),
         print ''
         stress.append(dsa_sigma)
         #-----------------------------------#
 
-        plt.ioff()
-        f1,f2,f3=__model_fit_plot__(
-            model_rs,ifig=ifig+istp*2+10,
-            istp=istp, nxphi=nxphi)
-        fe.savefig(f2);fs.savefig(f1); f_er.savefig(f3)
-        plt.close(f1);plt.close(f2); plt.close(f3)
-        plt.ion()
 
         if (istep!=None and istp==istep) or\
            (istep==None and istp==model_rs.dat_model.nstp-1):
             fig2,fig3,fig4=__model_fit_plot__(
                 model_rs,ifig=ifig+istp*2+10,
-                istp=istp, nxphi=nxphi)
+                istp=istp, nxphi=nxphi, stress_wgt=None,ivo=None)
+
+        plt.ioff()
+        f1,f2,f3=__model_fit_plot__(
+            model_rs,ifig=ifig+istp*2+10,
+            istp=istp, nxphi=nxphi, stress_wgt=[s11,s22,0,0,0,0],ivo=[0,1])
+        fs.savefig(f2);fe.savefig(f1); f_er.savefig(f3)
+        plt.close(f1);plt.close(f2); plt.close(f3)
+        plt.ion()
+
+
 
     fe.close(); fs.close(); f_er.close()
 
@@ -256,20 +244,17 @@ def ex_consistency(
 
     return model_rs
 
-def __model_fit_plot__(container,ifig,istp,nxphi=None):
+def __model_fit_plot__(container,ifig,istp,nxphi=None,
+                       stress_wgt=None,ivo=None):
+    """
+    """
     from MP.lib import mpl_lib
-    wide_fig = mpl_lib.wide_fig
-    fancy_legend=mpl_lib.fancy_legend
-    rm_lab = mpl_lib.rm_lab
-    tune_x_lim = mpl_lib.tune_x_lim
     from MP.lib import axes_label
-    __deco__ = axes_label.__deco__
-
-    # from mpl_lib.mpl_lib import wide_fig
-    # from mpl_lib.mpl_lib import fancy_legend
-    # from mpl_lib.mpl_lib import rm_lab
-    # from mpl_lib.mpl_lib import tune_x_lim
-    # from mpl_lib.axes_label import __deco__
+    wide_fig     = mpl_lib.wide_fig
+    fancy_legend = mpl_lib.fancy_legend
+    rm_lab       = mpl_lib.rm_lab
+    tune_x_lim   = mpl_lib.tune_x_lim
+    deco = axes_label.__deco__
 
     nphi=container.nphi
     if nxphi!=None and nphi>nxphi:
@@ -295,17 +280,13 @@ def __model_fit_plot__(container,ifig,istp,nxphi=None):
                    left=0.15,right=0.10,
                    nh=1,h0=0.2,h1=0,down=0.08,up=0.10,
                    iarange=True)
-
     figs= wide_fig(ifig+1,nw=nphi,
                    w0=0.00,ws=0.5,w1=0.0,uw=3.0,
                    left=0.12,right=0.10)
-
-
     fige= wide_fig(ifig+2,nw=nphi,
                    w0=0.00,ws=0.5,w1=0.0,uw=3.0,
                    left=0.12,right=0.10)
 
-    #axeig = fig.axes[:nphi]
     axes= fig.axes[:nphi]#nphi:nphi*2]
     ax_er= fige.axes[:nphi]
 
@@ -316,92 +297,71 @@ def __model_fit_plot__(container,ifig,istp,nxphi=None):
         ax=fig.axes[iphi]
         axesv.append(axes[iphi].twinx())
         axs=figs.axes[iphi]
-        #axg=axeig[iphi]
 
         ax.set_title(r'$\phi=%3.1f^\circ$'%(phis[iphi]*180/pi))
         axs.set_title(r'$\phi=%3.1f^\circ$'%(phis[iphi]*180/pi))
         ax.locator_params(nbins=4)
         axs.locator_params(nbins=4)
-        #axg.locator_params(nbins=4)
         axesv[iphi].locator_params(nbins=4)
 
     for iphi in range(nphi):
-        ax=axes[iphi]
-        av=axesv[iphi]
-        #ag=axeig[iphi]
-        ae=ax_er[iphi]
+        ax=axes[iphi]; av=axesv[iphi]; ae=ax_er[iphi]
 
         x=sin(psis)**2
         xv = sin(container.dat_model.psi)**2
-
         ax.plot(x,Ei[iphi]*1e6,'r--',
                 label=r'$E_{i}$ (fitting)')
-
-        # y = container.dat_model.ehkl[istp][iphi]-\
-        #     container.dat_model.ig[istp][iphi]
-        # y = y*1e6
         y = tdat[iphi]*1e6
-        #y = tdat_ref[iphi]*1e6
-        ax.plot(x,y,'bx',
-                label=r'$\varepsilon^{hkl}-'\
+        ax.plot(x,y,'bx',label=r'$\varepsilon^{hkl}-'\
                     '\varepsilon^{hkl}_0$')
-
-
         av.plot(xv,vf[iphi],'g-',label='Vol. Fraction')
-        # ag.plot(
-        #     x,eps0[iphi]*1e6,'+',color='k',
-        #     label=r'$\varepsilon_{\mathrm{IG}}^{hkl}$')
-
-        ae.plot(
-            x,Ei[iphi]*1e6-y,
-            'r--',label=r'$E_{i} - \varepsilon^{hkl}-\varepsilon^{hkl}_0$')
-
-        __deco__(ax=ax,iopt=0)
-        __deco__(ax=ae,iopt=0)
-        #__deco__(ax=ag,iopt=2)
-
+        ae.plot(x,Ei[iphi]*1e6-y,
+                'r--',label=r'$E_{i} - \varepsilon^{hkl}-'\
+                    '\varepsilon^{hkl}_0$')
+        deco(ax=ax,iopt=0); deco(ax=ae,iopt=0)
         if iphi==0:
             ax.legend(loc='upper right',fontsize=9,fancybox=True).\
                 get_frame().set_alpha(0.5)
             av.legend(loc='lower right',fontsize=9,fancybox=True).\
                 get_frame().set_alpha(0.5)
         ax=axesf[iphi]
-        l, = ax.plot(
-            xv,sf[0][iphi]*1e6,'b-o',
-            label=r'$F_{11}$')
-        l, = ax.plot(
-            xv,sf[1][iphi]*1e6,'r-x',
-            label=r'$F_{22}$')
+        l, = ax.plot(xv,sf[0][iphi]*1e6,'b-o',
+                     label=r'$F_{11}$')
+        l, = ax.plot(xv,sf[1][iphi]*1e6,'r-x',
+                     label=r'$F_{22}$')
         av.set_ylabel(r'$f(\phi,\psi)$',dict(fontsize=15))
-        __deco__(ax=ax,iopt=1)
-        if iphi==0:
-            fancy_legend(ax)
+        deco(ax=ax,iopt=1)
+        if iphi==0:fancy_legend(ax)
+
+    if stress_wgt!=None:
+        container.sigma = np.array(stress_wgt)
+        container.calc_Ei(ivo=ivo)
+
+        # label = 'E_{i} \mathrm{(fitting) with}'
+        # for i in range(len(ivo)):
+        #     label = '%s \sigma_{%1i}: %3.1f'%(label,i+1,stress_wgt[i])
+        # label=r'$%s$'%label
+        label = r'$E_{i}$ with given stress'
+
+        for iphi in range(nphi):
+            ax=axes[iphi]
+            x=sin(psis)**2
+            ax.plot(x,container.Ei[iphi]*1e6,'k--',label=label)
+            if iphi==0: fancy_legend(ax,size=10)
 
     tune_x_lim(fig.axes,axis='x')
-    tune_x_lim(axes,axis='y')
-    tune_x_lim(axesv,axis='y')
-    tune_x_lim(axesf,axis='y')
-    # tune_x_lim(axeig,axis='y')
-    # tune_x_lim(ax_er,axis='y')
-    # tune_x_lim(ax_er,axis='x')
+    tune_x_lim(axes,    axis='y')
+    tune_x_lim(axesv,   axis='y')
+    tune_x_lim(axesf,   axis='y')
 
     ## remove redundant axis labels
     for i in range(len(axes)-1):
-        rm_lab(axes[i+1],axis='y')
-        rm_lab(axes[i+1],axis='x')
-        # rm_lab(ax_er[i+1],axis='y')
-        # rm_lab(ax_er[i+1],axis='x')
-        # rm_lab(axeig[i+1],axis='y')
+        rm_lab(axes[i+1], axis='y')
+        rm_lab(axes[i+1], axis='x')
         rm_lab(axesf[i+1],axis='y')
         rm_lab(axesf[i+1],axis='x')
-        rm_lab(axesv[i],axis='y')
+        rm_lab(axesv[i],  axis='y')
 
-    #for i in range(len(axes)):
-        # rm_lab(axeig[i],axis='x')
-
-
-    #fig.tight_layout()
-    #figs.tight_layout()
     return fig, figs, fige
 
 def __model_fit_plot_3d__(container,istp,nxphi=None):

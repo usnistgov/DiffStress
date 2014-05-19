@@ -240,7 +240,7 @@ def f(phi,psi,s1,s2): return 0.5 * s2 * sin(phi) * sin(2*psi)          # s23
 
 class DiffDat:
     """
-    Standard diffraction class that can work for both 
+    Standard diffraction class that can work for both
     the experimental and simulative sets of diffraction
     data obtained either by proto or by EVPSC.
     """
@@ -590,6 +590,7 @@ class ResidualStress:
                  mod_ext=None,
                  fnmod_epshkl='int_els_ph1.out',
                  fnmod_ig='igstrain_unload_ph1.out',
+                 #fnmod_ig='igstrain_load_ph1.out',
                  fnmod_sf='igstrain_fbulk_ph1.out',
                  fnmod_str='STR_STR.OUT',
 
@@ -719,14 +720,27 @@ class ResidualStress:
         self.ndatm = len(self.phism) * len(self.psism)
         ehklm = datm[2] # last state... steps
 
-        ngr=datm[3]
-        vf =datm[4]
-
+        ngr = datm[3]; vf = datm[4]
         ehklm_sorted = np.zeros((len(self.stepsm),self.nphim,self.npsim))
 
         # ig strain from model
         if fnmod_ig!=None:
-            self.eps0m = reader(fn=fnmod_ig,isort=True)[2]
+            try: self.eps0m = reader(fn=fnmod_ig,isort=True)[2]
+            except:
+                t,dum = reader2(fn=fnmod_ig,iopt=1)
+                # t[0] ! ehkl
+                # t[1] ! e (macro)
+                t[2] ! ehkle    (ehkl - emacro)
+                # t[3] ! fhkl
+                # t[4] ! fbulk
+                # t[5] ! ige       e(hkl) - f_hkl*Sij
+                # t[6] ! Sij
+                # t[7] ! phi
+                # t[8] ! psi
+
+                t[2] ![nst,nsf, nphi, npsi]
+
+
         elif fnmod_ig==None:
             self.eps0m = np.zeros(self.ehklm.shape)
         # stress factor from model
@@ -979,7 +993,7 @@ class ResidualStress:
         figs.savefig('fit_SF_iopt%i.pdf'%(iopt))
         return stress
 
-    def find_sigma(self,ivo=None):
+    def find_sigma(self,ivo=None,init_guess=[0,0,0,0,0,0]):
         """
         Find the stress by fitting the elastic strains
         1) guessed from stress
@@ -987,7 +1001,7 @@ class ResidualStress:
         """
         from scipy import optimize
         fmin = optimize.leastsq
-        dat=fmin(self.f_least,[0,0,0,0,0,0],args=(ivo),
+        dat=fmin(self.f_least,init_guess,args=(ivo),
                  full_output=True,xtol=1e-12,ftol=1e-12,maxfev=1000)
         stress=dat[0]
         cov_x, infodict, mesg, ier = dat[1:]
@@ -1062,6 +1076,38 @@ class ResidualStress:
                 self.cffs[5,iphi,ipsi] = f(self.phis[iphi],self.psis[ipsi],self.s1,self.s2) # s23
 
         self.cffs = self.sf[:,:,:].copy()
+
+    def plot(self,stress=[0,0,0,0,0,0],ivo=None,iopt=0,label='None'):
+        """
+        iopt=0: plot tdat
+        iopt=1: plot Ei
+        """
+        from MP.lib import mpl_lib
+        wide_fig = mpl_lib.wide_fig
+        rm_inner = mpl_lib.rm_inner
+        tune_xy_lim = mpl_lib.tune_xy_lim
+        ticks_bin_u = mpl_lib.ticks_bins_ax_u
+        self.sigma=np.array(stress)
+        self.coeff()
+        self.calc_Ei(ivo=ivo) # calculated self.Ei
+        # plot and compare self.Ei / self.tdat
+        phi = self.phis
+        psi = self.psis
+        nphi = self.nphi
+        npsi = self.npsi
+
+        fig = wide_fig(nw=nphi)
+        for iphi in range(nphi):
+            ph = phi[iphi]
+            ax = fig.axes[iphi]
+            #x = psi
+            x = sin(psi*np.pi/180.)**2
+            ax.plot(psi,self.tdat[iphi],'x',label=r'$\varepsilon^{hkl}$')
+            ax.plot(psi,self.Ei[iphi],'-',label=r'$fitting$')
+
+        rm_inner(fig.axes)
+        ticks_bin_u(fig.axes)
+        tune_xy_lim(fig.axes)
 
     def f_least_d(self,stress=[0,0,0,0,0,0]):
         """
