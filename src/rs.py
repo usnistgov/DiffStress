@@ -589,14 +589,19 @@ class ResidualStress:
     def __init__(self,
                  mod_ext=None,
                  fnmod_epshkl='int_els_ph1.out',
+
                  #fnmod_ig='igstrain_unload_ph1.out',
-                 fnmod_ig='igstrain_fbulk_ph1.out',
                  #fnmod_ig='igstrain_bix_ph1.out',
+                 fnmod_ig='igstrain_fbulk_ph1.out',
+
                  fnmod_sf='igstrain_fbulk_ph1.out',
+
                  fnmod_str='STR_STR.OUT',
 
                  fnexp_ehkl='Bsteel_BB_00.txt',
+
                  fnexp_sf='YJ_Bsteel_BB.sff',
+
                  exppath='rs',
 
                  fnPF='rs/new_flowcurves.dat',
@@ -617,7 +622,6 @@ class ResidualStress:
         i_ip = 0 (collective stress analysis)
                1 (stress analysis only to check consistency in model)
         """
-
         if mod_ext!=None:
             print "mod_ext <%s> is given"%mod_ext
             fnmod_epshkl = '%s.%s'%(
@@ -626,9 +630,8 @@ class ResidualStress:
                 fnmod_ig.split('.')[0],mod_ext)
             fnmod_sf = '%s.%s'%(
                 fnmod_sf.split('.')[0],mod_ext)
-            fnmod_sf = '%s.%s'%(
-                fnmod_sf.split('.')[0],mod_ext)
-
+            fnmod_str = '%s.%s'%(
+                fnmod_str.split('.')[0],mod_ext)
 
         #######################################
 
