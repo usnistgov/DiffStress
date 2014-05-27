@@ -67,8 +67,7 @@ class StressAnalysis:
         self.IG.interp_psi(self.EXP.psis)
 
     def apply_sym(self):
-        self.EXP.apply_sym()
-        #self.EXP.get_ehkl()
+        pass
 
     def get_visualize(self,sigma=[0,0],istp=0,uni='MPa',d0=None):
         """
@@ -147,6 +146,7 @@ class StressAnalysis:
         self.calc_Ei(ivo=ivo)
 
         f_array=[]
+
         for iphi in range(nphi):
             for ipsi in range(npsi):
                 d = self.EXP.ehkl[self.istp,iphi,ipsi] -\

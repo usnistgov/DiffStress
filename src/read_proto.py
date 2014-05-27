@@ -312,19 +312,6 @@ class ProtoExp:
         self.psi = self.psi + offset
         self.psis = self.psis + offset
 
-    def apply_sym(self):
-        """
-        apply symmetry to d-spacings, intensities and fwhm
-        """
-        for i in range(self.nscan):
-            self.P_scan[i].apply_sym()
-        for i in range(self.nscan):
-            self.P_scan[i].get_dspc_avg()
-        for i in range(self.nscan):
-            self.P_scan[i].get_epshkl_davg()
-
-        self.get_ehkl()
-
 
 class ProtoScan:
     """
@@ -354,11 +341,6 @@ class ProtoScan:
     def put_psi_offset(self,offset=0.0):
         for i in range(len(self.protophi)):
             self.protophi[i].put_psi_offset(offset)
-    def apply_sym(self):
-        for i in range(len(self.protophi)):
-            self.protophi[i].symmetrize()
-        self.get_dspc_avg()
-        self.get_epshkl_davg()
 
 
 
@@ -409,36 +391,6 @@ class ProtoPhi:
         self.psis, idx = ssort.shellSort(self.psis)
         self.ppscans = ind_swap(self.ppscans,idx)
         self.npsi = len(self.psis)
-
-    def symmetrize(self):
-        import copy
-        if any(self.psis!=self.psis[::-1]*-1):
-            print 'symmetrization is not available'
-            return -1
-
-        # for i in range(len(self.ppscans)):
-        #     self.ppscans[i].
-        for i in range(self.npsi/2):
-            i0 =  i
-            i1 = -i - 1
-            if self.psis[i0]!=self.psis[i1]*-1:
-                raise IOError, 'an error not matching +-psi'
-
-            p0=copy.deepcopy(self.ppscans[i0])
-            p1=copy.deepcopy(self.ppscans[i1])
-
-            if p0.psi!=p1.psi*-1: raise IOError, 'Not matched psi'
-            if p0.phi!=p1.phi: raise IOError, 'Not matched phi'
-
-            psi = p0.psi
-            phi = p0.phi
-            dspc = (p0.dspc + p1.dspc)/2.
-            fwhm = (p0.fwhm + p1.fwhm)/2.
-            ints = (p0.ints + p1.ints)/2.
-            th2  = (p0.th2 + p1.th2)/2.
-
-            self.ppscans[i0] = PhiPsiScan(psi,phi,dspc,th2,fwhm,ints)
-            self.ppscans[i1] = PhiPsiScan(psi,phi,dspc,th2,fwhm,ints)            
             
 class Det:
     """
