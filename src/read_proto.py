@@ -125,9 +125,9 @@ class ProtoExp:
             self.phis=np.unique(self.phis)
             self.psis=np.unique(np.array(self.psis))
 
-            if (len(nphis)!=1): 
+            if (len(nphis)!=1):
                 raise IOError, 'phi setting is not uniform'
-            if (len(npsis)!=1): 
+            if (len(npsis)!=1):
                 raise IOError, 'phi setting is not uniform'
 
             self.nphis=nphis[0]
@@ -148,7 +148,7 @@ class ProtoExp:
         for i in range(len(self.phis)):
             print '%+4i'%self.phis[i],
         print ''
-        print '%8s %4i'%('npsis:', self.npsis), 
+        print '%8s %4i'%('npsis:', self.npsis),
         for i in range(3):
             print '%+4.1f'%self.psis[i],
         print ' ... ',
@@ -162,7 +162,7 @@ class ProtoExp:
         print ' ...' ,
         for i in range(1):
             print '%4.2f'%(self.flow.epsilon_vm[-i-1]),
-        print 
+        print
         print '#--------------------------------------------#'
 
     def get_ehkl(self):
@@ -220,7 +220,7 @@ class ProtoExp:
             mx = mx, mn=mn)
 
         for i in range(self.flow.nstp):
-            eps = self.flow.epsilon_vm[i] 
+            eps = self.flow.epsilon_vm[i]
             cl = c.to_rgba(eps)
             for j in range(self.nphi):
                 #X = np.sin(self.psi*np.pi/180.)**2
@@ -302,9 +302,33 @@ class ProtoExp:
         #tune_xy_lim = mpl_lib.tune_xy_lim(axest)
         rm_inner(figs.axes)
 
+    def put_psi_offset(self,offset=0.0):
+        """
+        Adjust psi values by putting an offset
+        """
+        for i in range(self.flow.nstp):
+            self.P_scan[i].put_psi_offset(offset)
+
+        self.psi = self.psi + offset
+        self.psis = self.psis + offset
+
+    def apply_sym(self):
+        """
+        apply symmetry to d-spacings, intensities and fwhm
+        """
+        for i in range(self.nscan):
+            self.P_scan[i].apply_sym()
+        for i in range(self.nscan):
+            self.P_scan[i].get_dspc_avg()
+        for i in range(self.nscan):
+            self.P_scan[i].get_epshkl_davg()
+
+        self.get_ehkl()
+
+
 class ProtoScan:
     """
-    a set of protophi taken at a state of interest
+    a set of protophi taken at a 'mechanical' state of interest
     """
     def __init__(self):
         self.protophi=[]
@@ -327,6 +351,15 @@ class ProtoScan:
             ps = self.protophi[i].ppscans
             for j in range(len(ps)):
                 ps[j].epshkl = (ps[j].dspc - self.d_avg)/self.d_avg
+    def put_psi_offset(self,offset=0.0):
+        for i in range(len(self.protophi)):
+            self.protophi[i].put_psi_offset(offset)
+    def apply_sym(self):
+        for i in range(len(self.protophi)):
+            self.protophi[i].symmetrize()
+        self.get_dspc_avg()
+        self.get_epshkl_davg()
+
 
 
 
@@ -334,7 +367,8 @@ class ProtoPhi:
     """
     A ProtoPhi contains a number of psi scans for a fixed phi
     """
-    def __init__(self,fn='../dat/23JUL12/23JUL12_0021Data4Phi135.txt'):
+    def __init__(self,fn='../dat/23JUL12/23JUL12_0021'\
+                 'Data4Phi135.txt'):
         self.detectors = read(fn)
         self.phi = self.detectors[0].phi
         self.ndetectors = len(self.detectors)
@@ -365,7 +399,47 @@ class ProtoPhi:
             Y.append(y)
         plt.plot(X,Y,'-x')
 
+    def put_psi_offset(self,offset=0.0):
+        for idet in range(self.ndet):
+            det = self.detectors[idet]
+            for j in range(len(det.ppscans)):
+                det.ppscans[j].put_psi_offset(offset)
 
+        self.psis = self.psis + offset
+        self.psis, idx = ssort.shellSort(self.psis)
+        self.ppscans = ind_swap(self.ppscans,idx)
+        self.npsi = len(self.psis)
+
+    def symmetrize(self):
+        import copy
+        if any(self.psis!=self.psis[::-1]*-1):
+            print 'symmetrization is not available'
+            return -1
+
+        # for i in range(len(self.ppscans)):
+        #     self.ppscans[i].
+        for i in range(self.npsi/2):
+            i0 =  i
+            i1 = -i - 1
+            if self.psis[i0]!=self.psis[i1]*-1:
+                raise IOError, 'an error not matching +-psi'
+
+            p0=copy.deepcopy(self.ppscans[i0])
+            p1=copy.deepcopy(self.ppscans[i1])
+
+            if p0.psi!=p1.psi*-1: raise IOError, 'Not matched psi'
+            if p0.phi!=p1.phi: raise IOError, 'Not matched phi'
+
+            psi = p0.psi
+            phi = p0.phi
+            dspc = (p0.dspc + p1.dspc)/2.
+            fwhm = (p0.fwhm + p1.fwhm)/2.
+            ints = (p0.ints + p1.ints)/2.
+            th2  = (p0.th2 + p1.th2)/2.
+
+            self.ppscans[i0] = PhiPsiScan(psi,phi,dspc,th2,fwhm,ints)
+            self.ppscans[i1] = PhiPsiScan(psi,phi,dspc,th2,fwhm,ints)            
+            
 class Det:
     """
     read a block of data lines belonging to a detector
@@ -420,6 +494,21 @@ class Det:
                            fwhm=self.fwhm[i],
                            ints=self.ints[i]))
 
+    def put_psi_offset(self,offset=0.0):
+        """
+        Put offset of psi...
+        """
+        for i in range(len(self.ppscans)):
+            self.ppscans[i].put_psi_offset(offset=offset)
+
+        # any systematic offset doesn't change the order of psi
+        # however, it may change the order of sin2psi....
+        self.psis = self.psis + offset
+        self.sin2psi = np.sin(self.psis*np.pi/180.)**2
+
+        print 'An offset value for psi was introduced.'
+        print 'Consider redoing sort_sin2psi if necessary'
+
 class PhiPsiScan:
     def __init__(self,psi,phi,dspc,th2,fwhm,ints):
         self.psi=psi
@@ -433,3 +522,10 @@ class PhiPsiScan:
         from phikhi import psikhi2cart
         conv = psikhi2cart.conv
         self.x, self.y = conv(p=self.phi,k=self.psi)
+    def put_psi_offset(self,offset=0.0):
+        """
+        In experiments, sometimes the beta zero position
+        requires a fix aftermath, if the symmetry was not
+        properly set at the beginning.
+        """
+        self.psi=self.psi + offset

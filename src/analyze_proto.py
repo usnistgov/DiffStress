@@ -61,6 +61,15 @@ class StressAnalysis:
         self.EXP.get_ehkl() # get ehkl based on d_avg
         self.nstp = self.EXP.flow.nstp
 
+    def put_psi_offset(self,offset=0.0):
+        self.EXP.put_psi_offset(offset=offset)
+        self.SF.interp_psi(self.EXP.psis)
+        self.IG.interp_psi(self.EXP.psis)
+
+    def apply_sym(self):
+        self.EXP.apply_sym()
+        #self.EXP.get_ehkl()
+
     def get_visualize(self,sigma=[0,0],istp=0,uni='MPa',d0=None):
         """
         Let's visualize the procedure. (sigma in Pascal)
@@ -198,7 +207,9 @@ def main(path='/Users/yj/repo/rs_pack/dat/23Jul12',
          fexp=None,
          iso_SF=False,
          ishow=False,
-         ind_plot=False):
+         ind_plot=False,
+         psi_offset=0.0,
+         psi_sym=False):
     """
     """
     if fexp==None:
@@ -220,8 +231,12 @@ def main(path='/Users/yj/repo/rs_pack/dat/23Jul12',
     plt.ioff()
 
     RS_graphs = PdfPages('RS_Graphs.pdf')
-
     mystress = StressAnalysis(path=path,fref=fref,fn_sf=fn_sf)
+    if psi_offset!=0: mystress.put_psi_offset(psi_offset)
+    if psi_sym:
+        print 'psi symmetry has been applied.'
+        mystress.apply_sym()
+
     mystress.nstp
     mystress.EXP.plot_all()
     RS_graphs.savefig(plt.gcf())
