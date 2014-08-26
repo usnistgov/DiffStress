@@ -6,9 +6,9 @@ wide_fig=mpl_lib.wide_fig
 fancy_legend = mpl_lib.fancy_legend
 
 def main_reader(path='../dat/23JUL12', fref='Bsteel_BB_00.txt',
-                fn_sf ='YJ_Bsteel_BB.sff',icheck=False):
+                fn_sf ='YJ_Bsteel_BB.sff',icheck=False,isym=False):
     import copy
-    EXP, SF, IG = rs_exp.read_main(path,fref,fn_sf,icheck)
+    EXP, SF, IG = rs_exp.read_main(path,fref,fn_sf,icheck,isym)
 
     ## interpolate based on experimental phis, psis, IG
 
@@ -54,9 +54,9 @@ class StressAnalysis:
     def __init__(self,
                  path='/Users/yj/repo/rs_pack/dat/23Jul12',
                  fref='Bsteel_BB_00.txt',
-                 fn_sf='YJ_Bsteel_BB.sff'):
+                 fn_sf='YJ_Bsteel_BB.sff',isym=False):
         self.EXP,self.SF,self.IG,self.SF_orig,self.IG_orig\
-            = main_reader(path,fref,fn_sf,icheck=False)
+            = main_reader(path,fref,fn_sf,icheck=False,isym=isym)
 
         self.EXP.get_ehkl() # get ehkl based on d_avg
         self.nstp = self.EXP.flow.nstp
@@ -231,7 +231,8 @@ def main(path='/Users/yj/repo/rs_pack/dat/23Jul12',
     plt.ioff()
 
     RS_graphs = PdfPages('RS_Graphs.pdf')
-    mystress = StressAnalysis(path=path,fref=fref,fn_sf=fn_sf)
+    mystress = StressAnalysis(path=path,fref=fref,
+                              fn_sf=fn_sf,isym=psi_sym)
     if psi_offset!=0: mystress.put_psi_offset(psi_offset)
     if psi_sym:
         print 'psi symmetry has been applied.'
@@ -345,7 +346,7 @@ def main(path='/Users/yj/repo/rs_pack/dat/23Jul12',
                     mystress.flow.sigma_vm[istp],'ro')
 
             for i in range(len(figx.axes)-2):
-                figx.axes[i].set_ylim(-0.0008,0.0004)
+                figx.axes[i].set_ylim(-0.0010,0.0006)
 
             fancy_legend(figx.axes[0])
             rm_inner(figx.axes[:4])

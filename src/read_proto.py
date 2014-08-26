@@ -46,14 +46,44 @@ def read(fn='../dat/23JUL12/23JUL12_0021Data4Phi135.txt'):
         if (kount>5): raise IOError, 'Nasty format match'
     return detectors
 
+
+
+### fref file requires a certain format:
+"""
+igbulk.sff    MajorStrainColumn: 2
+filename        E_xx   E_yy
+11JUL12_0007    0.000  0.000
+DDMMMYY_????    0.010  0.010
+DDMMMYY_????    0.020  0.020
+...
+"""
+### fref2 file requires a certain format:
+"""
+Records of the procedure 0: referece image.
+stress filename  images   remakrs
+13JUL12_0016      8,9    
+13JUL12_0017      74,75
+DDMMMYY_iiii      i,i
+"""
+
 class ProtoExp:
     """
     a Proto Exp contains a number of psi scans for various phis
     for a various deformation steps
     """
-    def __init__(self,path='../dat/23JUL12',fref=None):
-
-        if fref==None:
+    def __init__(self,path='../dat/23JUL12',fref=None,isym=False,
+                 fref2=None):
+        """
+        fref: the reference data file name, which contains
+               1) Stress factor file name
+               2) MajorStrainColumn index (1 or 2)
+               3) List of the XRAY file names and
+                  corresponding E_xx and E_yy
+        isym: symmetry (?)
+        fref2: reference file format 2 containing 
+               1) XRAY file names and its corresponding DIC indices
+        """
+        if fref==None and fref2==None:
             raise IOError, 'Not further developed yet.'
             # fns = glob('%s%s*.txt'%(path,sep))
             # scan_i = []
@@ -109,7 +139,9 @@ class ProtoExp:
                 nphi = len(fs)
                 self.P_scan.append(ProtoScan())
                 for iphi in range(nphi):
-                    self.P_scan[i].add_phi(ProtoPhi(fn=fs[iphi]))
+                    self.P_scan[i].add_phi(ProtoPhi(
+                        fn=fs[iphi],isym=isym))
+                        
                 self.P_scan[i].get_dspc_avg()
                 self.P_scan[i].get_epshkl_davg()
 
@@ -122,13 +154,14 @@ class ProtoExp:
 
             nphis=np.unique(nphis)
             npsis=np.unique(npsis)
+            self.psis=self.psis[0]
             self.phis=np.unique(self.phis)
-            self.psis=np.unique(np.array(self.psis))
+            # self.psis=np.unique(np.array(self.psis))
 
-            if (len(nphis)!=1):
-                raise IOError, 'phi setting is not uniform'
-            if (len(npsis)!=1):
-                raise IOError, 'phi setting is not uniform'
+            # if (len(nphis)!=1):
+            #     raise IOError, 'phi setting is not uniform'
+            # if (len(npsis)!=1):
+            #     raise IOError, 'phi setting is not uniform'
 
             self.nphis=nphis[0]
             self.npsis=npsis[0]
@@ -342,15 +375,12 @@ class ProtoScan:
         for i in range(len(self.protophi)):
             self.protophi[i].put_psi_offset(offset)
 
-
-
-
 class ProtoPhi:
     """
     A ProtoPhi contains a number of psi scans for a fixed phi
     """
     def __init__(self,fn='../dat/23JUL12/23JUL12_0021'\
-                 'Data4Phi135.txt'):
+                 'Data4Phi135.txt',isym=False):
         self.detectors = read(fn)
         self.phi = self.detectors[0].phi
         self.ndetectors = len(self.detectors)
@@ -370,7 +400,19 @@ class ProtoPhi:
         self.psis, idx = ssort.shellSort(self.psis)
         self.ppscans = ind_swap(self.ppscans,idx)
         self.npsi = len(self.psis)
-        ## sorts the PhiPsi scans in detectors based on phi-psi
+
+        # symmetrize the d-spacings...
+        if isym:
+            import copy
+            for i in range(len(self.ppscans)/2):
+                i0 = i
+                i1 = -i - 1
+                p0 = copy.deepcopy(self.ppscans[i0])
+                p1 = copy.deepcopy(self.ppscans[i1])
+                #print p0.psi, p1.psi
+                self.ppscans[i0].dspc=(p0.dspc+p1.dspc)/2.
+                self.ppscans[i1].dspc=(p0.dspc+p1.dspc)/2.
+
     def plot(self):
         import matplotlib.pyplot as plt
         X=[]; Y=[]
