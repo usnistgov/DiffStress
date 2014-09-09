@@ -51,7 +51,7 @@ def readstress(i1=0,i2=0,path='.'):
         s, er = __reader__.main(cfn, mode='tr')
         sig.append(s[i1,i2])
         err.append(er[i1,i2])
-    return sig, err
+    return sig, err, fntr
 
 def readstressfn(i1=0,i2=0, fn=None):
     s, er = __reader__.main(fn, mode='tr')
@@ -60,31 +60,93 @@ def readstressfn(i1=0,i2=0, fn=None):
 def ys(ix=0, iy=1):
     """ plot s11-s22 yield points """
     import matplotlib.pyplot as plt
-    s11, s11e = readstress(ix,ix)
-    s22, s22e = readstress(iy,iy)
+    s11, s11e, dum = readstress(ix,ix)
+    s22, s22e, dum = readstress(iy,iy)
     plt.errorbar(s11, s22, s11e, s22e, 'x-',
                  ecolor='red',)
 
-def sigeps(ix=0, iy=1, path='.'):
+def sigeps(ix=0, iy=1, path='.',dicfn=None,fig=None,iax=0,label=None,
+           ieps_flip = False, isig_flip=False):
     """ stress-strain curve ... """
     import numpy as np
-    import matplotlib.pyplot as plt
-    s11, s11e = readstress(ix, ix, path=path)
-    s22, s22e = readstress(iy, iy, path=path)
+    from MP.lib import mpl_lib, axes_label
+    eqv = axes_label.__eqv__
+
+    from __reader__ import __logreader__ as read_log
+    from os import sep
+    from MP.mat import mech
+    fc=mech.FlowCurve()
+    
+    s11, s11e, fntr = readstress(ix, ix, path=path)
+    s22, s22e, dum  = readstress(iy, iy, path=path)
 
     print '# of data points: ', len(s11)
 
+    fn_trs=[]
+    for i in range(len(fntr)):
+        fn_trs.append(fntr[i].split(sep)[-1])
+
     # An virtual strain
-    ind = np.arange(len(s11))
+    if dicfn==None: 
+        xs = np.arange(len(s11))
+    else:
+        ind, ex, ey, exy, ex_e, ey_e, exy_e =np.loadtxt(dicfn).T
+        fn, ln_fn, images = read_log(fn='%s%slog'%(path,sep))
+        S1=[];S1e=[]; S2=[];S2e=[]
 
-    ax = plt.gca()
-    ax.errorbar(ind, s11, yerr=s11e,
-                marker='o', ls='--',
-                label='%i%i'%(ix+1,ix+1))
-    ax.errorbar(ind, s22, yerr=s22e,
-                marker='o', ls='--',
-                label='%i%i'%(iy+1,iy+1))
-    ax.legend(loc='best')
+        if isig_flip:
+            dum = s11[::]
+            s11 = s22[::]
+            s22 = dum[::]
 
-    ax.set_ylabel(r'$\bar{\Sigma}$', fontsize=20)
-    ax.set_xlabel('Index', fontsize=20)
+            dum = s11e[::]
+            s11e = s22e[::]
+            s22e = dum[::]
+
+        for i in range(len(images)):
+            fn_triaxial = fn[i]
+            idx = np.array(fn_trs).searchsorted(fn_triaxial)
+            S1.append(s11[idx])
+            S2.append(s22[idx])
+            S1e.append(s11e[idx])
+            S2e.append(s22e[idx])
+
+        ## Stress states
+        fc.get_stress(S1,i=0,j=0)
+        fc.get_stress(S2,i=1,j=1)
+        fc.set_zero_sigma_ij(2,2)
+        fc.set_zero_shear_stress()
+
+        e11=[];e22=[];e33=[]
+        for i in range(len(images)):
+            i0s=images[i]
+
+            i0 = i0s[0]-1
+
+            e11.append(ex[i0])
+            e22.append(ey[i0])
+            e33.append(-ex[i0]-ey[i0])
+
+        ## x-y flip for the strain
+        if ieps_flip:
+            dum = e11[::]
+            e11 = e22[::]
+            e22 = dum[::]
+        fc.get_strain(e11,0,0)
+        fc.get_strain(e22,1,1)
+        fc.get_strain(e33,2,2)
+        fc.set_zero_shear_strain()
+
+    fc.get_eqv()
+    if fig==None:
+        wf=mpl_lib.wide_fig
+        fig=wf(nw=1,nh=1)
+        ax=fig.axes[0]
+    if fig!=None:
+        ax=fig.axes[iax]
+
+    ax.plot(fc.epsilon_vm, fc.sigma_vm, 'o', label=label)
+    eqv(ax=ax,ft=12)
+    return fig,fc,fn_trs
+
+    

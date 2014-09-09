@@ -103,8 +103,10 @@ class ProtoExp:
             #     fs = glob('%s%s*_%sData*.txt'%(
             #         path,sep,
             #         str(scan_i[i]).zfill(4)))
-
-        if fref!=None:
+        elif fref!=None and fref2!=None:
+            raise IOError, "Only one of fref"+\
+                " and fref2 shouldn't be 'None'"
+        elif fref!=None:
             if path==None: path = '.'
             fref = '%s%s%s'%(path,sep,fref)
 
@@ -134,7 +136,12 @@ class ProtoExp:
             self.psis = []
 
             for i in range(self.nscan):
-                dum = '%s%s%sData*.txt'%(path,sep,flab[i])
+                fn_tr = glob('%s%s%sData.txt'%(path,sep,flab[i]))[0]
+                igain=open(fn_tr,'r').readlines()[38].split(':')[1].split('\n')[0]
+                if igain[1:4]!='P/G':
+                    print 'warning: check gain flag in the triaxial'
+                    print igain[1:4]
+                dum = '%s%s%sData*Phi*.txt'%(path,sep,flab[i])
                 fs = glob(dum)
                 nphi = len(fs)
                 self.P_scan.append(ProtoScan())
