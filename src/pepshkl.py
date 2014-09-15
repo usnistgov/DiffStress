@@ -249,7 +249,7 @@ def reader3(fn='igstrain_unloads_avg.out',isort=False):
     """
     Reader for files in the 'igstrain_unloads_avg.out' template.
     """
-    from ssort import sh as sort
+    from MP.ssort import sh as sort
     # from sff_converter import condition
     # difl, nphi, phis, nbeta, neps, eps = condition(difile)
     ds = open(fn,'r').read()
@@ -293,7 +293,7 @@ def reader3(fn='igstrain_unloads_avg.out',isort=False):
 
 def reader4(fn='igstrain_unload_ph1.out',ndetector = 2):
     """ """
-    from ssort import sh as sort
+    from MP.ssort import sh as sort
     npb = int(open(fn,'r').readlines()[1].split()[0])
     ds = np.loadtxt(fn,skiprows=2).T
     # steps
@@ -374,7 +374,7 @@ def ex02(fn='int_eps_ph1.out',istep=0,iphi=0,ax01=None,
     label = None
     ls    = ['-x','--o']
     """
-    import ssort as sort
+    import MP.ssort as sort
     sort = sort.shellSort
     psi1,psi2,eps1,eps2,sig1,sig2,\
         vol1,vol2,s11,s22,e11,e22,ngr1,ngr2=\
@@ -517,7 +517,7 @@ def ex_igb(fn='igstrain_fbulk_ph1.out',ifig=2,iphi=0,isf=0,
     """ read ig strain file and analyze... (igstrain_fbulk_ph1.out) """
     import matplotlib.pyplot as plt
     from sff_converter import condition
-    from ssort import sh as sort
+    from MP.ssort import sh as sort
     difl, nphi, phis, nbeta, neps, eps = condition(fn=None)
     eps = eps * 2. # effective strain
     fig = plt.figure(ifig,figsize=(10,8))
@@ -830,7 +830,7 @@ def ex_igb_bix(fn='igstrain_bix_ph1.out',ifig=1,iphi=0,
                mxnst=None):
     import matplotlib.pyplot as plt
     from sff_converter import condition
-    from ssort import sh as sort
+    from MP.ssort import sh as sort
     difl, nphi, phis, nbeta, neps, eps = condition(fn=None)
     eps = eps * 2. # effective strain
 
@@ -991,7 +991,7 @@ def pub_plot(ifig=10):
     """
     import sff_plot
     import matplotlib.pyplot as plt
-    from ssort import sh as sort
+    from MP.ssort import sh as sort
 
     fij,e0,phis,psis,exx = sff_plot.reader(fn='exp_dat/Bsteel/YJ_Bsteel_BB.sff')
     print phis
@@ -1049,6 +1049,11 @@ def pub_plot(ifig=10):
 
 
 def ex_igb_bix_t(fn='igstrain_bix_ph1.out',fnout='igstrain_loads_avg.out'):
+    """
+    Default input fn is 'igstrain_bix_ph1.out':
+     this output file contains diffraction data measured prior to 'interruption'
+     of the unloading, after which the SF is virtually obtained in dif_planes2.f
+    """
     import matplotlib.pyplot as plt
     from sff_converter import condition
     import numpy as np
@@ -1088,7 +1093,7 @@ def ex_igb_cf(fnu='igstrain_fbulk_ph1.out',fnl='igstrain_bix_ph1.out'):
     import matplotlib.pyplot as plt
     from sff_converter import condition
     import numpy as np
-    from ssort import sh as sort
+    from MP.ssort import sh as sort
     difl, nphi, phis, nbeta, neps, eps = condition(fn=None)
 
     plt.ioff()

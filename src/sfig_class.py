@@ -45,9 +45,7 @@ class SF:
     def restore_sf(self):
         self.sf = self.sf_old.copy()
 
-    def add_iso_sf(self,E,nu):
-        E  = 204e9
-        nu = 0.3
+    def add_iso_sf(self,E=204e9,nu=0.3):
         phi = self.phi.copy()
         psi = self.psi.copy()
         self.sf_iso = np.zeros((len(phi),len(psi),6))

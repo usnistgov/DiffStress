@@ -6,19 +6,21 @@ def main(fn='temp.sff', difile=None, iph=1, factor=1e6, itab=False,
     """
     Arguments
     =========
-    fn     = 'temp.sff'
-    difile = 'None'
-    iph    = 1
-    factor = 1e6
-    itab   = False (use '\t' as the delimiter)
-    ieps0  = 0,1,2,3 (option for ntepsphiout)
-             0: int_eps_ph - at unloads (eps^hkl)
-             1: int_els_ph - at loads   (eps^hkl)
-             2: igstrain_ph - at loads  (Eps-eps^hkl)
-             3: igstrain_ph - at unloads  (Eps-eps^hkl)
+    fn       = 'temp.sff'
+    difile   = 'None'
+    iph      = 1
+    factor   = 1e6
+    itab     = False (use '\t' as the delimiter)
+    # ieps0 = 0,1,2,3 (option for ntepsphiout)
+    #          0: int_eps_ph - at unloads (eps^hkl)
+    #          1: int_els_ph - at loads   (eps^hkl)
+    #          2: igstrain_ph - at loads  (Eps-eps^hkl)
+    #          3: igstrain_ph - at unloads  (Eps-eps^hkl)
+    ieps0 is deprecated. The option for IG and SF is now hardwired
              4: igstrain_bulk - at loads (eps^hkl - Fij<Sij>)
              5: igstrain_bulk - at loads (eps^hkl - Fij/Fij^bulk E)
-    irev   = False (if True, eps0 = -eps0) - This argument is for
+
+    irev    = False (if True, eps0 = -eps0) - This argument is for
              the one time. (Mistake in diffwrite subroutine...)
 
     * Note that stress factor file for Thomas's PF software
@@ -28,30 +30,39 @@ def main(fn='temp.sff', difile=None, iph=1, factor=1e6, itab=False,
     for both single crystal moduli and hardening parameters.
     So, it is most likely that the stress factor should be
     converted from 1/MPa to 1/TPa.  10^6 MPa = 1 TPa.
+
+    There are various methods to calculate SF/IG strains in EVPSC.
+    1. igstrain_loads_avg.out: this file is not
+       one of many EVPSC-generated-output files. This file is
+       calculated based on ...
+
     """
     if not(itab): raise IOError,'use itab==True'
 
     if difile==None:
         print 'difile is none: find it from EVPSC.IN'
-        dl  = open('EVPSC.IN','r').readlines()
-        nph = int(dl[1].split()[0])
-        n = 12*(iph-1) + 3 + 11
-        difile= dl[n][:-1]
+        dl     = open('EVPSC.IN','r').readlines()
+        nph    = int(dl[1].split()[0])
+        n      = 12*(iph-1) + 3 + 11
+        difile = dl[n][:-1]
     print difile
 
     # condition
     difl, nphi, phis, npsi, neps, strains = condition(fn=difile)
 
+    # ------------------------------------------------------- #
     fn_ig_avg='igstrain_loads_avg.out'
+    # fn_ig_avg='igstrain_fbulk_ph1.out'
     from pepshkl import reader3 as reader
-    from pepshkl import ex_igb_bix_t
     import os.path
     if not(os.path.isfile(fn_ig_avg)):
+        from pepshkl import ex_igb_bix_t
         print 'Run pepshkl.ex_igb_cf or pepshkl.ex_igb_bix_t'\
             ' to obtain igstrain_loads_avg.out'
         ex_igb_bix_t()
-
     dat,psis,fij = reader(fn_ig_avg,isort=True)
+    # ------------------------------------------------------- #
+
     psis = psis[0]
     print 'difile:',difile
     print 'npsi', npsi

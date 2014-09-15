@@ -9,14 +9,14 @@ cos = np.cos
 sin = np.sin
 pi  = np.pi
 def reader(fn='igstrain_load_ph1.out',isort=False,icheck=False):
-    if isort: from ssort import sh as sort
+    if isort: from MP.ssort import sh as sort
     dl = open(fn).readlines()
     npb = dl[1].split()[0]
     dl = dl[2:]
     print npb
     ds = open(fn).read()
     d = ds.split('npb')[1]
-#    d = np.loadtxt(fn,skiprows=2).T
+    #d = np.loadtxt(fn,skiprows=2).T
     d = rb(fn,skiprows=2)
 
     steps = np.unique(d[0])
@@ -29,11 +29,9 @@ def reader(fn='igstrain_load_ph1.out',isort=False,icheck=False):
         if pp in phis: pass
         else: phis.append(pp)
 
-    phis=np.array(phis)
-
+    phis = np.array(phis)
     nphi = len(phis)
     psis = []
-
 
     for i in range(len(dl)):
         d = dl[i].split()
@@ -42,8 +40,7 @@ def reader(fn='igstrain_load_ph1.out',isort=False,icheck=False):
         psis.append(psi1)
         psis.append(psi2)
 
-    psis=np.array(psis)
-    npsis= len(psis)
+    psis   = np.array(psis); npsis  = len(psis)
     epshkl = np.zeros((nstp,nphi,npsis))
     ngr    = np.zeros((nstp,nphi,npsis))
     v      = np.zeros((nstp,nphi,npsis))
@@ -91,8 +88,8 @@ def reader(fn='igstrain_load_ph1.out',isort=False,icheck=False):
         ps = psis.copy()
         ps.sort()
         if not(all(psis==ps)):
-            print psis
-            print ps
+            # print psis
+            # print ps
             print 'Data along psi should be rearranged'
             for istp in range(nstp):
                 for iphi in range(nphi):
@@ -126,7 +123,7 @@ def read_exp(fn='Bsteel_BB_00.txt',path='rs'):
     from os import sep
     from glob import glob
     from plot_sin2psi import read as read
-    from ssort import sh as sort
+    from MP.ssort import sh as sort
 
     paths = '%s%s'%(path,sep)
 
@@ -643,8 +640,8 @@ class ResidualStress:
         #  3     (2,3)         (1,2)
         #  4     (1,3)         (1,3)
         #  5     (1,2)         (2,3)
-        import paths;paths.main()
-        #from ssort import sh as sort
+        # import paths;paths.main()
+        #from MP.ssort import sh as sort
 
         if i_ip==0:
 
@@ -713,7 +710,7 @@ class ResidualStress:
         """
         from RS import pepshkl
         from pepshkl import reader2 as reader_sf
-        from ssort import sh as sort
+        from MP.ssort import sh as sort
         # eps^hkl from model
         datm = reader(fnmod_epshkl,isort=True)
         self.stepsm = map(int,datm[-1])
@@ -732,34 +729,31 @@ class ResidualStress:
             try:
                 self.eps0m = reader(fn=fnmod_ig,isort=True)[2]
             except:
-                print 'fnmod_ig is not readable by reader method in rs.py module'
+                print '\n***********************************************************'
+                print 'Given fnmod_ig filename is %s'%fnmod_ig
+                print 'This file is not readable by reader method in rs.py module'
                 print 'trial with reader2 method in pepshkl.py module is performed'
+                print '***********************************************************\n'
                 t,dum = reader_sf(fn=fnmod_ig,iopt=1)
                 # t[0] ! ehkl
                 # t[1] ! e (macro)
                 # t[2] ! ehkle    (ehkl - emacro)
                 # t[3] ! fhkl
-                # t[4] ! fbulk
+                # t[4] ! fbulk    (f bulk?)
                 # t[5] ! ige       e(hkl) - f_hkl*Sij
                 # t[6] ! Sij
                 # t[7] ! phi
                 # t[8] ! psi
                 # t[2] ![nst,nsf, nphi, npsi]
+                print 'IG strain (self.eps0m) was defined as e(hkl) - f_hkl*S(ij)'
                 self.eps0m=t[5][:,0,:,:]
-
-                # t = reader_sf(fn=fnmod_ig,iopt=2)
-                # # t[0] # ehkl
-                # # t[1] # e (macro)
-                # # t[2] # ehkle:  e - macro
-                # # t[3] # ige e(hkl) - F^hkl_ij * Sij(ij=1,1 and 2,2)
-                # self.eps0m = t[2]
 
         elif fnmod_ig==None:
             self.eps0m = np.zeros(self.ehklm.shape)
 
         # stress factor from model
         t, usf = reader_sf(fn=fnmod_sf)
-        sfm = t[3] # [istp,k,phi,psi]
+        sfm = t[3] # [istp,k,phi,psi] {fhkl} Stress Factor
 
         self.sfm = np.zeros((sfm.shape[0],6,sfm.shape[2],sfm.shape[3]))
         for istp in range(len(sfm)):
@@ -791,9 +785,14 @@ class ResidualStress:
         self.stressm_con = np.array([s11,s22,s33,s12,s13,s23])
         self.strainm = []
         self.stressm = []
+
+        # for ist in range(len(self.stepsm)):
+        #     self.strainm.append(self.strainm_con.T[self.stepsm[ist]])
+        #     self.stressm.append(self.stressm_con.T[self.stepsm[ist]])
         for ist in range(len(self.stepsm)):
-            self.strainm.append(self.strainm_con.T[self.stepsm[ist]])
-            self.stressm.append(self.stressm_con.T[self.stepsm[ist]])
+            self.strainm.append(self.strainm_con.T[ist])
+            self.stressm.append(self.stressm_con.T[ist])
+
         self.strainm=np.array(self.strainm)
         self.stressm=np.array(self.stressm)
 
@@ -809,9 +808,9 @@ class ResidualStress:
         Read experimental eps^hkl, eps^0, stress factor
         """
         import os
-        from ssort import sh as sort
-        from ssort import shellSort as shsort
-        from ssort import ind_swap as idsort
+        from MP.ssort import sh as sort
+        from MP.ssort import shellSort as shsort
+        from MP.ssort import ind_swap as idsort
         from sff_plot import reader as read_sff
 
         self.phise,self.psise,self.ehkle,self.dhkle,straine\
@@ -856,7 +855,7 @@ class ResidualStress:
 
     def readPF(self,fnPF):
         from ght_anl import reader
-        from ssort import sh as sort
+        from MP.ssort import sh as sort
         fij, ig, phi, psi, strain, sij, dhkl,d0hkl,ehkl = reader(fnPF)
 
         phi,psi = __torad__(phi,psi)
@@ -1157,16 +1156,17 @@ class ResidualStress:
 def psi_reso2(mod=None,ntot=2):
     """
     Make the data nearly-equal spaced along psi (sin2psi) axis
+
+    mod  = None
+    ntot = 2
     """
-    sf = mod.sf
+    sf   = mod.sf
     eps0 = mod.eps0
     ehkl = mod.ehkl
     tdat = mod.tdat # tdat is the stress proportional part
 
-    phis = mod.phis
-    psis = mod.psis
-    nphi = mod.nphi
-    npsi = mod.npsi
+    phis = mod.phis; psis = mod.psis
+    nphi = mod.nphi; npsi = mod.npsi
 
     sin2psi_=[]
     for i in range(len(psis)):
@@ -1179,26 +1179,20 @@ def psi_reso2(mod=None,ntot=2):
         ixd = find_nearest(sin2psi_,spc[i])
         inds.append(ixd)
 
-    sf=select_psi(sf,inds)
-    eps0=select_psi(eps0,inds)
-    ehkl=select_psi(ehkl,inds)
-    tdat=select_psi(tdat,inds)
+    sf   = select_psi(sf,inds)
+    eps0 = select_psi(eps0,inds)
+    ehkl = select_psi(ehkl,inds)
+    tdat = select_psi(tdat,inds)
     phis = phis[::]
     new_psi = []
     for i in range(len(inds)):
         new_psi.append(psis[inds[i]])
     psis = np.array(new_psi)
-    nphi = len(phis)
-    npsi = len(psis)
+    nphi = len(phis); npsi = len(psis)
 
-    mod.sf=sf
-    mod.eps0=eps0
-    mod.ehkl=ehkl
-    mod.tdat=tdat
-    mod.phis=phis
-    mod.psis=psis
-    mod.nphi=nphi
-    mod.npsi=npsi
+    mod.sf = sf    ; mod.npsi = npsi
+    mod.eps0 = eps0; mod.ehkl = ehkl; mod.tdat = tdat
+    mod.phis = phis; mod.psis = psis; mod.nphi = nphi
 
 def select_psi(dat,inds):
     array = []
