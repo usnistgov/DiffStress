@@ -64,7 +64,7 @@ def ex_consistency(
         mod_ref='STR_STR.OUT',sin2psimx=None,
         iscatter=False,psimx=None,psi_nbin=1,
         ig_sub=True,istep=None,hkl=None,iplot=True,
-        iwind=False,wdeg=2,ipsi_opt=0):
+        iwind=False,wdeg=2,ipsi_opt=0,fn_sff=None):
     """
     Consistency check between 'weighted average' stress and
     the stress obtained following the stress analysis method
@@ -131,7 +131,7 @@ def ex_consistency(
     flow_weight.get_eqv() ## calc Von Mises stress/strain
 
     if len(flow_weight.epsilon_vm)<50: lc='bx'
-    else: lc='b-'
+    else:                              lc='b-'
 
     if iplot:
         ax1.plot(flow_weight.epsilon_vm,flow_weight.sigma_vm,
@@ -147,7 +147,6 @@ def ex_consistency(
         """
         Dimensions of data arrays for:
         ==============================
-
         sf     (nstp, k, nphi, npsi)
         ig     (nstp, nphi, npsi)
         ehkl   (nstp, nphi, npsi)
@@ -218,7 +217,6 @@ def ex_consistency(
             plt.close(f1);plt.close(f2);plt.close(f3)
             plt.ion()
 
-
     if iplot: fe.close(); fs.close(); f_er.close()
 
     stress   = np.array(stress).T # diffraction stress
@@ -277,6 +275,7 @@ def __model_fit_plot__(container,ifig,istp,nxphi=None,hkl=None,
     fancy_legend = mpl_lib.fancy_legend
     rm_lab       = mpl_lib.rm_lab
     tune_x_lim   = mpl_lib.tune_x_lim
+    tune_xy_lim  = mpl_lib.tune_xy_lim
     deco         = axes_label.__deco__
 
     nphi = container.nphi; npsi = container.npsi
@@ -359,7 +358,6 @@ def __model_fit_plot__(container,ifig,istp,nxphi=None,hkl=None,
                 get_frame().set_alpha(0.5)
             # av.legend(loc='lower right',fontsize=9,fancybox=True).\
             #     get_frame().set_alpha(0.5)
-
 
         ## all_stress_factor_hkl.pdf
         ax=axesf[iphi]

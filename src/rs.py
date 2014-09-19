@@ -168,12 +168,18 @@ def read_exp(fn='Bsteel_BB_00.txt',path='rs'):
 
 def interpolate(xs,xp,fp):
     """
+    Arguments
+    =========
+    xs
+    xp
+    fp
     """
-    if len(xp)!=len(fp):
-        raise IOError, 'len(xp) should be equal to len(fp)'
+    if len(xp)!=len(fp): raise IOError, \
+       'len(xp) should be equal to len(fp)'
     intp = np.interp
-    if not (np.all(np.diff(xp)>=0)):
-        raise ValueError, 'xp is not monotonically increasing'
+    if not (np.all(np.diff(xp)>=0)): raise ValueError, \
+       'xp is not monotonically increasing'
+
     y = []
     for i in range(len(xs)):
         y.append(intp(xs[i],xp,fp))

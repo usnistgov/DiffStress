@@ -24,14 +24,17 @@ class SF:
             self.nstp = len(self.sf[0])
 
             self.nij = self.sf.shape[-1]
-            if self.nij!=6:
-                print 'Stress factor is not fully given in 6D'
+            if self.nij!=6: print 'Stress factor'+\
+               ' is not fully given in 6D'
+
         if phi!=None:
             self.phi = phi
             self.nphi = len(self.phi)
         if psi!=None:
             self.psi = psi
+            self.sin2psi = np.sin(self.psi*np.pi/180.)**2
             self.npsi = len(self.psi)
+
     def add_flow(self,eps,i,j):
         self.flow.get_strain(eps,i,j)
 
@@ -43,6 +46,7 @@ class SF:
         self.sf = sf_new.copy()
 
     def restore_sf(self):
+        """ Restore self.sf_old to self.sf """
         self.sf = self.sf_old.copy()
 
     def add_iso_sf(self,E=204e9,nu=0.3):
@@ -56,9 +60,17 @@ class SF:
                     nu=nu,Y=E,iopt=1).copy()
 
     def interp_strain(self,epsilon_vm):
+        """
+        Linearly interpolate the SF with respect to
+        the given VM strain
+
+        Arguments
+        =========
+        epsilon_vm = []
+        """
         self.sf_old = self.sf.copy()
-        self.flow.get_vm_strain()
-        self.flow.epsilon_vm #
+        # self.flow.get_vm_strain()
+        # self.flow.epsilon_vm #
         self.sf_new = np.zeros(
             (len(epsilon_vm),self.nphi,self.npsi,self.nij))
         for iphi in range(self.nphi):
@@ -143,25 +155,24 @@ class SF:
         self.sf = sf_new.copy()
         self.phi = np.array(phi_new)
         self.nphi = len(self.phi)
-        
-    def plot(self):
+
+    def plot(self,nbin_sin2psi=2):
+        """   """
         from MP.lib import axes_label
         from MP.lib import mpl_lib
         import matplotlib as mpl
         import matplotlib.cm as cm
-
         figs = wide_fig(nw=self.nphi,w0=0,w1=0,
                         left=0.2,right=0.15)
 
         mx = max(self.flow.epsilon_vm)
         mn = min(self.flow.epsilon_vm)
-
         cmap, c = mpl_lib.norm_cmap(mx=mx,mn=mn)
         colors=[]
         self.flow.nstp = len(self.flow.epsilon_vm)
         for i in range(self.nphi):
             for j in range(self.flow.nstp):
-                eps = self.flow.epsilon_vm[j] 
+                eps = self.flow.epsilon_vm[j]
                 cl = c.to_rgba(eps)
                 if i==0: colors.append(cl)
 
@@ -175,12 +186,9 @@ class SF:
                 if j==0:
                     figs.axes[i].set_title(
                         r'$\phi: %3.1f^\circ{}$'%self.phi[i])
-
-        
         deco = axes_label.__deco__
         rm_inner =mpl_lib.rm_inner
         ticks_bin_u = mpl_lib.ticks_bins_ax_u
-
         deco(figs.axes[0],iopt=1)
         mpl_lib.tune_xy_lim(figs.axes)
         rm_inner(figs.axes)
@@ -192,6 +200,64 @@ class SF:
         mpl_lib.add_cb(ax=axcb,filled=False,
                        levels=self.flow.epsilon_vm,
                        colors=colors,ylab='Equivalent strain')
+
+        """   SF(phi,psi) vs plastic strain   """
+        ## binning sin2psi
+        nbin = nbin_sin2psi
+        indx = self.__binning__(nbin=nbin,mx=0.5)
+
+        for i in range(len(indx)):
+            print '%i bin'%(i+1)
+            for j in range(len(indx[i])):
+                print '%4i'%indx[i][j],
+                print '%4.2f'%(self.sin2psi[indx[i][j]]),
+            print
+
+        figs_p = wide_fig(nw=self.nphi,nh=nbin,
+                          w0=0,w1=0,left=0.2,right=0.15)
+
+        eps = self.flow.epsilon_vm
+        for i in range(self.nphi):
+            for j in range(nbin):
+                ax = figs_p.axes[i+self.nphi*j]
+                if j==nbin-1: ax.set_title(
+                        r'$\phi: %3.1f^\circ{}$'%self.phi[i])
+                idx = indx[j]
+                for k in range(len(idx)):
+                    ax.plot(eps,self.sf[:,i,[idx[k]],0],'x')
+                    ##ax.plot(eps,self.sf[:,i,k,1],'--')
+
+        for i in range(nbin):
+            axes=[]
+            for j in range(self.nphi):
+                axes.append(figs_p.axes[j+self.nphi*i])
+            #mpl_lib.tune_xy_lim(axes)
+            if i==0 and j==0:  rm_inner(axes[1:])
+            else: rm_inner(axes)
+
+        deco(figs_p.axes[0],iopt=6)
+
+        mpl_lib.tune_xy_lim(figs_p.axes)
+        #print 'no'
+        ticks_bin_u(figs_p.axes,n=3)
+
+
+    def __binning__(self,nbin,mx):
+        borders = np.linspace(0., mx, nbin+1)
+        bounds = []
+        indx = []
+        for i in range(nbin):
+            bounds.append(borders[i:i+2])
+            indx.append([])
+        ## Find elements along axis psi that belong to
+        ## individual bins
+        for i in range(nbin):
+            mn, mx = bounds[i]
+            print 'mn, mx:', mn, mx
+            for j in range(self.npsi):
+                if mn<=self.sin2psi[j] and self.sin2psi[j]<mx:
+                    indx[i].append(j)
+        return indx
 
 class IG:
     def add_data(self,ig,phi,psi):
@@ -283,7 +349,7 @@ class IG:
         self.ig = ig_new.copy()
         self.phi = np.array(phi_new)
         self.nphi = len(self.phi)
-        
+
     def plot(self):
         from MP.lib import axes_label
         from MP.lib import mpl_lib
@@ -300,7 +366,7 @@ class IG:
         colors=[]
         for i in range(self.nphi):
             for j in range(self.nstp):
-                eps = self.flow.epsilon_vm[j] 
+                eps = self.flow.epsilon_vm[j]
                 cl = c.to_rgba(eps)
                 if i==0: colors.append(cl)
 

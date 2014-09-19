@@ -1,11 +1,11 @@
 """
-experimental residual stress analysis
+Experimental residual stress analysis
 """
 def check(EXP=None):
     from MP.lib import mpl_lib
     from phikhi import draw_circ
     draw_circ = draw_circ.main
-    wide_fig = mpl_lib.wide_fig    
+    wide_fig = mpl_lib.wide_fig
 
     figs = wide_fig(nw=2)
 
@@ -57,19 +57,27 @@ def read_main(path='../dat/23JUL12',fref='Bsteel_BB_00.txt',
     SF, IG = read_IGSF(fn='%s%s%s'%(path,os.sep,fn_sf))
     return ExpProto, SF, IG
 
-def read_IGSF(fn='YJ_Bsteel_BB.sff'):
+def read_IGSF(fn='YJ_Bsteel_BB.sff', fc=None, fn_str=None):
     """
     Read from the stress factor file
+    ## Discard the 'strain' recorded in the *.sff file
+       if either fc or fn_str is given.
+
+    Arguments
+    =========
+    fn = 'YJ_Bsteel_BB.sff' ; file name of sff file
+    fc = None (should be a 'mech.FlowCurve' object)
     """
     import numpy as np
     import RS; reload(RS)
-    from RS import sff_plot
-    from RS import sfig_class
+    from RS import sff_plot, sfig_class
+
+    if fc!=None and fn_str!=None: raise IOError,\
+       'Only one of fc and fn_str should be given'
 
     StressFactor = sfig_class.SF
     IGstrain = sfig_class.IG
     read_sff = sff_plot.reader
-
     SF = StressFactor()  # class
     IG = IGstrain()      # class
 
@@ -79,9 +87,9 @@ def read_IGSF(fn='YJ_Bsteel_BB.sff'):
         sf = sf * 1e-12 # Pascal
         eps_macro = np.array(eps_macro)
         SF.add_data(sf=sf,phi=phi,psi=psi)
-        IG.add_data(ig=ig,phi=phi,psi=psi) 
+        IG.add_data(ig=ig,phi=phi,psi=psi)
 
-        # ## assign the flow
+        # ## assign the flow -- only biaxial ...
         SF.add_flow(eps_macro,0,0)
         SF.add_flow(eps_macro,1,1)
         SF.add_flow(-eps_macro*2,2,2)
@@ -93,5 +101,17 @@ def read_IGSF(fn='YJ_Bsteel_BB.sff'):
         IG.add_flow(-eps_macro*2,2,2)
         #IG.flow.set_zero_epsilon_ij(2,2)
         IG.flow.set_zero_shear_strain()
-
+    elif fn==None:
+        print 'SFF file name is missing.',
+        print ' Empty SF, IG objects are returned'
+    if fc!=None:
+        print "Warning: overwrite the SF.flow / IG.flow"
+        SF.flow = fc; IG.flow = fc
+    elif fn_str!=None:
+        print "Warning: overwirte the SF.flow / IG.flow"
+        from MP.mat import mech
+        fc=mech.FlowCurve(name='Flow for SF/IG')
+        fc.get_model(fn=fn_str)
+        fc.get_eqv()
+        SF.flow = fc; IG.flow = fc
     return SF, IG
