@@ -1163,6 +1163,8 @@ def psi_reso2(mod=None,ntot=2):
     """
     Make the data nearly-equal spaced along psi (sin2psi) axis
 
+    Arguments
+    =========
     mod  = None
     ntot = 2
     """
@@ -1199,6 +1201,17 @@ def psi_reso2(mod=None,ntot=2):
     mod.sf = sf    ; mod.npsi = npsi
     mod.eps0 = eps0; mod.ehkl = ehkl; mod.tdat = tdat
     mod.phis = phis; mod.psis = psis; mod.nphi = nphi
+
+
+    ## mod.dat_model
+    mod.dat_model.sf = select_psi(mod.dat_model.sf,inds)
+    mod.dat_model.ig = select_psi(mod.dat_model.ig,inds)
+    mod.dat_model.vf = select_psi(mod.dat_model.vf,inds)
+    mod.dat_model.ehkl = select_psi(mod.dat_model.ehkl,inds)
+    mod.dat_model.psi  = psis[::]
+    mod.dat_model.npsi = len(mod.dat_model.psi)
+
+
 
 def select_psi(dat,inds):
     array = []
@@ -1245,7 +1258,7 @@ def psi_reso(mod=None,nbin=2):
 def filter_psi(mod=None,psimx=None,sin2psimx=None):
     """
     """
-    sf = mod.sf
+    sf   = mod.sf
     eps0 = mod.eps0
     ehkl = mod.ehkl
     tdat = mod.tdat # tdat is the stress proportional part
@@ -1274,8 +1287,6 @@ def filter_psi(mod=None,psimx=None,sin2psimx=None):
             if reft[i]<=sin2psimx:
                 i1 = len(reft) - i; break
 
-    #print i0, i1
-
     sf = sf[:,:,i0:i1]
     eps0 = eps0[:,i0:i1]
     ehkl = ehkl[:,i0:i1]
@@ -1294,3 +1305,11 @@ def filter_psi(mod=None,psimx=None,sin2psimx=None):
     mod.psis=psis
     mod.nphi=nphi
     mod.npsi=npsi
+
+    ## mod.dat_model
+    mod.dat_model.sf   = mod.dat_model.sf[:,:,:,i0:i1]
+    mod.dat_model.ig   = mod.dat_model.ig[:,:,i0:i1]
+    mod.dat_model.vf   = mod.dat_model.vf[:,:,i0:i1]
+    mod.dat_model.ehkl = mod.dat_model.ehkl[:,:,i0:i1]
+    mod.dat_model.psi  = mod.dat_model.psi[i0:i1]
+    mod.dat_model.npsi  = len(mod.dat_model.psi)

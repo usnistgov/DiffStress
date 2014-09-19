@@ -55,16 +55,11 @@ def ex(ifig=50,
 
 def ex_consistency(
         ifig=50,nxphi=3,
-        #exp_ref=['exp_dat/Bsteel/bulge/EXP_BULGE_JINKIM.txt',
-        #'exp_dat/Bsteel/uni/avgstr_000.txt'],
-        #exp_lab=['Exp bulge','Exp uniaxiai'],
-        #exp_ref=['exp_dat/Bsteel/uni/avgstr_000.txt'],
-        #exp_lab=['Exp uniaxiai'],
         exp_ref=[],exp_lab=[],mod_ext=None,
         mod_ref='STR_STR.OUT',sin2psimx=None,
         iscatter=False,psimx=None,psi_nbin=1,
         ig_sub=True,istep=None,hkl=None,iplot=True,
-        iwind=False,wdeg=2,ipsi_opt=0,fn_sff=None):
+        iwind=False,wdeg=2,ipsi_opt=1,fn_sff=None):
     """
     Consistency check between 'weighted average' stress and
     the stress obtained following the stress analysis method
@@ -130,8 +125,8 @@ def ex_consistency(
     flow_weight.get_model(fn=mod_ref)
     flow_weight.get_eqv() ## calc Von Mises stress/strain
 
-    if len(flow_weight.epsilon_vm)<50: lc='bx'
-    else:                              lc='b-'
+    if len(flow_weight.epsilon_vm)<5: lc='bx'
+    else:                             lc='bx-'
 
     if iplot:
         ax1.plot(flow_weight.epsilon_vm,flow_weight.sigma_vm,
@@ -180,7 +175,6 @@ def ex_consistency(
             filter_psi(model_rs,sin2psimx=sin2psimx,psimx=psimx)
 
         if psi_nbin!=1:
-            #psi_reso(model_rs,nbin=psi_nbin)
             psi_reso2(model_rs,ntot=psi_nbin)
 
         #-----------------------------------#
@@ -237,8 +231,15 @@ def ex_consistency(
     sigma_wgt = flow_weight.sigma
 
     if iplot:
-        ax2.plot(sigma_wgt[0,0],sigma_wgt[1,1],'bo',label='weight')
-        ax2.plot(flow_dsa.sigma[0,0],flow_dsa.sigma[1,1],'k.',label='DSA')
+        ax2.plot(sigma_wgt[0,0],sigma_wgt[1,1],'bx')
+        ax2.plot(flow_dsa.sigma[0,0],flow_dsa.sigma[1,1],'k+')
+
+        ## connector
+        npoints = len(sigma_wgt[0,0])
+        wgtx = sigma_wgt[0,0];      wgty = sigma_wgt[1,1]
+        dsax = flow_dsa.sigma[0,0]; dsay = flow_dsa.sigma[1,1]
+        for i in range(npoints):
+            ax2.plot([wgtx[i],dsax[i]],[wgty[i],dsay[i]],'k-',alpha=0.2)
 
         ax2.set_ylim(-100,700); ax2.set_xlim(-100,700)
         ax2.set_aspect('equal')
@@ -348,7 +349,7 @@ def __model_fit_plot__(container,ifig,istp,nxphi=None,hkl=None,
         if hkl==None and ileg: label=r'$E_{i} - \varepsilon^{hkl}-\varepsilon^{hkl}_0$'
         elif hkl!=None and ileg: label=r'$E_{i} - \varepsilon^{%s}-\varepsilon^{%s}_0$'%(hkl,hkl)
         elif ileg!=True: label = None
-        av.plot(xv,vf[iphi],'r-')#,label='VF')
+        av.plot(xv,vf[iphi],'r-')
         ae.plot(x,Ei[iphi]*1e6-y,c2+m2,label=label)
 
         deco(ax=ax,iopt=0,hkl=hkl,ipsi_opt=ipsi_opt)
