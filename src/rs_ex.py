@@ -59,7 +59,8 @@ def ex_consistency(
         mod_ref='STR_STR.OUT',sin2psimx=None,
         iscatter=False,psimx=None,psi_nbin=1,
         ig_sub=True,istep=None,hkl=None,iplot=True,
-        iwind=False,wdeg=2,ipsi_opt=1,fn_sff=None):
+        iwind=False,wdeg=2,ipsi_opt=1,fn_sff=None,
+        pmargin=None):
     """
     Consistency check between 'weighted average' stress and
     the stress obtained following the stress analysis method
@@ -81,8 +82,10 @@ def ex_consistency(
     hkl       : hkl of plane, for the sake of labels.
     iplot (True) : flag whether or not MPL plot is performed
     ipsi_opt 0: sin2psi
-             1: (+-) sin2psi
+             1: sing(psi) * sin2psi
              2: psi
+    pmargin   : portional margin of volume that should exceed to
+                contribute to the ehkl/SF/IG in model_rs
     """
     from rs import ResidualStress,u_epshkl,filter_psi,\
         psi_reso, psi_reso2
@@ -116,6 +119,8 @@ def ex_consistency(
 
     ## masking array element based on diffraction volume
     model_rs.dat_model.mask_vol()
+    if pmargin!=None:
+        model_rs.dat_model.mask_vol_margin(pmargin)
 
     if mod_ext==None: mod_ref='STR_STR.OUT'
     else:             mod_ref='%s.%s'%(
