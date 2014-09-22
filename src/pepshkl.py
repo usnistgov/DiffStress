@@ -126,9 +126,15 @@ def reader(fn='pepshkl.out',step=0,phi=0,skiprows=1,iopt=1):
 
 def reader2(fn='igstrain_fbulk_ph1.out',iopt=1):
     """
-    iopt1: fn = 'igstrain_fbulk_ph1.out style'
+    Arguments
+    =========
+    fn = 'igstrain_fbulk_ph1.out style'
+    iopt 1 or 2
+      iopt1: suitable for igstrain_fbulk_ph1.out, in which
+            diffraction results are repeatedly obtained for
+            individual elastic loading for stress factor probing
     """
-    print '\n\n\n###########################################'
+    print '\n\n###########################################'
     print '# Reader for igstrain_fbulk_ph?.out files #'
     print '###########################################\n'
 
@@ -143,9 +149,7 @@ def reader2(fn='igstrain_fbulk_ph1.out',iopt=1):
     for i in range(len(dstr)):
         rst = dstr[i].split('\n')
         ablock = rst[1:-1]
-
         blocks.append(ablock)
-
         if i==0:
             npb = len(ablock)
             phis = []
@@ -168,7 +172,7 @@ def reader2(fn='igstrain_fbulk_ph1.out',iopt=1):
             i1, i2 = map(int, [i1,i2])
             isf.append([i1,i2])
 
-    print 'total number of data block', nblock
+    #print 'total number of data block', nblock
     if iopt==1:
         usf = []
         for i in range(len(isf)):
@@ -243,6 +247,7 @@ def reader2(fn='igstrain_fbulk_ph1.out',iopt=1):
     print '\ntdat(property, ist, isf, iphi, ipsi)'
     if iopt==1: return tdat,usf
     if iopt==2: return tdat
+    raise IOError, 'Unexpected iopt was given'
     ##
 
 def reader3(fn='igstrain_unloads_avg.out',isort=False):
@@ -513,47 +518,61 @@ def uniq(a):
     return np.array(u), np.array(ind)
 
 def ex_igb(fn='igstrain_fbulk_ph1.out',ifig=2,iphi=0,isf=0,
-           mxnst=None):
-    """ read ig strain file and analyze... (igstrain_fbulk_ph1.out) """
+           mxnst=None,flow=None):
+    """
+    Read ig strain file and analyze... (igstrain_fbulk_ph1.out)
+
+    igstrain_fbulk_ph1.out contains diffraction for each and every
+    reloading from 'unloaded' polycrystal.
+
+    Arguments
+    =========
+    fn = 'igstrain_fbulk_ph1.out'
+    ifig = 2
+    iphi=0
+    isf=0
+    mxnst=None
+    """
     import matplotlib.pyplot as plt
     from sff_converter import condition
     from MP.ssort import sh as sort
-    difl, nphi, phis, nbeta, neps, eps = condition(fn=None)
-    eps = eps * 2. # effective strain
-    fig = plt.figure(ifig,figsize=(10,8))
-    ax01 = fig.add_subplot(221); ax02 = fig.add_subplot(222)
-    ax03 = fig.add_subplot(223); ax04 = fig.add_subplot(224)
-    axes = [ax01,ax02,ax03,ax04]
-    fig01 = plt.figure(ifig+1,figsize=(10,8))
-    fig02 = plt.figure(ifig+2,figsize=(10,8))
-    fig03 = plt.figure(ifig+3,figsize=(10,8))
-    fig04 = plt.figure(ifig+4,figsize=(10,8))
-    ax05 = fig01.add_subplot(221);ax06 = fig01.add_subplot(222)
-    ax07 = fig01.add_subplot(223);ax08 = fig01.add_subplot(224)
-    axes01 = [ax05,ax06,ax07,ax08]
-    ax09 = fig02.add_subplot(221);ax10 = fig02.add_subplot(222)
-    ax11 = fig02.add_subplot(223);ax12 = fig02.add_subplot(224)
-    axes02 = [ax09,ax10,ax11,ax12]
-    ax13 = fig03.add_subplot(221);ax14 = fig03.add_subplot(222)
-    ax15 = fig03.add_subplot(223);ax16 = fig03.add_subplot(224)
-    axes03 = [ax13,ax14,ax15,ax16]
-    ax17 = fig04.add_subplot(221);ax18 = fig04.add_subplot(222)
-    ax19 = fig04.add_subplot(223);ax20 = fig04.add_subplot(224)
-    axes04 = [ax17,ax18,ax19,ax20]
+    from MP.mat import voigt
+    from MP.lib.mpl_lib import wide_fig as wf
+
+    difl, nphi, phis, nbeta, dum1, dum2 = condition(fn=None)
+
+    if flow==None: raise IOError, 'Flow stress is missing'
+    eps = flow.epsilon_vm[::]
+    neps = flow.nstp
+
+    nw = 4
+    remainder = np.mod(neps,nw)
+    if remainder==0:
+        nh = neps/nw
+    elif remainder>0:
+        nh = neps/nw + 1
+
+    fig  =wf(nw=2, nh=2,ifig=ifig,iarange=True);  axes  =fig.axes
+    ax01, ax02, ax03, ax04 = axes
+    fig01=wf(nw=nw,nh=nh,ifig=ifig+1,iarange=True,nfig=neps);axes01=fig01.axes
+    fig02=wf(nw=nw,nh=nh,ifig=ifig+2,iarange=True,nfig=neps);axes02=fig02.axes
+    fig03=wf(nw=nw,nh=nh,ifig=ifig+3,iarange=True,nfig=neps);axes03=fig03.axes
+    fig04=wf(nw=nw,nh=nh,ifig=ifig+4,iarange=True,nfig=neps);axes04=fig04.axes
+
     tdat, usf = reader2(fn,iopt=1)
     print tdat.shape
     nsf = len(usf); nst = len(tdat[0]); npsi = len(tdat[0,0,0,0,:])
-    print nsf, nst
-    markers = ['o','x','+','^','d','*']
-    colors  = ['r','g','b','k','m','y']
-    axe_lab = ['(a)','(b)','(c)','(d)']
+    if nst!=neps: raise IOError, 'Inconsistency between neps and nst'
+    markers = ['o','x','+','^','d','*','o','x','+','^','d','*''o','x','+','^','d','*']
+    colors  = ['r','g','b','k','m','y','r','g','b','k','m','y','r','g','b','k','m','y']
+    from string import ascii_lowercase as alphabet
+    axe_lab=[]
+    for ab in alphabet: axe_lab.append('(%s)'%ab)
     yl = 0; yh = 0
     avg = np.zeros((2,nst,npsi)) #
-    sft  = np.zeros((6,nst,npsi)) # f^{hkl}
+    sft = np.zeros((6,nst,npsi)) # f^{hkl}
 
     if mxnst!=None: nst=mxnst
-
-
     for i in range(nst):
         ehkl  = tdat[0,i,isf,iphi,:] # e(hkl,phi,psi)
         e     = tdat[1,i,isf,iphi,:] # macro
@@ -573,7 +592,7 @@ def ex_igb(fn='igstrain_fbulk_ph1.out',ifig=2,iphi=0,isf=0,
         axes04[i].set_title(r'%s $\bar{E}^{\mathrm{eff}} = %4.2f$'%(
                 axe_lab[i],eps[i]))
         igys = []; igos = []; igts = []
-        for j in range(nsf):
+        for j in range(nsf): ## Number of elastic loading for stress factor calc.
             ehkl_ = tdat[0,i,j,iphi,:] # e(hkl,phi,psi)
             e_    = tdat[1,i,j,iphi,:] # macro
             fhkl_ = tdat[3,i,j,iphi,:] # Fhkl
@@ -583,18 +602,22 @@ def ex_igb(fn='igstrain_fbulk_ph1.out',ifig=2,iphi=0,isf=0,
             sft[j,i,:] = fhkl_[:] #
 
             i1,i2 = usf[j]
-            igo   = ehkl_ - e_
+            igo = ehkl_ - e_ ## old way
             igt = []
             m = 0
             for k in range(len(fbulk_)):
                 if fbulk_[k]==0:
                     m=m+1
                     igt.append(0.)
-                else:
-                    igt.append(ehkl_[k] - fhkl_[k] / fbulk_[k] * e_[k])
-            print m, 'case of fbulk(phi,psi)=0 happened'
+                else: igt.append(
+                        ehkl_[k] - \
+                        fhkl_[k] / fbulk_[k] * e_[k])
+
+            if m!=0: print m, 'case of fbulk'+\
+               '(phi,psi)=0 happened'
+
             igt = np.array(igt)
-            igy   = ehkl_ - fhkl_ * sij_
+            igy = ehkl_ - fhkl_ * sij_ ## new way (YJ)
             if j==0:
                 igy_avg = igy/nsf
                 igo_avg = igo/nsf
@@ -603,9 +626,7 @@ def ex_igb(fn='igstrain_fbulk_ph1.out',ifig=2,iphi=0,isf=0,
                 igy_avg = igy_avg + igy/nsf
                 igo_avg = igo_avg + igo/nsf
                 igt_avg = igt_avg + igt/nsf
-            igys.append(igy)
-            igos.append(igo)
-            igts.append(igt)
+            igys.append(igy);igos.append(igo);igts.append(igt)
 
             # The old method
             if j==4: m = markers[j]
@@ -651,7 +672,6 @@ def ex_igb(fn='igstrain_fbulk_ph1.out',ifig=2,iphi=0,isf=0,
             if yl0<yl: yl = yl0
             if yh0>yh: yh = yh0
 
-
             pass # over nsf
 
         # errors for 6 cases of SF loading
@@ -675,15 +695,6 @@ def ex_igb(fn='igstrain_fbulk_ph1.out',ifig=2,iphi=0,isf=0,
             x=newx,y=newy*1e6,yerr=newye*1e6,
             ls='-',color='r',label='old')
 
-        # # average GHT
-        # y = igt_avg
-        # ye= igte
-        # x = np.sin(psi[:]*np.pi/180.)**2
-        # newx, newy, newye = sort(x,y,ye)
-        # axes04[i].plot(
-        #     x=newx,y=newy*1e6,#yerr=newye*1e6,
-        #     ls='-',color='m',label='GHT')
-
         # average YU
         y  = igy_avg
         avg[0,i,:] = psi[:]; avg[1,i,:] = y[:]
@@ -693,7 +704,6 @@ def ex_igb(fn='igstrain_fbulk_ph1.out',ifig=2,iphi=0,isf=0,
 
         newx, newy, newye = sort(x,y,ye)
 
-
         axes04[i].errorbar(
             x=newx,y=newy*1e6,yerr=newye*1e6,
             ls='-',ms=3,color='b',label='YJ')
@@ -701,13 +711,9 @@ def ex_igb(fn='igstrain_fbulk_ph1.out',ifig=2,iphi=0,isf=0,
         axes04[0].legend(loc='best',fancybox=True)\
             .get_frame().set_alpha(0.5)
 
-        if isf==0: i1=1; i2=1
-        if isf==1: i1=2; i2=2
-        if isf==2: i1=3; i2=3
-        if isf==3: i1=2; i2=3
-        if isf==4: i1=1; i2=3
-        if isf==5: i1=1; i2=2
+        i1,i2 = voigt.ijv[:,isf]
         sin2psi = np.sin(psi*np.pi/180.)**2
+
         ax01.plot(sin2psi,ige*1e6,markers[i]#,color='k',
            ,label=r'$\bar{E}^{\mathrm{eff}} = %4.2f$'%eps[i])
         ax02.plot(sin2psi,ehkle*1e6,markers[i]#,color='k'
@@ -720,6 +726,10 @@ def ex_igb(fn='igstrain_fbulk_ph1.out',ifig=2,iphi=0,isf=0,
         ax03.plot(sin2psi,(ehkl-fhkl/fbulk*e)*1e6,markers[i]
            ,label=r'$\bar{E}^{\mathrm{eff}} = %4.2f$'%eps[i])
         sin2psi = np.sin(psi*np.pi/180.)**2
+
+
+
+    ## Deco the axes
     for i in range(nst):
         axes01[i].set_ylim(yl,yh)
         axes02[i].set_ylim(yl,yh)
@@ -759,37 +769,45 @@ def ex_igb(fn='igstrain_fbulk_ph1.out',ifig=2,iphi=0,isf=0,
         r'$F_{%1i%1i}^{\mathrm{bulk}}(%3.0f^\circ,\psi)$'%(
             i1,i2,phis[iphi])+
         r'$\bar{E}(%3.0f^\circ,\psi)$'%(phis[iphi]),dict(fontsize=13))
-    # ax03.set_title(
-    #     r'$\varepsilon(hkl,%3.0f^\circ,\psi)-F_{%1i%1i)$'\
-    #         r'$F^{mathrm{bulk}}_{%1i%1i}(%3.0f^\circ,\psi)$'\
-    #         r'$\bar{E}(%3.0f^\circ,\psi) [\mu\varepsilon]$'%(
-    #             phis[iphi],i1,i2,i1,i2,phis[iphi],phis[iphi]), dict(fontsize=20))
     ax04.set_title(r'(d) $F^{hkl}_{%1i%1i}$ and '%(i1,i2)+\
                        r'$F^{\mathrm{bulk}}_{%1i%1i}$'%
                    (i1,i2), dict(fontsize=13))
     ax04.legend(loc='lower right',fancybox=True).get_frame().set_alpha(0.5)
-    fig.tight_layout(); fig01.tight_layout(); fig02.tight_layout()
-    fig03.tight_layout(); fig04.tight_layout()
+    # fig.tight_layout(); fig01.tight_layout(); fig02.tight_layout()
+    # fig03.tight_layout(); fig04.tight_layout()
     fig.savefig('ig_bulk.pdf');fig01.savefig('ig_bulk_Old.pdf')
     fig02.savefig('ig_bulk_GHT.pdf'); fig03.savefig('ig_bulk_YJ.pdf')
     fig04.savefig('ig_bulk_avg.pdf')
     ## save the averaged IG strain
+
+
     return avg, sft # avg[2,nst,npsi], sft[6,nst,npsi]
 
 def ex_igb_t(fn='igstrain_fbulk_ph1.out',
              fnout='igstrain_unloads_avg.out',
-             mxnst=None):
+             mxnst=None,flow=None):
     """
+
+    Arguments
+    =========
+    fn   ='igstrain_fbulk_ph1.out'
+    fnout='igstrain_unloads_avg.out'
+    mxnst=None
     """
     import matplotlib.pyplot as plt
     from sff_converter import condition
     import numpy as np
-    difl, nphi, phis, nbeta, neps, eps = condition(fn=None)
+    difl, nphi, phis, nbeta, dum1, dum2 = condition(fn=None)
+    if flow==None: raise IOError, 'Flow should be given'
+    elif flow!=None:
+        flow.get_eqv()
+        eps = flow.epsilon_vm[::]
+
     avg = []; sfs = []
     for i in range(nphi):
         a, sf = ex_igb(
             fn=fn,ifig=i*7+1,iphi=i,isf=0,
-            mxnst=mxnst)# a[2,nst,npsi], sf[6,nst,npsi]
+            mxnst=mxnst,flow=flow)# a[2,nst,npsi], sf[6,nst,npsi]
         avg.append(a) # average ieps0
         sfs.append(sf)
 
@@ -810,7 +828,7 @@ def ex_igb_t(fn='igstrain_fbulk_ph1.out',
     else: nst=mxnst
 
     for ist in range(nst):
-        f.writelines('-- eps^{eff}: %5.3f\n'%(eps[ist]*2.0))
+        f.writelines('-- eps^{eff}: %5.3f\n'%eps[ist])
         for iphi in range(len(avg[0][ist])):
             phi = phis[iphi]
             psi = avg[0,ist,iphi,:]
@@ -827,12 +845,16 @@ def ex_igb_t(fn='igstrain_fbulk_ph1.out',
     return avg, sfs  #avg[2,nst,nphi,npsi], sfs[
 
 def ex_igb_bix(fn='igstrain_bix_ph1.out',ifig=1,iphi=0,
-               mxnst=None):
+               mxnst=None,flow=None):
+    """
+    """
     import matplotlib.pyplot as plt
     from sff_converter import condition
     from MP.ssort import sh as sort
     difl, nphi, phis, nbeta, neps, eps = condition(fn=None)
-    eps = eps * 2. # effective strain
+
+    if flow!=None: eps = flow.epsilon_vm[::]
+    else:          eps = eps * 2. ## Under condition balanced biaxial
 
     fig01 = plt.figure(ifig,figsize=(15.5,8.5))
     ax01=fig01.add_subplot(231)
@@ -840,8 +862,7 @@ def ex_igb_bix(fn='igstrain_bix_ph1.out',ifig=1,iphi=0,
     ax03=fig01.add_subplot(233)
     ax04=fig01.add_subplot(234)
     ax05=fig01.add_subplot(235)
-#    ax06=fig01.add_subplot(236)
-    axes01 = [ax01,ax02,ax03,ax04,ax05]#,ax06]
+    axes01 = [ax01,ax02,ax03,ax04,ax05]
 
     fig02 = plt.figure(ifig+1,figsize=(15.5,8.5))
     ax01=fig02.add_subplot(231)
@@ -849,8 +870,7 @@ def ex_igb_bix(fn='igstrain_bix_ph1.out',ifig=1,iphi=0,
     ax03=fig02.add_subplot(233)
     ax04=fig02.add_subplot(234)
     ax05=fig02.add_subplot(235)
-#    ax06=fig02.add_subplot(236)
-    axes02 = [ax01,ax02,ax03,ax04,ax05]#,ax06]
+    axes02 = [ax01,ax02,ax03,ax04,ax05]
 
     tdat = reader2(fn,iopt=2)
     nst = len(tdat[0])
@@ -979,7 +999,6 @@ def ex_igb_bix(fn='igstrain_bix_ph1.out',ifig=1,iphi=0,
         axes02[i].grid('on')
     fig01.tight_layout()
     fig02.tight_layout()
-
     fig01.savefig('bix_analysis.pdf')
     fig02.savefig('bix_eps0_at_phis.pdf')
     return rst, sf2 #rst[2,nst,nphi,npsi], sf2[2,nst,nphi,npsi]
@@ -1048,26 +1067,34 @@ def pub_plot(ifig=10):
     # fig.tight_layout()
 
 
-def ex_igb_bix_t(fn='igstrain_bix_ph1.out',fnout='igstrain_loads_avg.out'):
+def ex_igb_bix_t(fn='igstrain_bix_ph1.out',
+                 fnout='igstrain_loads_avg.out',
+                 flow=None):
     """
     Default input fn is 'igstrain_bix_ph1.out':
-     this output file contains diffraction data measured prior to 'interruption'
-     of the unloading, after which the SF is virtually obtained in dif_planes2.f
+     this output file contains diffraction data measured
+     prior to the 'interruption' by unloading. Note that
+     this unloading is to elastically and uniaixally
+     deform the polycrystal in order to obtain 'stress factor'
     """
     import matplotlib.pyplot as plt
     from sff_converter import condition
     import numpy as np
-    difl, nphi, phis, nbeta, neps, eps = condition(fn=None)
-    print 'eps:',eps
+    difl, nphi, phis, nbeta, dum, eps = condition(fn=None)
+
+    if flow!=None: eps = flow.epsilon_vm[::]
+    else: eps = eps * 2
+
     #rst[2,nst,nphi,npsi], sf2[2,nst,nphi,npsi]
-    rst, sf2 = ex_igb_bix(fn='igstrain_bix_ph1.out',ifig=123)
+    rst, sf2 = ex_igb_bix(fn=fn,ifig=123,flow=flow)
+
     f   = open(fnout,'w')
     f.writelines('%3s %8s %13s %14s %14s %14s %14s %14s %14s\n'
-                 %('phi','psi','eps0','F11','F22','F33','F23','F13','F12'))
+                 %('phi','psi','eps0','F11','F22',
+                   'F33','F23','F13','F12'))
 
     for ist in range(len(rst[0])):
-        print eps[ist]*2.0
-        f.writelines('-- eps^{eff}: %5.3f\n'%(eps[ist]*2.0))
+        f.writelines('-- eps^{eff}: %5.3f\n'%eps[ist])
         for iphi in range(nphi):
             phi = phis[iphi]
             psi = rst[0,ist,iphi,:]
@@ -1085,8 +1112,8 @@ def ex_igb_bix_t(fn='igstrain_bix_ph1.out',fnout='igstrain_loads_avg.out'):
     plt.close('all')
     return rst
 
-
-def ex_igb_cf(fnu='igstrain_fbulk_ph1.out',fnl='igstrain_bix_ph1.out'):
+def ex_igb_cf(fnu='igstrain_fbulk_ph1.out',
+              fnl='igstrain_bix_ph1.out'):
     """
     compare the ig strain at load and unloads.
     """
@@ -1166,4 +1193,3 @@ def ex_igb_cf(fnu='igstrain_fbulk_ph1.out',fnl='igstrain_bix_ph1.out'):
 #     import numpy as np
 # #    from ssort import sh as sort
 #     fu = open(fns[0],'r').read()
-
