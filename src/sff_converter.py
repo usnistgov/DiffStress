@@ -2,7 +2,7 @@
 import numpy as np
 from nist_diff import intepsphiout, fij
 def main(fn='temp.sff', difile=None, iph=1, factor=1e6, itab=False,
-         ieps0=2,irev=False):
+         ieps0=4,irev=False,fn_str=None, flow=None):
     """
     Arguments
     =========
@@ -17,8 +17,9 @@ def main(fn='temp.sff', difile=None, iph=1, factor=1e6, itab=False,
     #          2: igstrain_ph - at loads  (Eps-eps^hkl)
     #          3: igstrain_ph - at unloads  (Eps-eps^hkl)
     ieps0 is deprecated. The option for IG and SF is now hardwired
-             4: igstrain_bulk - at loads (eps^hkl - Fij<Sij>)
-             5: igstrain_bulk - at loads (eps^hkl - Fij/Fij^bulk E)
+             # 4: igstrain_bulk - at loads (eps^hkl - Fij<Sij>)
+             # 5: igstrain_bulk - at loads (eps^hkl - Fij/Fij^bulk E)
+             IG strain is calculated from igstrain_loads_avg.out
 
     irev    = False (if True, eps0 = -eps0) - This argument is for
              the one time. (Mistake in diffwrite subroutine...)
@@ -35,6 +36,10 @@ def main(fn='temp.sff', difile=None, iph=1, factor=1e6, itab=False,
     1. igstrain_loads_avg.out: this file is not
        one of many EVPSC-generated-output files. This file is
        calculated based on ...
+    2. igstrain_bix_ph1.out (diff prior to *unloading*)
+    3. igstrain_fbulk_ph1.out
+    4. int_els_ph1.out (prior to unloading)
+    5. int_eps_ph1.out (post unloading)
 
     """
     if not(itab): raise IOError,'use itab==True'
@@ -48,18 +53,34 @@ def main(fn='temp.sff', difile=None, iph=1, factor=1e6, itab=False,
     print difile
 
     # condition
-    difl, nphi, phis, npsi, neps, strains = condition(fn=difile)
+    difl, nphi, phis, npsi, dum1, dum2 = condition(fn=difile)
 
     # ------------------------------------------------------- #
     fn_ig_avg='igstrain_loads_avg.out'
-    # fn_ig_avg='igstrain_fbulk_ph1.out'
+    #fn_ig_avg='igstrain_fbulk_ph1.out'
     from pepshkl import reader3 as reader
     import os.path
+
+    if flow!=None and fn_str!=None:
+        raise IOError, 'Either flow or fn_str should be given'
+    elif flow!=None: flow.get_eqv()
+    elif fn_str!=None:
+        from MP.mat.mech import FlowCurve
+        flow = FlowCurve()
+        flow.get_model(fn=fn_str)
+        flow.get_eqv()
+
+    neps    = flow.nstp
+    strains = flow.epsilon_vm[::]
+
     if not(os.path.isfile(fn_ig_avg)):
         from pepshkl import ex_igb_bix_t
         print 'Run pepshkl.ex_igb_cf or pepshkl.ex_igb_bix_t'\
             ' to obtain igstrain_loads_avg.out'
-        ex_igb_bix_t()
+        dummy_rst = ex_igb_bix_t(fn='igstrain_bix_ph1.out',
+                                 fnout=fn_ig_avg,
+                                 flow=flow)
+
     dat,psis,fij = reader(fn_ig_avg,isort=True)
     # ------------------------------------------------------- #
 
@@ -86,7 +107,7 @@ def main(fn='temp.sff', difile=None, iph=1, factor=1e6, itab=False,
     sff.write('#psivalues \t%i'%npsi)
     for i in range(neps*10-3): sff.write('\t')
     sff.write('\r\n')
-    sff.write(('%s'%('exx \t%5.3f'%(strains[0]))).ljust(14))
+    sff.write(('%s'%('e^{eff} \t%5.3f'%(strains[0]))).ljust(14))
     for i in range(8): sff.write('\t')
 
     if neps>1:
@@ -140,10 +161,10 @@ def main(fn='temp.sff', difile=None, iph=1, factor=1e6, itab=False,
     pass # end of main
 
 
-print """
-definition main
-"""
-print main.__doc__
+# print """
+# definition main
+# """
+# print main.__doc__
 
 def condition(fn=None):
     """
@@ -172,3 +193,4 @@ def condition(fn=None):
     eps = eps[::-1] #; eps.append(0)
     eps = np.array(eps[::-1])
     return difl, nphi, phis, nbeta, neps, eps
+
