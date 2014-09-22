@@ -514,6 +514,31 @@ class DiffDat:
                             #print i,j,k
                             self.mask(istp=i,iphi=j,ipsi=k)
 
+    def mask_vol_margin(self,pmargin):
+        """
+        Mask grains whose volume is lower than
+        a critical margin
+
+        Arguments
+        =========
+        pmargin = 0.1 (discard 10% below)
+        """
+        for istp in range(self.nstp):
+            ## find average volume for each nstp
+            for iphi in range(self.nphi):
+                npsi = 0; vf_tot = 0.
+                for ipsi in range(self.npsi):
+                    if self.vf[istp,iphi,ipsi]>0 and\
+                       not(np.isnan(self.vf[istp,iphi,ipsi])):
+                        npsi = npsi + 1
+                        vf_tot = vf_tot + self.vf[istp,iphi,ipsi]
+                vf_mean = vf_tot / npsi
+                margin = vf_mean * pmargin
+                for ipsi in range(self.npsi):
+                    if self.vf[istp,iphi,ipsi]<margin \
+                       and not(np.isnan(self.vf[istp,iphi,ipsi])):
+                        self.mask(istp,iphi,ipsi)
+
     def mask(self,istp,iphi,ipsi):
         """
         Mask for the given psi angles at particular deformation
