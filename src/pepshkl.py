@@ -41,7 +41,7 @@ def reader(fn='pepshkl.out',step=0,phi=0,skiprows=1,iopt=1):
     step = 0
     phi  = 0
     skiprows = 1
-    iopt     = 1(pepshkl.out) 2(int_eps_ph1.out)
+    iopt     = 1(pepshkl.out) 2(int_eps_ph1.out) 3(
     """
     dat = np.loadtxt(fn, skiprows=skiprows, dtype='float').T
     # steps
@@ -124,7 +124,7 @@ def reader(fn='pepshkl.out',step=0,phi=0,skiprows=1,iopt=1):
         return psi1,psi2,e1,e2,phkl1,phkl2,vol1,vol2,s11,s22,e11,e22,ngr1,ngr2
 
 
-def reader2(fn='igstrain_fbulk_ph1.out',iopt=1):
+def reader2(fn='igstrain_fbulk_ph1.out',iopt=1,isort=True):
     """
     Arguments
     =========
@@ -133,7 +133,12 @@ def reader2(fn='igstrain_fbulk_ph1.out',iopt=1):
       iopt1: suitable for igstrain_fbulk_ph1.out, in which
             diffraction results are repeatedly obtained for
             individual elastic loading for stress factor probing
+      iopt2: ??
     """
+    import MP.ssort as sort
+    shsort = sort.shellSort
+    ss     = sort.ind_swap
+
     print '\n\n###########################################'
     print '# Reader for igstrain_fbulk_ph?.out files #'
     print '###########################################\n'
@@ -194,7 +199,7 @@ def reader2(fn='igstrain_fbulk_ph1.out',iopt=1):
 
     print '\nIG strains were measured at', nst, 'steps'
 
-    if iopt==1: tdat = np.zeros((9,nst,nsf,nphi,npsi))
+    if iopt==1: tdat = np.zeros((10,nst,nsf,nphi,npsi))
     if iopt==2: tdat = np.zeros((9,nst,nphi,npsi))
 
     for i in range(nst):
@@ -207,22 +212,37 @@ def reader2(fn='igstrain_fbulk_ph1.out',iopt=1):
 
                     if iopt==1:
                         try:
-                            phi,psi,sin2psi,ehkl,e,ehkle,fhkl,fbulk,ige,sij\
-                                = map(float, ablock[ipb].split())
-                        except IndexError:
-                            phi,psi,sin2psi,ehkl,e,ehkle,fhkl,fbulk,ige,sij\
-                                = np.nan,np.nan,np.nan,np.nan,np.nan,np.nan,\
-                                np.nan,np.nan,np.nan,np.nan
+                            dd = map(float, ablock[ipb].split())
+                            nd = len(dd)
+                            if nd==11:
+                                phi,psi,sin2psi,ehkl,e,ehkle,\
+                                    fhkl,fbulk,ige,sij,rsq\
+                                    = dd
+                            elif nd==10:
+                                rsq = np.nan
+                                phi,psi,sin2psi,ehkl,e,ehkle,\
+                                    fhkl,fbulk,ige,sij\
+                                    = dd
 
-                        tdat[0,i,j,k,l] = ehkl   #e(hkl,phi,psi)
-                        tdat[1,i,j,k,l] = e      #macro
-                        tdat[2,i,j,k,l] = ehkle  #e-macro
-                        tdat[3,i,j,k,l] = fhkl   #F(hkl,phi,psi)
-                        tdat[4,i,j,k,l] = fbulk  #F(bulk,phi,psi)
-                        tdat[5,i,j,k,l] = ige    #e(hkl,phi,psi) - f_hkl * Sij
-                        tdat[6,i,j,k,l] = sij    #Sij
-                        tdat[7,i,j,k,l] = phi    #Phi
-                        tdat[8,i,j,k,l] = psi    #Psi
+
+                        except IndexError:
+                            phi,psi,sin2psi,ehkl,e,ehkle,\
+                                fhkl,fbulk,ige,sij,rsq\
+                                = np.nan,np.nan,np.nan,\
+                                np.nan,np.nan,np.nan,\
+                                np.nan,np.nan,\
+                                np.nan,np.nan,np.nan
+
+                        tdat[0,i,j,k,l] = ehkl       #e(hkl,phi,psi)
+                        tdat[1,i,j,k,l] = e          #macro
+                        tdat[2,i,j,k,l] = ehkle      #e-macro
+                        tdat[3,i,j,k,l] = fhkl       #F(hkl,phi,psi)
+                        tdat[4,i,j,k,l] = fbulk      #F(bulk,phi,psi)
+                        tdat[5,i,j,k,l] = ige        #e(hkl,phi,psi) - f_hkl * Sij
+                        tdat[6,i,j,k,l] = sij        #Sij
+                        tdat[7,i,j,k,l] = phi        #Phi
+                        tdat[8,i,j,k,l] = psi        #Psi
+                        tdat[9,i,j,k,l] = rsq        #Psi
 
                     elif iopt==2:
                         #return ablock
@@ -234,15 +254,26 @@ def reader2(fn='igstrain_fbulk_ph1.out',iopt=1):
                             phi,psi,sin2psi,ehkl,e,ehkle,ige,f11,f22,s11,s22\
                                 = np.nan,np.nan,np.nan,np.nan,np.nan,np.nan,np.nan,np.nan,np.nan,np.nan,np.nan
 
-                        tdat[0,i,k,l] = ehkl   #e(hkl,phi,psi)
-                        tdat[1,i,k,l] = e      #macro
-                        tdat[2,i,k,l] = ehkle  #e-macro
-                        tdat[3,i,k,l] = ige    #e(hkl) - F^hkl_ij * Sij (ij=1,1 and 2,2)
-                        tdat[4,i,k,l] = f11    #F^hkl_11
-                        tdat[5,i,k,l] = f22    #F^hkl_22
-                        tdat[6,i,k,l] = s11    #S11
-                        tdat[7,i,k,l] = s22    #S22
-                        tdat[8,i,k,l] = psi    #S22
+                        tdat[0,i,k,l] = ehkl       #e(hkl,phi,psi)
+                        tdat[1,i,k,l] = e          #macro
+                        tdat[2,i,k,l] = ehkle      #e-macro
+                        tdat[3,i,k,l] = ige        #e(hkl) - F^hkl_ij * Sij (ij=1,1 and 2,2)
+                        tdat[4,i,k,l] = f11        #F^hkl_11
+                        tdat[5,i,k,l] = f22        #F^hkl_22
+                        tdat[6,i,k,l] = s11        #S11
+                        tdat[7,i,k,l] = s22        #S22
+                        tdat[8,i,k,l] = psi        #S22
+
+    if isort:
+        if iopt==1: ndat = 10
+        elif iopt==2: raise IOError,\
+             'Unexpected ioption for isort==True'
+
+        psi = tdat[8,0,0,0,:]
+        _psi_,ind = shsort(psi)
+        _tdat_ = tdat.swapaxes(0,-1)[::]
+        tdat = ss(_tdat_[::],ind)[::]
+        tdat = tdat.swapaxes(0,-1)[::]
 
     print '\ntdat(property, ist, isf, iphi, ipsi)'
     if iopt==1: return tdat,usf
@@ -253,6 +284,11 @@ def reader2(fn='igstrain_fbulk_ph1.out',iopt=1):
 def reader3(fn='igstrain_unloads_avg.out',isort=False):
     """
     Reader for files in the 'igstrain_unloads_avg.out' template.
+
+    Arguments
+    =========
+    fn    = 'igstrain_unloads_avg.out'
+    isort = False
     """
     from MP.ssort import sh as sort
     # from sff_converter import condition
@@ -296,49 +332,70 @@ def reader3(fn='igstrain_unloads_avg.out',isort=False):
     psis=np.array(psis)
     return dat, psis, fij
 
-def reader4(fn='igstrain_unload_ph1.out',ndetector = 2):
-    """ """
+def reader4(fn='igstrain_unload_ph1.out',
+            ndetector=2,iopt=0):
+    """
+    Arguments
+    =========
+    fn        = 'igstrain_unloads_ph1.out'
+    ndetector = 2
+    iopt      = 0 (default return) (1: return vdat,
+                                   ngrd in addition)
+    """
     from MP.ssort import sh as sort
     npb = int(open(fn,'r').readlines()[1].split()[0])
-    ds = np.loadtxt(fn,skiprows=2).T
+    ds  = np.loadtxt(fn,skiprows=2).T
     # steps
     steps = np.unique(ds[0])
-    nst = len(steps)
+    nst   = len(steps)
     # phi
     phis = np.unique(ds[1])
     nphi = len(phis)
     # npsi
-    nbeta =  npb/nphi
-    npsi = nbeta * ndetector
-
+    nbeta = npb/nphi
+    npsi  = nbeta * ndetector
     # lines
-    nl = len(ds[0])
+    nl  = len(ds[0])
     dat = ds.T
 
     #tdat = np.zeros((len(steps),
     # collect psi1 and psi2
-    psis = []
-    psis1 = []; psis2 = []
+    psis = []; psis1 = []; psis2 = []
     for il in range(nbeta):
         d = dat[il]
-        istep, phi, beta, psi1, psi2, eps1, eps2, sig1, sig2 = d[:9]
-        psis.append(psi1)
-        psis.append(psi2)
-    psis = np.array(psis)
-    #
+        istep, phi, beta, psi1, psi2, eps1,\
+            eps2, sig1, sig2 = d[:9]
+        psis.append(psi1); psis.append(psi2)
 
+    psis = np.array(psis)
+
+    # IG strain array
     tdat = np.zeros((nst,nphi,npsi))
+    if iopt!=0:
+        # volume/number of grains
+        vdat = np.zeros((nst,nphi,npsi))
+        ngrd = np.zeros((nst,nphi,npsi))
+
     il = 0
     for ist in range(nst):
         for iphi in range(nphi):
             for ib in range(nbeta):
                 d = dat[il]
-                istep, phi, beta, psi1, psi2, eps1, eps2, sig1, sig2 = d[:9]
-                tdat[ist,iphi,ib*2] = eps1
+                istep, phi, beta, psi1, psi2, \
+                    eps1, eps2, sig1, sig2 = d[:9]
+                tdat[ist,iphi,ib*2]   = eps1
                 tdat[ist,iphi,ib*2+1] = eps2
+                ## volume/ngr
+                if iopt!=0:
+                    n1,n2,v1,v2 = d[9:13]
+                    vdat[ist,iphi,ib*2]   = v1
+                    vdat[ist,iphi,ib*2+1] = v2
+                    ngrd[ist,iphi,ib*2]   = n1
+                    ngrd[ist,iphi,ib*2+1] = n2
                 il = il + 1
-    return tdat,psis
-
+    if   iopt==0: return tdat,psis
+    elif iopt==1: return tdat,psis,vdat,ngrd
+    else:         raise IOError, 'Unexpected iopt given'
 
 def ex01(fn='pepshkl.out',istep=0,iphi=0,ax01=None,ax01x=None):
     """
@@ -570,7 +627,8 @@ def ex_igb(fn='igstrain_fbulk_ph1.out',ifig=2,iphi=0,isf=0,
     for ab in alphabet: axe_lab.append('(%s)'%ab)
     yl = 0; yh = 0
     avg = np.zeros((2,nst,npsi)) #
-    sft = np.zeros((6,nst,npsi)) # f^{hkl}
+    sft  = np.zeros((6,nst,npsi)) # f^{hkl}
+    rsqt = np.zeros((6,nst,npsi)) # f^{hkl}
 
     if mxnst!=None: nst=mxnst
     for i in range(nst):
@@ -582,6 +640,7 @@ def ex_igb(fn='igstrain_fbulk_ph1.out',ifig=2,iphi=0,isf=0,
         ige   = tdat[5,i,isf,iphi,:] # e - F_ij *Sij
         sij   = tdat[6,i,isf,iphi,:] # Sij
         psi   = tdat[8,i,isf,iphi,:]
+        rsq   = tdat[9,i,isf,iphi,:]
         sin2psi = np.sin(psi*np.pi/180.)**2
         axes01[i].set_title(r'%s $\bar{E}^{\mathrm{eff}} = %4.2f$'%(
                 axe_lab[i],eps[i]))
@@ -598,8 +657,10 @@ def ex_igb(fn='igstrain_fbulk_ph1.out',ifig=2,iphi=0,isf=0,
             fhkl_ = tdat[3,i,j,iphi,:] # Fhkl
             fbulk_= tdat[4,i,j,iphi,:] # Fbulk
             sij_  = tdat[6,i,j,iphi,:] # Sij
+            rsq_  = tdat[6,i,j,iphi,:] # R^2
 
-            sft[j,i,:] = fhkl_[:] #
+            sft[j,i,:]  = fhkl_[::] #
+            rsqt[j,i,:] = rsq_[::]
 
             i1,i2 = usf[j]
             igo = ehkl_ - e_ ## old way
@@ -727,8 +788,6 @@ def ex_igb(fn='igstrain_fbulk_ph1.out',ifig=2,iphi=0,isf=0,
            ,label=r'$\bar{E}^{\mathrm{eff}} = %4.2f$'%eps[i])
         sin2psi = np.sin(psi*np.pi/180.)**2
 
-
-
     ## Deco the axes
     for i in range(nst):
         axes01[i].set_ylim(yl,yh)
@@ -780,7 +839,6 @@ def ex_igb(fn='igstrain_fbulk_ph1.out',ifig=2,iphi=0,isf=0,
     fig04.savefig('ig_bulk_avg.pdf')
     ## save the averaged IG strain
 
-
     return avg, sft # avg[2,nst,npsi], sft[6,nst,npsi]
 
 def ex_igb_t(fn='igstrain_fbulk_ph1.out',
@@ -803,13 +861,14 @@ def ex_igb_t(fn='igstrain_fbulk_ph1.out',
         flow.get_eqv()
         eps = flow.epsilon_vm[::]
 
-    avg = []; sfs = []
+    avg = []; sfs = []; rsqs = [];
     for i in range(nphi):
-        a, sf = ex_igb(
+        a, sf, rsq = ex_igb(
             fn=fn,ifig=i*7+1,iphi=i,isf=0,
             mxnst=mxnst,flow=flow)# a[2,nst,npsi], sf[6,nst,npsi]
         avg.append(a) # average ieps0
         sfs.append(sf)
+        rsqs.append(rsq)
 
     avg = np.array(avg) #avg[nphi,2,nst,npsi]
     avg = avg.swapaxes(0,1)    #avg[2,nphi,nst, npsi]
@@ -819,6 +878,11 @@ def ex_igb_t(fn='igstrain_fbulk_ph1.out',
     sfs = sfs.swapaxes(1,3) # [nphi,npsi,nst, 6]
     sfs = sfs.swapaxes(0,2) # [nst, npsi,nphi,6]
     sfs = sfs.swapaxes(1,2) # [nst, nphi,npsi,6]
+
+    rsqs = np.array(rsqs)     #rsqs[nphi,6,nst,npsi]
+    rsqs = rsqs.swapaxes(1,3) # [nphi,npsi,nst, 6]
+    rsqs = rsqs.swapaxes(0,2) # [nst, npsi,nphi,6]
+    rsqs = rsqs.swapaxes(1,2) # [nst, nphi,npsi,6]
 
     f = open(fnout,'w')
     f.writelines('%3s %8s %13s %14s %14s %14s %14s %14s %14s\n'
@@ -842,7 +906,7 @@ def ex_igb_t(fn='igstrain_fbulk_ph1.out',
                     f.writelines(' %+12.7e'%fij[j])
                 f.writelines('\n')
     f.close()
-    return avg, sfs  #avg[2,nst,nphi,npsi], sfs[
+    return avg, sfs, rsqs  #avg[2,nst,nphi,npsi], sfs[
 
 def ex_igb_bix(fn='igstrain_bix_ph1.out',ifig=1,iphi=0,
                mxnst=None,flow=None):
@@ -1124,7 +1188,7 @@ def ex_igb_cf(fnu='igstrain_fbulk_ph1.out',
     difl, nphi, phis, nbeta, neps, eps = condition(fn=None)
 
     plt.ioff()
-    avgu,sfs=ex_igb_t(fn=fnu,fnout='igstrain_unloads_avg.out')   # at unlaods
+    avgu,sfs,rsqs=ex_igb_t(fn=fnu,fnout='igstrain_unloads_avg.out')   # at unlaods
     avgl=ex_igb_bix_t(fn=fnl,fnout='igstrain_loads_avg.out') # at loads
 
     print avgu.shape#[2,nst,nphi,nspi]

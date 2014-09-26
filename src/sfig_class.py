@@ -13,7 +13,7 @@ interp = rs.interpolate
 class SF:
     def add_data(self,sf=None,phi=None,psi=None):
         """
-        sf[nstp,nphi,npsi,6]
+        sf[nstp,nphi,npsi,nij]
         """
         self.flow = fc()
         if sf!=None:
@@ -34,6 +34,10 @@ class SF:
             self.psi = psi
             self.sin2psi = np.sin(self.psi*np.pi/180.)**2
             self.npsi = len(self.psi)
+
+    def add_vf(self,vf): self.vf = vf[::]
+
+    def add_rsq(self,rsq): self.rsq = rsq[::]
 
     def add_flow(self,eps,i,j):
         self.flow.get_strain(eps,i,j)
@@ -156,13 +160,50 @@ class SF:
         self.phi = np.array(phi_new)
         self.nphi = len(self.phi)
 
-    def plot(self,nbin_sin2psi=2):
+    def mask_vol(self,pmargin=0.05):
+        """
+        1) Mask data in case that volume (ngr) is zero
+        2) Or, if self.vf is given, use proportional margin
+           to set a limit for indivial plastic level
+        """
+        if hasattr(self, 'vf'):
+            print 'self has vf property.',\
+                ' Do mask based on volume margin:',\
+                ' %5.3f%%'%(pmargin*100)
+            ntot = 0
+            for istp in range(self.nstp):
+                n = 0
+                for iphi in range(self.nphi):
+                    mean  = np.mean(self.vf[istp,iphi,:])
+                    limit = mean*pmargin
+                    print 'mean and limit:', mean, limit
+                    for ipsi in range(self.npsi):
+                        if self.vf[istp,iphi,ipsi]<limit:
+                            self.sf[istp,iphi,ipsi,:] = np.nan
+                            n = n + 1
+                print '%i number of sf data points were masked for step %i'%(n,istp)
+                ntot = ntot + n
+            print '%i number of sf data points were masked in total'%ntot
+
+                    ##self.sf[istp,iphi,:,:][self.vf[istp,iphi,:]<limit]=np.nan
+        else:
+            print 'No volume is given. Mask if sf==0'
+            self.sf[self.sf==0]=np.nan
+
+    def mask_vol_abs(self,value=0.001):
+        self.sf[self.sf<value]=np.nan
+
+    def plot(self,nbin_sin2psi=2,iopt=0):
         """   """
         from MP.lib import axes_label
         from MP.lib import mpl_lib
         import matplotlib as mpl
         import matplotlib.cm as cm
-        figs = wide_fig(nw=self.nphi,w0=0,w1=0,
+        if hasattr(self, 'vf'): 
+            nh = 2
+        else: nh = 1
+
+        figs = wide_fig(nw=self.nphi,nh=nh,w0=0,w1=0,
                         left=0.2,right=0.15)
 
         mx = max(self.flow.epsilon_vm)
@@ -176,23 +217,40 @@ class SF:
                 cl = c.to_rgba(eps)
                 if i==0: colors.append(cl)
 
+                y = self.sf[j,i,:,0] * 1e12
                 l, = figs.axes[i].plot(
-                    sin(self.psi*np.pi/180.)**2,
-                    self.sf[j,i,:,0],'-',color=cl)
+                    np.sign(self.psi)*sin(self.psi*np.pi/180.)**2,
+                    y,'-',color=cl)
+                y = self.sf[j,i,:,1] * 1e12
                 figs.axes[i].plot(
-                    sin(self.psi*np.pi/180.)**2,
-                    self.sf[j,i,:,1],'--',color=cl)
+                    np.sign(self.psi)*sin(self.psi*np.pi/180.)**2,
+                    y,'--',color=cl)
 
                 if j==0:
                     figs.axes[i].set_title(
                         r'$\phi: %3.1f^\circ{}$'%self.phi[i])
+
+        if nh==2:
+            for i in range(self.nphi):
+                for j in range(self.flow.nstp):
+                    eps = self.flow.epsilon_vm[j]
+                    cl = c.to_rgba(eps)
+                    y = self.vf[j,i,:]
+                    figs.axes[i+self.nphi].plot(
+                        np.sign(self.psi)*sin(self.psi*np.pi/180.)**2,
+                        y,'-',color=cl)
+
         deco = axes_label.__deco__
         rm_inner =mpl_lib.rm_inner
         ticks_bin_u = mpl_lib.ticks_bins_ax_u
-        deco(figs.axes[0],iopt=1)
-        mpl_lib.tune_xy_lim(figs.axes)
-        rm_inner(figs.axes)
-        ticks_bin_u(figs.axes,n=4)
+        rm_inner(figs.axes[:3])
+        rm_inner(figs.axes[3:6])
+        deco(figs.axes[0],iopt=1,ipsi_opt=1)
+        deco(figs.axes[3],iopt=7,ipsi_opt=1)
+        mpl_lib.tune_xy_lim(figs.axes[:3])
+        mpl_lib.tune_xy_lim(figs.axes[3:6])
+        ticks_bin_u(figs.axes[:3],n=4)
+        ticks_bin_u(figs.axes[3:6],n=4)
 
         # color bar
         b = figs.axes[-1].get_position()
@@ -224,8 +282,11 @@ class SF:
                         r'$\phi: %3.1f^\circ{}$'%self.phi[i])
                 idx = indx[j]
                 for k in range(len(idx)):
-                    ax.plot(eps,self.sf[:,i,[idx[k]],0],'x')
-                    ##ax.plot(eps,self.sf[:,i,k,1],'--')
+                    y = self.sf[:,i,[idx[k]],0][::]
+                    # for n in range(len(y)):
+                    #     if np.isnan(y[n])==True:
+                    #         raise IOError
+                    ax.plot(eps,y,'x')
 
         for i in range(nbin):
             axes=[]
@@ -240,6 +301,17 @@ class SF:
         mpl_lib.tune_xy_lim(figs_p.axes)
         #print 'no'
         ticks_bin_u(figs_p.axes,n=3)
+
+
+        if iopt==1:
+            for i in range(len(figs.axes)):
+                figs.axes[i].set_xlim(0.0,0.5)
+            for i in range(3):
+                figs.axes[i].set_ylim(-2,2)
+                figs.axes[3+i].set_ylim(0.,0.1)
+
+
+
 
 
     def __binning__(self,nbin,mx):
@@ -371,7 +443,7 @@ class IG:
                 if i==0: colors.append(cl)
 
                 figs.axes[i].plot(
-                    sin(self.psi*np.pi/180.)**2,
+                    np.sign(self.psi)*sin(self.psi*np.pi/180.)**2,
                     self.ig[j,i,:],'-x',color=cl)
 
                 if j==0:
@@ -382,7 +454,7 @@ class IG:
         rm_inner =mpl_lib.rm_inner
         ticks_bin_u = mpl_lib.ticks_bins_ax_u
 
-        deco(figs.axes[0],iopt=2)
+        deco(figs.axes[0],iopt=2,ipsi_opt=1)
         mpl_lib.tune_xy_lim(figs.axes)
         rm_inner(figs.axes)
         ticks_bin_u(figs.axes,n=4)

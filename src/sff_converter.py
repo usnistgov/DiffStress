@@ -56,7 +56,7 @@ def main(fn='temp.sff', difile=None, iph=1, factor=1e6, itab=False,
     difl, nphi, phis, npsi, dum1, dum2 = condition(fn=difile)
 
     # ------------------------------------------------------- #
-    fn_ig_avg='igstrain_loads_avg.out'
+    fn_ig_avg='igstrain_loads_avg.out' ## IG strain from avg.
     #fn_ig_avg='igstrain_fbulk_ph1.out'
     from pepshkl import reader3 as reader
     import os.path
@@ -80,7 +80,6 @@ def main(fn='temp.sff', difile=None, iph=1, factor=1e6, itab=False,
         dummy_rst = ex_igb_bix_t(fn='igstrain_bix_ph1.out',
                                  fnout=fn_ig_avg,
                                  flow=flow)
-
     dat,psis,fij = reader(fn_ig_avg,isort=True)
     # ------------------------------------------------------- #
 

@@ -60,7 +60,7 @@ def ex_consistency(
         iscatter=False,psimx=None,psi_nbin=1,
         ig_sub=True,istep=None,hkl=None,iplot=True,
         iwind=False,wdeg=2,ipsi_opt=1,fn_sff=None,
-        pmargin=None):
+        pmargin=None,path=''):
     """
     Consistency check between 'weighted average' stress and
     the stress obtained following the stress analysis method
@@ -86,6 +86,7 @@ def ex_consistency(
              2: psi
     pmargin   : portional margin of volume that should exceed to
                 contribute to the ehkl/SF/IG in model_rs
+    path      : place holder for strain path
     """
     from rs import ResidualStress,u_epshkl,filter_psi,\
         psi_reso, psi_reso2
@@ -101,9 +102,9 @@ def ex_consistency(
         fancy_legend = mpl_lib.fancy_legend
 
         ## Collection of figures at various plastic strains
-        fe   = PdfPages('all_ehkl_fits_%s.pdf'%hkl)
-        fs   = PdfPages('all_stress_factors_%s.pdf'%hkl)
-        f_er = PdfPages('all_Ei-ehkl-e0_%s.pdf'%hkl)
+        fe   = PdfPages('all_ehkl_fits_%s_%s.pdf'%(hkl,path))
+        fs   = PdfPages('all_stress_factors_%s_%s.pdf'%(hkl,path))
+        f_er = PdfPages('all_Ei-ehkl-e0_%s_%s.pdf'%(hkl,path))
 
         # fig1 is 'flow_**.pdf'
         fig1 = wide_fig(ifig,nw=2,nh=1,left=0.2,uw=3.5,
@@ -256,10 +257,10 @@ def ex_consistency(
         ax2.grid('on'); plt.show()
 
         ## save figures
-        fig1.savefig('flow_%s.pdf'%hkl)
-        fig2.savefig('ehkl_fit_%s.pdf'%hkl)
-        fig3.savefig('sf_%s.pdf'%hkl)
-        fig4.savefig('ehkl_fit_err_%s.pdf'%hkl)
+        fig1.savefig('flow_%s_%s.pdf'%(hkl,path))
+        fig2.savefig('ehkl_%s_fit_%s.pdf'%(hkl,path))
+        fig3.savefig('sf_%s_%s.pdf'%(hkl,path))
+        fig4.savefig('ehkl_fit_err_%s_%s.pdf'%(hkl,path))
         # close figures
         plt.close(fig1); plt.close(fig2); plt.close(fig3); plt.close(fig4)
 
