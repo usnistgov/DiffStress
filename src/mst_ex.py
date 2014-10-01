@@ -485,7 +485,9 @@ def influence_of_intp(ss=2,bounds=[0,0.5],
 
     return fw, e
 
-def influence_of_nbin(ss=3):
+def influence_of_nbin(
+    ss=3,bounds = [0,0.5],
+    nbins = [11, 19, 25, 51]):
     """
     Influence of psi bin size
     """
@@ -496,8 +498,8 @@ def influence_of_nbin(ss=3):
     deco         = axes_label.__deco__
     fig = wide_fig(nw=1,nh=1);ax=fig.axes[0]
 
-    bounds = [0,0.5]
-    nbins = [5, 11, 19, 25, 50]
+
+
     for i in range(len(nbins)):
         nb = nbins[i]
         fw, e = influence_of_intp(
