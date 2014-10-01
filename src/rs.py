@@ -1217,6 +1217,7 @@ def psi_reso2(mod=None,ntot=2):
     ehkl = select_psi(ehkl,inds)
     tdat = select_psi(tdat,inds)
     phis = phis[::]
+
     new_psi = []
     for i in range(len(inds)):
         new_psi.append(psis[inds[i]])
@@ -1227,16 +1228,38 @@ def psi_reso2(mod=None,ntot=2):
     mod.eps0 = eps0; mod.ehkl = ehkl; mod.tdat = tdat
     mod.phis = phis; mod.psis = psis; mod.nphi = nphi
 
+    # ## mod.dat_model
+    # mod.dat_model.sf   = select_psi(mod.dat_model.sf,inds)
+    # mod.dat_model.ig   = select_psi(mod.dat_model.ig,inds)
+    # mod.dat_model.vf   = select_psi(mod.dat_model.vf,inds)
+    # mod.dat_model.ehkl = select_psi(mod.dat_model.ehkl,inds)
+    # mod.dat_model.psi  = psis[::]
+    # mod.dat_model.npsi = len(mod.dat_model.psi)
 
-    ## mod.dat_model
-    mod.dat_model.sf = select_psi(mod.dat_model.sf,inds)
-    mod.dat_model.ig = select_psi(mod.dat_model.ig,inds)
-    mod.dat_model.vf = select_psi(mod.dat_model.vf,inds)
-    mod.dat_model.ehkl = select_psi(mod.dat_model.ehkl,inds)
-    mod.dat_model.psi  = psis[::]
-    mod.dat_model.npsi = len(mod.dat_model.psi)
+def psi_reso3(obj,psi,ntot=2):
+    """
+    Reduce elements along the psi axis,
+    which is assumed as the ending axis
 
-
+    Arguments
+    =========
+    obj
+    psi
+    ntot
+    """
+    sign_sin2psi = []
+    for i in range(len(psi)):
+        sign_sin2psi.append(
+            np.sign(psi) \
+            * sin(psi)**2)
+    # equal distance
+    spc  = np.linspace(np.min(sign_sin2psi),
+                       np.max(sign_sin2psi),ntot)
+    inds = []
+    for i in range(len(spc)):
+        inds.append(find_nearest(
+            sign_sin2psi,spc[i]))
+    return select_psi(obj, inds)
 
 def select_psi(dat,inds):
     array = []
@@ -1282,6 +1305,11 @@ def psi_reso(mod=None,nbin=2):
 
 def filter_psi(mod=None,psimx=None,sin2psimx=None):
     """
+    Arguments
+    =========
+    mod   = None
+    psimx = None
+    sin2psimx = None
     """
     sf   = mod.sf
     eps0 = mod.eps0
@@ -1338,3 +1366,32 @@ def filter_psi(mod=None,psimx=None,sin2psimx=None):
     mod.dat_model.ehkl = mod.dat_model.ehkl[:,:,i0:i1]
     mod.dat_model.psi  = mod.dat_model.psi[i0:i1]
     mod.dat_model.npsi  = len(mod.dat_model.psi)
+
+
+def filter_psi2(obj=None,sin2psi=[],bounds=[0.,1.]):
+    """
+    Limit psi values - trim some elements from the obj
+    array as to assert only a certain range of psi (sin2psi)
+
+    Arguments
+    =========
+    obj     = None
+    sin2psi =
+    bounds  = [0,  1.]
+    """
+    inds = []
+    for i in range(len(sin2psi)):
+        val = sin2psi[i]
+        if val>=bounds[0] and val<=bounds[1]:
+            inds.append(i)
+    shape = np.array(obj.shape)
+    shape[-1] = len(inds)
+    new_obj = np.zeros(shape)
+    new_obj_t = new_obj.swapaxes(0,-1)
+    obj_t = obj.swapaxes(0,-1)
+
+    for i in range(len(inds)):
+        new_obj_t[i]=obj_t[inds[i]]
+
+    new_obj = new_obj_t.swapaxes(0,-1)
+    return new_obj

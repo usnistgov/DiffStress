@@ -227,7 +227,6 @@ def plot_sf(sff_fn='temp.sff',pmargin=0.1):
         ax.plot(sign_sin2psi,SF.vf[istp,0,:],'--')
 
     SF.plot(nbin_sin2psi=3,iopt=1)
-
     return SF,tdat,psis,vdat,ngrd
 
 def plot_sf_psis(
@@ -312,5 +311,231 @@ def plot_sf_psis(
             axt.plot(x,v,'r-x')
 
             axt.set_ylim(0.,0.10)
-
             ax.set_xlim(0.,1.0)
+
+def use_intp_sfig(ss=2):
+    """
+    Use "interpolated" SF/IG strains
+    to calculate the influence of 'interpolation'
+
+    Arguments
+    =========
+    ss=2
+    """
+    from rs import ResidualStress as RS
+    from copy import copy
+    ## 1. Read original SF/IG/FLow
+    RS_model = RS(mod_ext=None,
+                  fnmod_ig='igstrain_fbulk_ph1.out',
+                  fnmod_sf='igstrain_fbulk_ph1.out',
+                  i_ip=1)
+    _SF_   = RS_model.dat_model.sf[::]
+    _IG_   = RS_model.dat_model.ig[::]
+    _Flow_ = RS_model.dat_model.flow; _Flow_.get_eqv()
+    print _Flow_.epsilon_vm
+    Flow   = copy(_Flow_)
+    _nstp_ = _Flow_.nstp
+    print _nstp_
+
+    ## 2. Create a set of SF/IG/Flow interpolated at
+    #   several plastic increments
+
+    ##   2-1. Reduce the SF/IG/FLow nstp
+    # Half of the original plastic increments
+
+    SF = _SF_[::ss]; IG = _IG_[::ss]
+    Flow.epsilon = Flow.epsilon.swapaxes(0,-1)[::ss].swapaxes(0,-1)
+    Flow.sigma   = Flow.sigma.swapaxes(0,-1)[::ss].swapaxes(0,-1)
+    Flow.nstp    = Flow.nstp / ss
+    Flow.get_eqv()
+    #return Flow,_Flow_
+
+    ##   2-2. Create the SF object
+    import sfig_class
+    #      2-2-1. Original SF
+    SF0 = _SF_.swapaxes(1,-1).swapaxes(1,2)
+    StressFactor0 = sfig_class.SF()
+    StressFactor0.add_data(
+        sf=SF0[::]*1e-6,phi=RS_model.dat_model.phi[::]*180./np.pi,
+        psi=RS_model.dat_model.psi[::]*180./np.pi)
+    StressFactor0.flow = _Flow_; StressFactor0.flow.get_eqv()
+    StressFactor0.mask_vol()
+
+    #      2-2-2. Rearrange SF [stp,nij,nphi,npsi] -> [nstp,nphi,nspi,nij]
+    SF = SF.swapaxes(1,-1).swapaxes(1,2)
+    StressFactor = sfig_class.SF()
+    StressFactor.add_data(
+        sf=SF[::]*1e-6,phi=RS_model.dat_model.phi[::]*180./np.pi,
+        psi=RS_model.dat_model.psi[::]*180./np.pi)
+    StressFactor.flow = Flow
+    StressFactor.flow.get_eqv()
+    ##     2-2-3. Interpolate them at strains
+    StressFactor.interp_strain(epsilon_vm = _Flow_.epsilon_vm)
+    StressFactor.flow = _Flow_
+    StressFactor.flow.get_eqv()
+    StressFactor.nstp = StressFactor.flow.nstp
+
+    ##   2-3. Create the IG object
+    ## IG0 = _IG_.swapaxes(1,-1).swapaxes(1,2)
+    IG0 = _IG_[::]
+    IGStrain0 = sfig_class.IG()
+    IGStrain0.add_data(
+        ig=IG0[::],phi=RS_model.dat_model.phi[::]*180./np.pi,
+        psi=RS_model.dat_model.psi[::]*180./np.pi)
+    IGStrain0.flow = _Flow_; IGStrain0.flow.get_eqv()
+    ## IGStrain0.mask_vol()
+
+    #      2-2-2. Rearrange IG [stp,nij,nphi,npsi] -> [nstp,nphi,nspi,nij]
+    ## IG = IG.swapaxes(1,-1).swapaxes(1,2)
+    IGStrain = sfig_class.IG()
+    IGStrain.add_data(
+        ig=IG[::],phi=RS_model.dat_model.phi[::]*180./np.pi,
+        psi=RS_model.dat_model.psi[::]*180./np.pi)
+    IGStrain.flow = Flow
+    IGStrain.flow.get_eqv()
+    ##     2-2-3. Interpolate them at strains
+    IGStrain.interp_strain(epsilon_vm = _Flow_.epsilon_vm)
+    IGStrain.flow = _Flow_
+    IGStrain.flow.get_eqv()
+    IGStrain.nstp = IGStrain.flow.nstp
+
+    StressFactor0.plot()
+    StressFactor.plot()
+    IGStrain0.plot()
+    IGStrain.plot()
+    return StressFactor, IGStrain
+
+def influence_of_intp(ss=2,bounds=[0,0.5],
+                      psi_nbin=13,iplot=False,
+                      hkl=None):
+    """
+    Parametric study to demonstrate the influence of
+    psi binning
+
+    Arguments
+    =========
+    ss       = 2 (step size)
+    bounds   = sin2psi bounds
+    psi_nbin = Number of psi data points in use
+    """
+    from MP.mat.mech import find_err
+    from rs import filter_psi2, psi_reso3
+    from rs_ex import ex_consistency as main
+    from MP.lib import mpl_lib,axes_label
+    import matplotlib.pyplot as plt
+    wide_fig     = mpl_lib.wide_fig
+    deco         = axes_label.__deco__
+    fig = wide_fig(nw=3,nh=1);axs=fig.axes
+
+    ## Use the reduced set over the consistency check
+    sf,ig = use_intp_sfig(ss=ss)
+    sf_ext = sf.sf.swapaxes(1,-1).swapaxes(-2,-1)[::]*1e6
+    ig_ext = ig.ig[::]
+
+    ##
+    # Filtering against sin2psi
+    sf_ext = filter_psi2(
+        obj=sf_ext,sin2psi=sf.sin2psi,bounds=bounds)
+    ig_ext = filter_psi2(
+        obj=ig_ext,sin2psi=sf.sin2psi,bounds=bounds)
+
+    # # # Reduce binning
+    ## consistency check
+    rst = main(sin2psimx=bounds[1],psi_nbin=psi_nbin,
+               sf_ext=sf_ext,ig_ext=ig_ext,
+               iplot=iplot,hkl=hkl)
+
+    fw, fd = rst[1], rst[2]
+
+    axs[0].plot(fw.epsilon_vm,fw.sigma_vm,'b-x',
+                label='Weight Avg.')
+    axs[0].plot(fd.epsilon_vm,fd.sigma_vm,'k+',
+                label='Diff Stress')
+
+    x = fd.epsilon_vm[::ss]; y = fd.sigma_vm[::ss]
+    label='SF/IG acqusition'
+    axs[0].plot(x,y,'o',mec='r',mfc='None',
+                alpha=0.8,label=label)
+    npoints = len(fw.sigma[0,0])
+
+    axs[1].plot(fw.sigma[0,0],fw.sigma[1,1],'b-x')
+    axs[1].plot(fd.sigma[0,0],fd.sigma[1,1],'k+')
+
+    wgtx, wgty = fw.sigma[0,0], fw.sigma[1,1]
+    dsax, dsay = fd.sigma[0,0], fd.sigma[1,1]
+    for i in range(npoints):
+        axs[1].plot([wgtx[i],dsax[i]],
+                    [wgty[i],dsay[i]],'k-',alpha=0.2)
+
+    e = find_err(fw,fd)
+    axs[2].plot(fw.epsilon_vm, e, 'x')
+    axs[2].plot(fw.epsilon_vm[::ss],e[::ss],
+                'o',mec='r',mfc='None',label=label)
+
+    axes_label.__eqv__(axs[0],ft=10)
+    axs[1].set_aspect('equal')
+    axs[1].set_xlabel(r'$\bar{\Sigma}_{11}$',dict(fontsize=15))
+    axs[1].set_ylabel(r'$\bar{\Sigma}_{22}$',dict(fontsize=15))
+    axs[1].set_ylim(-100,700); axs[1].set_xlim(-100,700)
+
+    axs[0].legend(loc='best',fontsize=10).get_frame().set_alpha(0.5)
+    deco(iopt=8,ft=15,ax=axs[2])
+    fig.savefig('flow_dd_bin%i_ss%i.pdf'%(psi_nbin,ss))
+    plt.close(fig)
+
+    return fw, e
+
+def influence_of_nbin(ss=3):
+    """
+    Influence of psi bin size
+    """
+    from MP.lib import mpl_lib,axes_label
+    import matplotlib.pyplot as plt
+    fancy_legend = mpl_lib.fancy_legend
+    wide_fig     = mpl_lib.wide_fig
+    deco         = axes_label.__deco__
+    fig = wide_fig(nw=1,nh=1);ax=fig.axes[0]
+
+    bounds = [0,0.5]
+    nbins = [5, 11, 19, 25, 50]
+    for i in range(len(nbins)):
+        nb = nbins[i]
+        fw, e = influence_of_intp(
+            ss=ss, bounds=bounds,
+            psi_nbin = nb,iplot=False)
+        x = fw.epsilon_vm[::]
+        y = e[::]
+
+        ax.plot(x,y,label=nb)
+
+
+    fancy_legend(ax=ax,size=10)
+    deco(iopt=8,ft=15,ax=ax)
+    fig.savefig('ss%i_err.pdf'%ss)
+    plt.close('all')
+
+def compare_exp_mod(ntot_psi=21):
+    import numpy as np
+    import matplotlib.pyplot as plt
+    from pepshkl import reader4
+    from RS import sff_converter
+    from rs_exp import read_IGSF
+    from MP.lib import mpl_lib
+    from MP.mat.mech import FlowCurve as FC
+    wf = mpl_lib.wide_fig
+    sff_converter.main(fn='temp.sff',difile=None,itab=True,
+                       ieps0=4,  fn_str='STR_STR.OUT')
+    SF, dum = read_IGSF(fn='temp.sff',fn_str='STR_STR.OUT')
+    SF.reduce_psi(bounds=[0.,0.5],ntot_psi=ntot_psi)
+    SF.mask_vol()
+    SF.plot(ylim=[-2,2])
+
+
+    ## biaxial
+    flow = FC()
+    exx = open('YJ_Bsteel_BB.sff','r').read().split('\n')[4].split()[1:]
+    exx = np.array(exx,dtype='float'); eyy = exx[::]; ezz = -(exx+eyy)
+    flow.epsilon_vm = abs(ezz)
+    flow.nstp = len(ezz)
+    SF, dum = read_IGSF(fn='YJ_Bsteel_BB.sff',fc=flow)
+    SF.plot(mxnphi=3,ylim=[-2,2])

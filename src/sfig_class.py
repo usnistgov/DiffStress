@@ -11,6 +11,8 @@ from RS import rs
 interp = rs.interpolate
 
 class SF:
+    def __init__(self):
+        pass
     def add_data(self,sf=None,phi=None,psi=None):
         """
         sf[nstp,nphi,npsi,nij]
@@ -62,6 +64,66 @@ class SF:
                 self.sf_iso[iphi,ipsi] = calc_iso_sf(
                     phi=phi[iphi],psi=psi[ipsi],
                     nu=nu,Y=E,iopt=1).copy()
+    def reduce_psi(
+            self, bounds = [0.0,0.5],
+            ntot_psi = 17):
+        self.bound_psi(bounds = bounds)
+        self.reso_psi(ntot=ntot_psi)
+
+    def bound_psi(self, bounds = [0.0,0.5]):
+        from rs import filter_psi2 as filter_psi
+        sft = self.sf.swapaxes(-1,-2)
+        psi_dum = self.psi[::]
+
+        ## bounds filter
+        sft = filter_psi(
+            obj=sft[::], sin2psi=self.sin2psi[::],
+            bounds=bounds)
+        if hasattr(self, 'vf'):
+            vf = filter_psi(
+                obj=self.vf[::],sin2psi=self.sin2psi[::],
+                bounds=bounds)
+        if hasattr(self, 'rsq'):
+            rsq = filter_psi(
+                obj=self.rsq[::],sin2psi=self.sin2psi[::],
+                bounds=bounds)
+        sin2psi = filter_psi(
+            obj=self.sin2psi[::],sin2psi=self.sin2psi[::],
+            bounds=bounds)
+        psid = filter_psi(
+            obj=psi_dum[::],sin2psi=self.sin2psi[::],
+            bounds=bounds)
+
+        self.sf=sft.swapaxes(-1,-2)
+        self.sin2psi = sin2psi[::]
+        self.psi = psid[::]
+        self.npsi = len(self.psi)
+        if hasattr(self, 'vf'): self.vf=vf[::]
+        if hasattr(self, 'rsq'): self.rsq=rsq[::]
+
+    def reso_psi(self,ntot=17):
+        from rs import psi_reso3 as reso
+        sft = self.sf.swapaxes(-1,-2)
+        psid = self.psi[::] * np.pi/180.
+        sin2psi = self.sin2psi[::]
+
+        # ## psi reduce resol.
+        sft = reso(obj=sft[::], psi=psid[::],ntot=ntot)
+        if hasattr(self, 'vf'):
+            vf = reso(obj=vf[::], psi=psid[::],ntot=ntot)
+        if hasattr(self, 'rsq'):
+            rsq = reso(obj=rsq[::], psi=psid[::],ntot=ntot)
+
+        sin2psi = reso(obj=sin2psi[::], psi=psid[::],ntot=ntot)
+        psi = reso(obj=psid[::], psi=psid[::],ntot=ntot)
+
+        self.sf = sft.swapaxes(-1,-2)
+        print self.sf.shape
+        self.sin2psi = sin2psi[::]
+        self.psi = psi[::] * 180./np.pi
+        self.npsi = len(self.psi)
+        if hasattr(self, 'vf'): self.vf=vf[::]
+        if hasattr(self, 'rsq'): self.rsq=rsq[::]
 
     def interp_strain(self,epsilon_vm):
         """
@@ -193,25 +255,29 @@ class SF:
     def mask_vol_abs(self,value=0.001):
         self.sf[self.sf<value]=np.nan
 
-    def plot(self,nbin_sin2psi=2,iopt=0):
+    def plot(self,nbin_sin2psi=2,iopt=0,ylim=None,
+             mxnphi=None,hkl='211'):
         """   """
         from MP.lib import axes_label
         from MP.lib import mpl_lib
         import matplotlib as mpl
         import matplotlib.cm as cm
-        if hasattr(self, 'vf'): 
+        if hasattr(self, 'vf'):
             nh = 2
         else: nh = 1
 
-        figs = wide_fig(nw=self.nphi,nh=nh,w0=0,w1=0,
+        if mxnphi==None: mxnphi = self.nphi
+        figs = wide_fig(nw=mxnphi,nh=nh,w0=0,w1=0,
                         left=0.2,right=0.15)
 
         mx = max(self.flow.epsilon_vm)
         mn = min(self.flow.epsilon_vm)
+        # mx = 1.
+        # mn = 0.
         cmap, c = mpl_lib.norm_cmap(mx=mx,mn=mn)
         colors=[]
         self.flow.nstp = len(self.flow.epsilon_vm)
-        for i in range(self.nphi):
+        for i in range(mxnphi):
             for j in range(self.flow.nstp):
                 eps = self.flow.epsilon_vm[j]
                 cl = c.to_rgba(eps)
@@ -220,37 +286,40 @@ class SF:
                 y = self.sf[j,i,:,0] * 1e12
                 l, = figs.axes[i].plot(
                     np.sign(self.psi)*sin(self.psi*np.pi/180.)**2,
-                    y,'-',color=cl)
+                    y,'-x',color=cl)
                 y = self.sf[j,i,:,1] * 1e12
                 figs.axes[i].plot(
                     np.sign(self.psi)*sin(self.psi*np.pi/180.)**2,
-                    y,'--',color=cl)
+                    y,'--.',color=cl)
 
                 if j==0:
                     figs.axes[i].set_title(
                         r'$\phi: %3.1f^\circ{}$'%self.phi[i])
 
         if nh==2:
-            for i in range(self.nphi):
+            for i in range(mxnphi):
                 for j in range(self.flow.nstp):
                     eps = self.flow.epsilon_vm[j]
                     cl = c.to_rgba(eps)
                     y = self.vf[j,i,:]
-                    figs.axes[i+self.nphi].plot(
+                    figs.axes[i+mxnphi].plot(
                         np.sign(self.psi)*sin(self.psi*np.pi/180.)**2,
                         y,'-',color=cl)
 
         deco = axes_label.__deco__
         rm_inner =mpl_lib.rm_inner
         ticks_bin_u = mpl_lib.ticks_bins_ax_u
-        rm_inner(figs.axes[:3])
-        rm_inner(figs.axes[3:6])
-        deco(figs.axes[0],iopt=1,ipsi_opt=1)
-        deco(figs.axes[3],iopt=7,ipsi_opt=1)
-        mpl_lib.tune_xy_lim(figs.axes[:3])
-        mpl_lib.tune_xy_lim(figs.axes[3:6])
-        ticks_bin_u(figs.axes[:3],n=4)
-        ticks_bin_u(figs.axes[3:6],n=4)
+        rm_inner(figs.axes[:mxnphi])
+        if nh==2: rm_inner(figs.axes[mxnphi:mxnphi*2])
+        deco(figs.axes[0],iopt=1,ipsi_opt=1,hkl=hkl)
+        if nh==2: deco(figs.axes[mxnphi],iopt=7,ipsi_opt=1,hkl=hkl)
+        mpl_lib.tune_xy_lim(figs.axes[:mxnphi])
+        if ylim!=None:
+            for i in range(len(figs.axes[:mxnphi])):
+                figs.axes[i].set_ylim(ylim)
+        if nh==2: mpl_lib.tune_xy_lim(figs.axes[mxnphi:mxnphi*2])
+        ticks_bin_u(figs.axes[:mxnphi],n=4)
+        if nh==2: ticks_bin_u(figs.axes[mxnphi:mxnphi*2],n=4)
 
         # color bar
         b = figs.axes[-1].get_position()
@@ -258,6 +327,8 @@ class SF:
         mpl_lib.add_cb(ax=axcb,filled=False,
                        levels=self.flow.epsilon_vm,
                        colors=colors,ylab='Equivalent strain')
+
+        if nh==1: return
 
         """   SF(phi,psi) vs plastic strain   """
         ## binning sin2psi
@@ -271,13 +342,15 @@ class SF:
                 print '%4.2f'%(self.sin2psi[indx[i][j]]),
             print
 
-        figs_p = wide_fig(nw=self.nphi,nh=nbin,
+
+        if mxnphi!=None: mxnphi=self.nphi
+        figs_p = wide_fig(nw=mxnphi,nh=nbin,
                           w0=0,w1=0,left=0.2,right=0.15)
 
         eps = self.flow.epsilon_vm
-        for i in range(self.nphi):
+        for i in range(mxnphi):
             for j in range(nbin):
-                ax = figs_p.axes[i+self.nphi*j]
+                ax = figs_p.axes[i+mxnphi*j]
                 if j==nbin-1: ax.set_title(
                         r'$\phi: %3.1f^\circ{}$'%self.phi[i])
                 idx = indx[j]
@@ -290,17 +363,21 @@ class SF:
 
         for i in range(nbin):
             axes=[]
-            for j in range(self.nphi):
-                axes.append(figs_p.axes[j+self.nphi*i])
+            for j in range(mxnphi):
+                axes.append(figs_p.axes[j+mxnphi*i])
             #mpl_lib.tune_xy_lim(axes)
             if i==0 and j==0:  rm_inner(axes[1:])
             else: rm_inner(axes)
 
-        deco(figs_p.axes[0],iopt=6)
+        deco(figs_p.axes[0],iopt=6,hkl=hkl)
 
         mpl_lib.tune_xy_lim(figs_p.axes)
         #print 'no'
         ticks_bin_u(figs_p.axes,n=3)
+
+        if ylim!=None:
+            for i in range(len(figs_p.axes)):
+                figs_p.axes[i].set_ylim(ylim)
 
 
         if iopt==1:
@@ -309,9 +386,6 @@ class SF:
             for i in range(3):
                 figs.axes[i].set_ylim(-2,2)
                 figs.axes[3+i].set_ylim(0.,0.1)
-
-
-
 
 
     def __binning__(self,nbin,mx):

@@ -60,7 +60,8 @@ def ex_consistency(
         iscatter=False,psimx=None,psi_nbin=1,
         ig_sub=True,istep=None,hkl=None,iplot=True,
         iwind=False,wdeg=2,ipsi_opt=1,fn_sff=None,
-        pmargin=None,path=''):
+        pmargin=None,path='',
+        sf_ext=None,ig_ext=None):
     """
     Consistency check between 'weighted average' stress and
     the stress obtained following the stress analysis method
@@ -87,9 +88,11 @@ def ex_consistency(
     pmargin   : portional margin of volume that should exceed to
                 contribute to the ehkl/SF/IG in model_rs
     path      : place holder for strain path
+    sf_ext    : Overwrite stress factor
+    ig_ext    : Overwrite IG strain
     """
     from rs import ResidualStress,u_epshkl,filter_psi,\
-        psi_reso, psi_reso2
+        filter_psi2,psi_reso, psi_reso2
 
     from MP.mat import mech # mech is a module
     FlowCurve = mech.FlowCurve
@@ -116,7 +119,11 @@ def ex_consistency(
         ax2.set_axis_bgcolor('0.95')
 
     ## i_ip = 1: model case
-    model_rs = ResidualStress(mod_ext=mod_ext,i_ip=1)
+    model_rs = ResidualStress(
+        mod_ext=mod_ext,
+        fnmod_ig='igstrain_fbulk_ph1.out',
+        fnmod_sf='igstrain_fbulk_ph1.out',
+        i_ip=1)
 
     ## masking array element based on diffraction volume
     model_rs.dat_model.mask_vol()
@@ -141,7 +148,7 @@ def ex_consistency(
 
     ## plot all stress factors at individual deformation levels
     stress = []
-    print '%10s%11s%11s%11s%11s%11s'%(
+    print '%8s%8s%8s%8s%8s%8s'%(
         'S11','S22','S33','S23','S13','S12')
 
     for istp in range(model_rs.dat_model.nstp):
@@ -179,7 +186,10 @@ def ex_consistency(
 
         if sin2psimx!=None or psimx!=None:
             filter_psi(model_rs,sin2psimx=sin2psimx,psimx=psimx)
-
+            if sf_ext!=None:
+                model_rs.sf = sf_ext[istp]
+            elif ig_ext!=None:
+                model_rs.ig = ig_ext[istp]
         if psi_nbin!=1:
             psi_reso2(model_rs,ntot=psi_nbin)
 
@@ -189,9 +199,10 @@ def ex_consistency(
         s22 = model_rs.dat_model.flow.sigma[1,1][istp]
         dsa_sigma = model_rs.find_sigma(
             ivo=[0,1],
-            init_guess=[s11,s22,0,0,0,0])
+            init_guess=[0,0,0,0,0,0])
+            #init_guess=[s11,s22,0,0,0,0])
 
-        for i in range(6): print '%+10.1f'%(dsa_sigma[i]),
+        for i in range(6): print '%+7.1f'%(dsa_sigma[i]),
         print ''
         stress.append(dsa_sigma)
         #-----------------------------------#

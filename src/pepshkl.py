@@ -25,7 +25,7 @@ pepshkl.out (int_eps_ph?.out) file reader and plotter
  - Return only unique elements contained in a numpy array
     with its index contained also in another numpy array
 """
-print __doc__
+#print __doc__
 
 import numpy as np
 #from rearrange_sort import main as ss
@@ -936,7 +936,7 @@ def ex_igb_bix(fn='igstrain_bix_ph1.out',ifig=1,iphi=0,
     ax05=fig02.add_subplot(235)
     axes02 = [ax01,ax02,ax03,ax04,ax05]
 
-    tdat = reader2(fn,iopt=2)
+    tdat = reader2(fn,iopt=2,isort=False)
     nst = len(tdat[0])
     npsi=len(tdat[0,0,0])
 
