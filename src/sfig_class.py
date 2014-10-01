@@ -269,11 +269,12 @@ class SF:
         if mxnphi==None: mxnphi = self.nphi
         figs = wide_fig(nw=mxnphi,nh=nh,w0=0,w1=0,
                         left=0.2,right=0.15)
+        # mx = max(self.flow.epsilon_vm)
+        # mn = min(self.flow.epsilon_vm)
+        mx = 1.
+        mn = 0.
 
-        mx = max(self.flow.epsilon_vm)
-        mn = min(self.flow.epsilon_vm)
-        # mx = 1.
-        # mn = 0.
+        norm = mpl.colors.Normalize(vmin=mn, vmax=mx)
         cmap, c = mpl_lib.norm_cmap(mx=mx,mn=mn)
         colors=[]
         self.flow.nstp = len(self.flow.epsilon_vm)
@@ -324,7 +325,7 @@ class SF:
         # color bar
         b = figs.axes[-1].get_position()
         axcb = figs.add_axes([0.88,b.y0,0.03,b.y1-b.y0])
-        mpl_lib.add_cb(ax=axcb,filled=False,
+        mpl_lib.add_cb(ax=axcb,filled=False,norm=norm,
                        levels=self.flow.epsilon_vm,
                        colors=colors,ylab='Equivalent strain')
 
@@ -496,29 +497,38 @@ class IG:
         self.phi = np.array(phi_new)
         self.nphi = len(self.phi)
 
-    def plot(self):
+    def plot(self, nbin_sin2psi=2, iopt=0,ylim=None,
+             mxnphi=None,hkl='211'):
         from MP.lib import axes_label
         from MP.lib import mpl_lib
         import matplotlib as mpl
         import matplotlib.cm as cm
+        if hasattr(self,'vf'): nh = 2
+        else: nh = 1
 
-        figs = wide_fig(nw=self.nphi,w0=0,w1=0,
+        if mxnphi==None: mxnphi = self.nphi
+        figs = wide_fig(nw=mxnphi,nh=nh,w0=0,w1=0,
                         left=0.2,right=0.15)
 
         mx = max(self.flow.epsilon_vm)
         mn = min(self.flow.epsilon_vm)
+        mx = 1.
+        mn = 0.
 
         cmap, c = mpl_lib.norm_cmap(mx=mx,mn=mn)
         colors=[]
-        for i in range(self.nphi):
-            for j in range(self.nstp):
+        self.flow.nstp = len(self.flow.epsilon_vm)
+
+        for i in range(mxnphi):
+            for j in range(self.flow.nstp):
                 eps = self.flow.epsilon_vm[j]
                 cl = c.to_rgba(eps)
                 if i==0: colors.append(cl)
 
+                y = self.ig[j,i,:]
                 figs.axes[i].plot(
                     np.sign(self.psi)*sin(self.psi*np.pi/180.)**2,
-                    self.ig[j,i,:],'-x',color=cl)
+                    y,'-x',color=cl)
 
                 if j==0:
                     figs.axes[i].set_title(

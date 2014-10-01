@@ -143,7 +143,6 @@ def plot_rsq():
 
     return sf,vdat,rsq,psi
 
-
 def return_vf():
     """
     Return volume fraction
@@ -190,8 +189,7 @@ def plot_sf(sff_fn='temp.sff',pmargin=0.1):
 
     sff_converter.main(fn=sff_fn,difile=None,itab=True,
                        ieps0=4,  fn_str='STR_STR.OUT')
-    SF, dum = read_IGSF(fn=sff_fn,fn_str='STR_STR.OUT')
-
+    SF, IG = read_IGSF(fn=sff_fn,fn_str='STR_STR.OUT')
 
     tdat,_psis_,_vdat_,_ngrd_ = reader4(
         fn='int_els_ph1.out',ndetector=2,iopt=1)
@@ -228,6 +226,22 @@ def plot_sf(sff_fn='temp.sff',pmargin=0.1):
 
     SF.plot(nbin_sin2psi=3,iopt=1)
     return SF,tdat,psis,vdat,ngrd
+
+def test_ig(sff_fn='dum.sff'):
+    import numpy as np
+    import matplotlib.pyplot as plt
+    from pepshkl import reader4
+    from RS import sff_converter
+    from rs_exp import read_IGSF
+    from MP.lib import mpl_lib
+    wf = mpl_lib.wide_fig
+
+    sff_converter.main(fn=sff_fn,difile=None,itab=True,
+                       ieps0=4,  fn_str='STR_STR.OUT')
+    SF, IG = read_IGSF(fn=sff_fn,fn_str='STR_STR.OUT')
+
+    IG.plot()
+    
 
 def plot_sf_psis(
         sff_fn='temp.sff',
