@@ -510,15 +510,15 @@ class IG:
         figs = wide_fig(nw=mxnphi,nh=nh,w0=0,w1=0,
                         left=0.2,right=0.15)
 
-        mx = max(self.flow.epsilon_vm)
-        mn = min(self.flow.epsilon_vm)
+        # mx = max(self.flow.epsilon_vm)
+        # mn = min(self.flow.epsilon_vm)
         mx = 1.
         mn = 0.
 
+        norm = mpl.colors.Normalize(vmin=mn, vmax=mx)
         cmap, c = mpl_lib.norm_cmap(mx=mx,mn=mn)
         colors=[]
         self.flow.nstp = len(self.flow.epsilon_vm)
-
         for i in range(mxnphi):
             for j in range(self.flow.nstp):
                 eps = self.flow.epsilon_vm[j]
@@ -539,6 +539,8 @@ class IG:
         ticks_bin_u = mpl_lib.ticks_bins_ax_u
 
         deco(figs.axes[0],iopt=2,ipsi_opt=1)
+        for i in range(len(figs.axes)):
+            figs.axes[i].set_xlim(-0.5,0.5)
         mpl_lib.tune_xy_lim(figs.axes)
         rm_inner(figs.axes)
         ticks_bin_u(figs.axes,n=4)
@@ -546,7 +548,7 @@ class IG:
         # color bar
         b = figs.axes[-1].get_position()
         axcb = figs.add_axes([0.88,b.y0,0.03,b.y1-b.y0])
-        mpl_lib.add_cb(ax=axcb,filled=False,
+        mpl_lib.add_cb(ax=axcb,filled=False,norm=norm,
                        levels=self.flow.epsilon_vm,
                        colors=colors,ylab='Equivalent strain')
 

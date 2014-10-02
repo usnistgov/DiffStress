@@ -260,7 +260,7 @@ def plot_sf_psis(
 
     sff_converter.main(fn=sff_fn,difile=None,itab=True,
                        ieps0=4,  fn_str='STR_STR.OUT')
-    SF, dum = read_IGSF(fn=sff_fn,fn_str='STR_STR.OUT')
+    SF, IG = read_IGSF(fn=sff_fn,fn_str='STR_STR.OUT')
 
     tdat,_psis_,_vdat_,_ngrd_ = reader4(
         fn='int_els_ph1.out',ndetector=2,iopt=1)
@@ -290,15 +290,17 @@ def plot_sf_psis(
     for i in range(len(psi_ref)):
         inds.append(find_nearest(SF.psi, psi_ref[i]))
 
-    SF.mask_vol() ## shake off all zero values
+    #SF.mask_vol() ## shake off all zero values
 
     fig=wf(nh=nphi,nw=len(psi_ref),iarange=True)
     figv=wf(nh=nphi,nw=len(psi_ref),iarange=True)
+    fe0=wf(nh=nphi,nw=len(psi_ref),iarange=True)
     for iphi in range(nphi):
         for ipsi in range(len(psi_ref)):
             #ax = fig.axes[iphi+nphi*ipsi]
             ax = fig.axes[ipsi+len(psi_ref)*iphi]
             axt = figv.axes[ipsi+len(psi_ref)*iphi]
+            aig = fe0.axes[ipsi+len(psi_ref)*iphi]
             if iphi==0:
                 ax.set_title(
                     r'$\psi= %3.1f^\circ{}$'%\
@@ -308,24 +310,33 @@ def plot_sf_psis(
                     r'$\psi= %3.1f^\circ{}$'%\
                     SF.psi[inds[ipsi]]
                 )
+                aig.set_title(
+                    r'$\psi= %3.1f^\circ{}$'%\
+                    SF.psi[inds[ipsi]]
+                )
             if ipsi==0:
                 ax.text(0,0,r'$\phi=%3.1f^\circ{}$'%\
                         SF.phi[iphi],transform=ax.transAxes)
                 axt.text(0,0,r'$\phi=%3.1f^\circ{}$'%\
-                        SF.phi[iphi],transform=ax.transAxes)
+                         SF.phi[iphi],transform=axt.transAxes)
+                aig.text(0,0,r'$\phi=%3.1f^\circ{}$'%\
+                         SF.phi[iphi],transform=aig.transAxes)
 
                 deco(ax,iopt=6)
                 deco(axt,iopt=7)
 
-
             x = SF.flow.epsilon_vm
             y = SF.sf[:,iphi,inds[ipsi],0] # f11
+            ig = IG.ig[:,iphi,inds[ipsi]]
             v = vdat[:,iphi,inds[ipsi]]
             ax.plot(x,y*1e12,'b-o')
+            aig.plot(x,ig,'b-o')
             axt.plot(x,v,'r-x')
 
             axt.set_ylim(0.,0.10)
             ax.set_xlim(0.,1.0)
+            aig.set_xlim(0.,1.0)
+            aig.set_ylim(-0.002,0.002)
 
 def use_intp_sfig(ss=2):
     """
