@@ -296,15 +296,15 @@ class DiffDat:
         self.vf=vf
         self.ngr=np.array(ngr,dtype='int')
 
-        if self.vf==None:
+        if type(self.vf)==type(None):
             self.vf = np.zeros(self.ehkl.shape)*np.nan
-        if self.ngr==None:
+        if type(self.ngr)==type(None):
             self.ngr = np.zeros(self.ehkl.shape)*np.nan
 
-        if sf!=None: self.nstp = len(sf) # (nstp,k,nphi,npsi)
-        if ig!=None: self.nstp = len(ig) # (nstp,k,nphi,npsi)
-        if ehkl!=None: self.nstp = len(ehkl) # (nstp,k,nphi,npsi)
-        if dhkl!=None: self.nstp = len(dhkl) # (nstp,k,nphi,npsi)
+        if type(sf)!=type(None): self.nstp = len(sf) # (nstp,k,nphi,npsi)
+        if type(ig)!=type(None): self.nstp = len(ig) # (nstp,k,nphi,npsi)
+        if type(ehkl)!=type(None): self.nstp = len(ehkl) # (nstp,k,nphi,npsi)
+        if type(dhkl)!=type(None): self.nstp = len(dhkl) # (nstp,k,nphi,npsi)
 
         self.stress=stress
         self.strain = np.array(strain).copy()
@@ -1037,15 +1037,36 @@ class ResidualStress:
         figs.savefig('fit_SF_iopt%i.pdf'%(iopt))
         return stress
 
-    def find_sigma(self,ivo=None,init_guess=[0,0,0,0,0,0]):
+    def find_sigma(self,ivo=None,init_guess=[0,0,0,0,0,0],
+                   weight=None):
         """
         Find the stress by fitting the elastic strains
-        1) guessed from stress
-        2) with the given elastic strains
+        1) Guess Ei from stress
+        2) Minimize difference between the guessed Ei
+           and the observed Ei, i.e., eps(hkl) - eps(IG)
+        3) If weight is given, weight the object array in the
+           elementwise. For that, shape of the weight array
+           should be (self.nphi,self.npsi)
+
+        Arguments
+        =========
+        ivo        = None
+        init_guess = [0,0,0,0,0,0]
+        weight     = None
         """
         from scipy import optimize
         fmin = optimize.leastsq
-        dat=fmin(self.f_least,init_guess,args=(ivo),
+
+        ## Whether or not weight was given
+        if type(weight)==type(None):
+            f_objf = self.f_least
+            least_args = (ivo)
+        else:
+            f_objf = self.f_least_weighted
+            least_args = (ivo,weight)
+        ##
+
+        dat=fmin(f_objf,init_guess,args=least_args,
                  full_output=True,xtol=1e-12,ftol=1e-12,maxfev=1000)
         stress=dat[0]
         cov_x, infodict, mesg, ier = dat[1:]
@@ -1075,6 +1096,8 @@ class ResidualStress:
         """
         Back calculate the elastic strain
         based on 'stress' and elastic coefficients
+
+        ivo = None
         """
         self.Ei = np.zeros((self.nphi,self.npsi))
         for iphi in range(self.nphi):
@@ -1119,6 +1142,7 @@ class ResidualStress:
                 self.cffs[4,iphi,ipsi] = e(self.phis[iphi],self.psis[ipsi],self.s1,self.s2) # s13
                 self.cffs[5,iphi,ipsi] = f(self.phis[iphi],self.psis[ipsi],self.s1,self.s2) # s23
 
+        ## overwrite coefficient by stress factor (DEC)
         self.cffs = self.sf[:,:,:].copy()
 
     def plot(self,stress=[0,0,0,0,0,0],ivo=None,iopt=0,label='None'):
@@ -1180,6 +1204,30 @@ class ResidualStress:
             for ipsi in range(self.npsi):
                 d = self.tdat[iphi,ipsi] \
                     - self.Ei[iphi,ipsi]
+                if np.isnan(d): d = 0
+                f_array.append(d)
+        return np.array(f_array)
+
+    def f_least_weighted(self,stress=[0,0,0,0,0,0],ivo=None,
+                         weight=None):
+        """
+        For weighted linear least square method
+        """
+        if type(weight)==type(None):
+            raise IOError, "Argument weight should be given"
+        if np.shape(weight)!=(self.nphi,self.npsi):
+            raise IOError, "Argument weight is not compatible"
+
+        self.sigma=np.array(stress)
+        self.coeff()
+        self.calc_Ei(ivo=ivo)
+        ## weight Ei by volumes in (phi,psi)
+        f_array = [ ]
+        for iphi in range(self.nphi):
+            for ipsi in range(self.npsi):
+                d = self.tdat[iphi,ipsi] \
+                    - self.Ei[iphi,ipsi]
+                d = d * weight[iphi,ipsi]
                 if np.isnan(d): d = 0
                 f_array.append(d)
         return np.array(f_array)

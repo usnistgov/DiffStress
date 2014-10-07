@@ -145,7 +145,7 @@ def plot_rsq():
 
 def return_vf():
     """
-    Return volume fraction
+    Return volume fraction from 'int_els_ph1.out'
     """
     from pepshkl import reader4
     tdat,_psis_,_vdat_,_ngrd_ = reader4(
@@ -241,7 +241,7 @@ def test_ig(sff_fn='dum.sff'):
     SF, IG = read_IGSF(fn=sff_fn,fn_str='STR_STR.OUT')
 
     IG.plot()
-    
+
 
 def plot_sf_psis(
         sff_fn='temp.sff',
@@ -432,7 +432,8 @@ def use_intp_sfig(ss=2):
 
 def influence_of_intp(ss=2,bounds=[0,0.5],
                       psi_nbin=13,iplot=False,
-                      hkl=None):
+                      hkl=None,
+                      iscatter=False,iwgt=False):
     """
     Parametric study to demonstrate the influence of
     psi binning
@@ -442,9 +443,12 @@ def influence_of_intp(ss=2,bounds=[0,0.5],
     ss       = 2 (step size)
     bounds   = sin2psi bounds
     psi_nbin = Number of psi data points in use
+    hkl      = None
+    iscatter = False
+    iwgt     = False
     """
     from MP.mat.mech import find_err
-    from rs import filter_psi2, psi_reso3
+    from rs import filter_psi2
     from rs_ex import ex_consistency as main
     from MP.lib import mpl_lib,axes_label
     import matplotlib.pyplot as plt
@@ -468,7 +472,8 @@ def influence_of_intp(ss=2,bounds=[0,0.5],
     ## consistency check
     rst = main(sin2psimx=bounds[1],psi_nbin=psi_nbin,
                sf_ext=sf_ext,ig_ext=ig_ext,
-               iplot=iplot,hkl=hkl)
+               iplot=iplot,hkl=hkl,iscatter=iscatter,
+               iwgt=iwgt)
 
     fw, fd = rst[1], rst[2]
 
@@ -511,10 +516,19 @@ def influence_of_intp(ss=2,bounds=[0,0.5],
     return fw, e
 
 def influence_of_nbin(
-    ss=3,bounds = [0,0.5],
-    nbins = [11, 19, 25, 51]):
+        ss=3,bounds = [0,0.5],
+        nbins = [11, 19, 25, 51],iscatter=False,
+        iwgt=False):
     """
     Influence of psi bin size
+
+    Arguments
+    =========
+    ss = 3
+    bounds = [0.0, 0.5]
+    nbins = [11, 19, 25, 51]
+    iscatter = False
+    iwgt     = False
     """
     from MP.lib import mpl_lib,axes_label
     import matplotlib.pyplot as plt
@@ -523,22 +537,69 @@ def influence_of_nbin(
     deco         = axes_label.__deco__
     fig = wide_fig(nw=1,nh=1);ax=fig.axes[0]
 
-
-
+    Y = []
     for i in range(len(nbins)):
         nb = nbins[i]
         fw, e = influence_of_intp(
             ss=ss, bounds=bounds,
-            psi_nbin = nb,iplot=False)
+            psi_nbin = nb,iplot=False,
+            iscatter=iscatter,iwgt=iwgt)
         x = fw.epsilon_vm[::]
         y = e[::]
-
         ax.plot(x,y,label=nb)
+        Y.append(y)
 
 
     fancy_legend(ax=ax,size=10)
     deco(iopt=8,ft=15,ax=ax)
     fig.savefig('ss%i_err.pdf'%ss)
+    plt.close('all')
+
+    ## Y [nbins, nsteps]
+    return x, Y
+
+def influence_of_nbin_scatter(
+        ss=3,bounds=[0.0, 0.5],
+        nbins=[11, 19, 25, 51],
+        iscatter=True,nsample=5,iwgt=True):
+    """
+    Repeat influence_of_nbin examination
+    to verify the error in stress analysis
+    pertaining to that in eps(hkl,phi,psi)
+    """
+    from MP.lib import mpl_lib,axes_label
+    import matplotlib.pyplot as plt
+    fancy_legend = mpl_lib.fancy_legend
+    wide_fig     = mpl_lib.wide_fig
+    deco         = axes_label.__deco__
+    fig = wide_fig(nw=1,nh=1);ax=fig.axes[0]
+
+    Y = []
+    for i in range(nsample):
+        x, y = influence_of_nbin(
+            ss=ss,bounds=bounds,
+            nbins=nbins, iscatter=iscatter,
+            iwgt=iwgt)
+        Y.append(y)
+    ## Y [nsample, nbin, nstp]
+    Y = np.array(Y).swapaxes(0,-1).swapaxes(0,1)
+    ## Y [nbin, nstp, nsample]
+    nbin, nstp, nsamp = Y.shape
+
+    for i in range(nbin):
+        e = []; s = []
+        for j in range(nstp):
+            mean = Y[i,j,:].mean()
+            std  = Y[i,j,:].std()
+            e.append(mean)
+            s.append(std)
+        #ax.plot(x,e,label=nbins[i])
+        ax.errorbar(x,e,yerr=std,fmt='x',label=nbins[i])
+
+    ax.set_ylim(0.,)
+    fancy_legend(ax=ax,size=10)
+    deco(iopt=8,ft=15,ax=ax)
+    fig.savefig('ss_%i_err_scatter_nsamp_%i.pdf'%(ss,nsample))
     plt.close('all')
 
 def compare_exp_mod(ntot_psi=21):

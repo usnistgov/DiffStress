@@ -61,7 +61,7 @@ def ex_consistency(
         ig_sub=True,istep=None,hkl=None,iplot=True,
         iwind=False,wdeg=2,ipsi_opt=1,fn_sff=None,
         pmargin=None,path='',
-        sf_ext=None,ig_ext=None):
+        sf_ext=None,ig_ext=None,iwgt=False):
     """
     Consistency check between 'weighted average' stress and
     the stress obtained following the stress analysis method
@@ -90,9 +90,10 @@ def ex_consistency(
     path      : place holder for strain path
     sf_ext    : Overwrite stress factor
     ig_ext    : Overwrite IG strain
+    iwgt      : Whether or not accounting for 'weight'
     """
     from rs import ResidualStress,u_epshkl,filter_psi,\
-        filter_psi2,psi_reso, psi_reso2
+        filter_psi2,psi_reso, psi_reso2, psi_reso3
 
     from MP.mat import mech # mech is a module
     FlowCurve = mech.FlowCurve
@@ -183,24 +184,36 @@ def ex_consistency(
         model_rs.psis = model_rs.dat_model.psi
         model_rs.nphi = len(model_rs.phis)
         model_rs.npsi = len(model_rs.psis)
+        wgt           = model_rs.dat_model.vf[istp][::]
 
         if sin2psimx!=None or psimx!=None:
             filter_psi(model_rs,sin2psimx=sin2psimx,psimx=psimx)
+            wgt = filter_psi2(
+                wgt,sin2psi=np.sin(model_rs.psis)**2,
+                bounds =[0., sin2psimx])
             if sf_ext!=None:
                 model_rs.sf = sf_ext[istp]
             elif ig_ext!=None:
                 model_rs.ig = ig_ext[istp]
+
         if psi_nbin!=1:
+            wgt = psi_reso3(wgt,psi=model_rs.psis,ntot=psi_nbin)
             psi_reso2(model_rs,ntot=psi_nbin)
 
         #-----------------------------------#
         ## find the sigma ...
         s11 = model_rs.dat_model.flow.sigma[0,0][istp]
         s22 = model_rs.dat_model.flow.sigma[1,1][istp]
+
+        if iwgt: pass
+        else: wgt = None # overwrite wgt
+
         dsa_sigma = model_rs.find_sigma(
             ivo=[0,1],
-            init_guess=[0,0,0,0,0,0])
-            #init_guess=[s11,s22,0,0,0,0])
+            init_guess=[0,0,0,0,0,0],
+            #init_guess=[s11,s22,0,0,0,0],
+            weight = wgt # None
+            )
 
         for i in range(6): print '%+7.1f'%(dsa_sigma[i]),
         print ''
@@ -269,9 +282,9 @@ def ex_consistency(
 
         ## save figures
         fig1.savefig('flow_%s_%s.pdf'%(hkl,path))
-        fig2.savefig('ehkl_%s_fit_%s.pdf'%(hkl,path))
-        fig3.savefig('sf_%s_%s.pdf'%(hkl,path))
-        fig4.savefig('ehkl_fit_err_%s_%s.pdf'%(hkl,path))
+        ## fig2.savefig('ehkl_%s_fit_%s.pdf'%(hkl,path))
+        ## fig3.savefig('sf_%s_%s.pdf'%(hkl,path))
+        ## fig4.savefig('ehkl_fit_err_%s_%s.pdf'%(hkl,path))
         # close figures
         plt.close(fig1); plt.close(fig2); plt.close(fig3); plt.close(fig4)
 
