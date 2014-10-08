@@ -345,7 +345,10 @@ def use_intp_sfig(ss=2):
 
     Arguments
     =========
-    ss=2
+    ss=2   or [0,1,3]
+       * If ss is an integer, use it as 'step'
+       * If ss is a list with intengers in it,
+         use these element-wise integers to select.
     """
     from rs import ResidualStress as RS
     from copy import copy
@@ -368,12 +371,19 @@ def use_intp_sfig(ss=2):
     ##   2-1. Reduce the SF/IG/FLow nstp
     # Half of the original plastic increments
 
-    SF = _SF_[::ss]; IG = _IG_[::ss]
-    Flow.epsilon = Flow.epsilon.swapaxes(0,-1)[::ss].swapaxes(0,-1)
-    Flow.sigma   = Flow.sigma.swapaxes(0,-1)[::ss].swapaxes(0,-1)
-    Flow.nstp    = Flow.nstp / ss
-    Flow.get_eqv()
-    #return Flow,_Flow_
+
+    if type(ss).__name__=='int':
+        SF = _SF_[::ss]; IG = _IG_[::ss]
+        Flow.epsilon = Flow.epsilon.swapaxes(0,-1)[::ss].swapaxes(0,-1)
+        Flow.sigma   = Flow.sigma.swapaxes(0,-1)[::ss].swapaxes(0,-1)
+        Flow.nstp    = Flow.nstp / ss
+        Flow.get_eqv()
+    elif type(ss).__name__=='list':
+        SF = _SF_[ss]; IG = _IG_[ss]
+        Flow.epsilon = Flow.epsilon[:,:,ss]
+        Flow.sigma   = Flow.sigma[:,:,ss]
+        Flow.nstp    = len(ss)
+        Flow.get_eqv()
 
     ##   2-2. Create the SF object
     import sfig_class
@@ -484,7 +494,11 @@ def influence_of_intp(ss=2,bounds=[0,0.5],
     axs[0].plot(fd.epsilon_vm,fd.sigma_vm,'k+',
                 label='Diff Stress')
 
-    x = fd.epsilon_vm[::ss]; y = fd.sigma_vm[::ss]
+    if type(ss).__name__=='int':
+        x = fd.epsilon_vm[::ss]; y = fd.sigma_vm[::ss]
+    elif type(ss).__name__=='list':
+        x = fd.epsilon_vm[ss]; y = fd.sigma_vm[ss]
+
     label='SF/IG acqusition'
     axs[0].plot(x,y,'o',mec='r',mfc='None',
                 alpha=0.8,label=label)
@@ -501,8 +515,13 @@ def influence_of_intp(ss=2,bounds=[0,0.5],
 
     e = find_err(fw,fd)
     axs[2].plot(fw.epsilon_vm, e, 'x')
-    axs[2].plot(fw.epsilon_vm[::ss],e[::ss],
-                'o',mec='r',mfc='None',label=label)
+
+    if type(ss).__name__=='int':
+        axs[2].plot(fw.epsilon_vm[::ss],e[::ss],
+                    'o',mec='r',mfc='None',label=label)
+    elif type(ss).__name__=='list':
+        axs[2].plot(fw.epsilon_vm[ss],e[ss],
+                    'o',mec='r',mfc='None',label=label)
 
     axes_label.__eqv__(axs[0],ft=10)
     axs[1].set_aspect('equal')
@@ -512,7 +531,10 @@ def influence_of_intp(ss=2,bounds=[0,0.5],
 
     axs[0].legend(loc='best',fontsize=10).get_frame().set_alpha(0.5)
     deco(iopt=8,ft=15,ax=axs[2])
-    fig.savefig('flow_dd_bin%i_ss%i.pdf'%(psi_nbin,ss))
+
+    if type(ss).__name__=='int':    dum=ss
+    elif type(ss).__name__=='list': dum =len(ss)
+    fig.savefig('flow_dd_bin%i_ss%i.pdf'%(psi_nbin,dum))
     plt.close(fig)
 
     return fw, e
@@ -555,7 +577,10 @@ def influence_of_nbin(
 
     fancy_legend(ax=ax,size=10)
     deco(iopt=8,ft=15,ax=ax)
-    fig.savefig('ss%i_err.pdf'%ss)
+
+    if type(ss).__name__=='int':    dum=ss
+    elif type(ss).__name__=='list': dum =len(ss)
+    fig.savefig('ss%i_err.pdf'%dum)
     plt.close('all')
 
     ## Y [nbins, nsteps]
@@ -606,27 +631,36 @@ def influence_of_nbin_scatter(
             ax.errorbar(x,e,yerr=std,fmt='x',label=nbins[i])
 
     if iplot:
-        ax1.plot(x[::ss],np.zeros((len(x[::ss]),)),'r|',ms=12)
-        ax.plot(x[::ss],np.zeros((len(x[::ss]),)),'r|',ms=8)
+        if type(ss).__name__=='int':
+            ax1.plot(x[::ss],np.zeros((len(x[::ss]),)),'r|',ms=12)
+            ax.plot(x[::ss],np.zeros((len(x[::ss]),)),'r|',ms=8)
+        elif type(ss).__name__=='list':
+            ax1.plot(x[ss],np.zeros((len(x[ss]),)),'r|',ms=12)
+            ax.plot(x[ss],np.zeros((len(x[ss]),)),'r|',ms=8)
+
         ax.set_ylim(0.,); ax.set_xlim(0.,ax.get_xlim()[1]*1.05)
         ax1.set_ylim(0.,); ax1.set_xlim(0.,ax1.get_xlim()[1]*1.05)
         fancy_legend(ax=ax, size=7,ncol=2)
         fancy_legend(ax=ax1,size=7,ncol=2)
         deco(iopt=8,ft=15,ax=ax);  deco(iopt=8,ft=15,ax=ax1)
-        fig.savefig('ss_%i_err_scatter_nsamp_%i.pdf'%(ss,nsample))
+
+        if type(ss).__name__=='int':    dum=ss
+        elif type(ss).__name__=='list': dum =len(ss)
+        fig.savefig('ss_%i_err_scatter_nsamp_%i.pdf'%(dum,nsample))
         plt.close('all')
     return x, e
 
 def influence_of_cnts_stats(
         ss=3,bounds=[0.,0.5],
-        nbins=33, sigmas=[1e-5, 2e-5, 5e-5, 1e-4],nsample=5):
+        nbins=33, sigmas=[1e-5, 2e-5, 5e-5, 1e-4],
+        nsample=5):
     from MP.lib import mpl_lib,axes_label
     import matplotlib.pyplot as plt
     fancy_legend = mpl_lib.fancy_legend
     wide_fig     = mpl_lib.wide_fig
     deco         = axes_label.__deco__
-    fig = wide_fig(nw=1,nh=1);
-    ax=fig.axes[0]
+    fig = wide_fig(nw=2,nh=1);
+    ax1=fig.axes[0]; ax2=fig.axes[1]
 
     M = []
     for i in range(len(sigmas)):
@@ -639,14 +673,29 @@ def influence_of_cnts_stats(
                 iwgt=True,sigma=sigmas[i],iplot=False)
             Y.append(y)
         Y = np.array(Y).T
-        M = []
+        M = []; S=[]
         for k in range(len(x)):
             M.append(Y[k].mean())
-        ax.plot(x,M,label='%6.0e'%sigmas[i])
+            S.append(Y[k].std())
+        ax1.plot(x,M,label='%6.0e'%sigmas[i])
+        ax2.errorbar(x,M,yerr=S,label='%6.0e'%sigmas[i])
 
-    ax.set_ylim(0.,); ax.set_xlim(0.,ax.get_xlim()[1]*1.05)
-    deco(iopt=8,ft=15,ax=ax)
-    fancy_legend(ax=ax, size=7,ncol=2)
+    if type(ss).__name__=='int':
+        ax1.plot(x[::ss],np.zeros((len(x[::ss]),)),'o',mec='r',mfc='None',ms=8)
+        ax2.plot(x[::ss],np.zeros((len(x[::ss]),)),'o',mec='r',mfc='None',ms=8)
+    elif type(ss).__name__=='list':
+        ax1.plot(x[ss],np.zeros((len(x[ss]),)),'o',mec='r',mfc='None',ms=8)
+        ax2.plot(x[ss],np.zeros((len(x[ss]),)),'o',mec='r',mfc='None',ms=8)
+
+    ax1.set_ylim(0.,); ax1.set_xlim(0.,ax1.get_xlim()[1]*1.05)
+    ax1.set_title(r'Error in $\varepsilon^\mathrm{hkl}$')
+    deco(iopt=8,ft=15,ax=ax1)
+    fancy_legend(ax=ax1, size=7,ncol=2)
+    ax2.set_ylim(0.,); ax2.set_xlim(0.,ax2.get_xlim()[1]*1.05)
+    ax2.set_title(r'Error in $\varepsilon^\mathrm{hkl}$')
+    deco(iopt=8,ft=15,ax=ax2)
+    fancy_legend(ax=ax2, size=7,ncol=2)
+
     fig.savefig('ee.pdf')
 
 def compare_exp_mod(ntot_psi=21):

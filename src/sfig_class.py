@@ -144,7 +144,9 @@ class SF:
                 for k in range(self.nij):
                     y = self.sf_old[:,iphi,ipsi,k]
                     self.sf_new[:,iphi,ipsi,k] = interp(
-                        epsilon_vm,self.flow.epsilon_vm,y)
+                        xs=epsilon_vm,
+                        xp=self.flow.epsilon_vm,
+                        fp=y)
 
         self.sf = self.sf_new
         # Overwrite the flow? self.nstp also needs change

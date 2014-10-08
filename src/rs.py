@@ -173,6 +173,9 @@ def interpolate(xs,xp,fp):
     xs
     xp
     fp
+
+
+    (xp,fp) : given data
     """
     if len(xp)!=len(fp): raise IOError, \
        'len(xp) should be equal to len(fp)'
