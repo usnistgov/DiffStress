@@ -433,7 +433,8 @@ def use_intp_sfig(ss=2):
 def influence_of_intp(ss=2,bounds=[0,0.5],
                       psi_nbin=13,iplot=False,
                       hkl=None,
-                      iscatter=False,iwgt=False):
+                      iscatter=False,iwgt=False,
+                      sigma=5e-5):
     """
     Parametric study to demonstrate the influence of
     psi binning
@@ -473,6 +474,7 @@ def influence_of_intp(ss=2,bounds=[0,0.5],
     rst = main(sin2psimx=bounds[1],psi_nbin=psi_nbin,
                sf_ext=sf_ext,ig_ext=ig_ext,
                iplot=iplot,hkl=hkl,iscatter=iscatter,
+               sigma=sigma,
                iwgt=iwgt)
 
     fw, fd = rst[1], rst[2]
@@ -518,6 +520,7 @@ def influence_of_intp(ss=2,bounds=[0,0.5],
 def influence_of_nbin(
         ss=3,bounds = [0,0.5],
         nbins = [11, 19, 25, 51],iscatter=False,
+        sigma=1e-5,
         iwgt=False):
     """
     Influence of psi bin size
@@ -543,7 +546,7 @@ def influence_of_nbin(
         fw, e = influence_of_intp(
             ss=ss, bounds=bounds,
             psi_nbin = nb,iplot=False,
-            iscatter=iscatter,iwgt=iwgt)
+            iscatter=iscatter,sigma=sigma,iwgt=iwgt)
         x = fw.epsilon_vm[::]
         y = e[::]
         ax.plot(x,y,label=nb)
@@ -560,8 +563,9 @@ def influence_of_nbin(
 
 def influence_of_nbin_scatter(
         ss=3,bounds=[0.0, 0.5],
-        nbins=[11, 19, 25, 51],
-        iscatter=True,nsample=5,iwgt=True):
+        nbins=[7, 13, 23, 33],
+        iscatter=True,nsample=5,iwgt=True,
+        sigma=5e-5,iplot=False):
     """
     Repeat influence_of_nbin examination
     to verify the error in stress analysis
@@ -572,13 +576,17 @@ def influence_of_nbin_scatter(
     fancy_legend = mpl_lib.fancy_legend
     wide_fig     = mpl_lib.wide_fig
     deco         = axes_label.__deco__
-    fig = wide_fig(nw=1,nh=1);ax=fig.axes[0]
+    if iplot:
+        fig = wide_fig(nw=2,nh=1);
+        ax=fig.axes[0]
+        ax1=fig.axes[1]
 
     Y = []
     for i in range(nsample):
         x, y = influence_of_nbin(
             ss=ss,bounds=bounds,
             nbins=nbins, iscatter=iscatter,
+            sigma=sigma,
             iwgt=iwgt)
         Y.append(y)
     ## Y [nsample, nbin, nstp]
@@ -593,14 +601,53 @@ def influence_of_nbin_scatter(
             std  = Y[i,j,:].std()
             e.append(mean)
             s.append(std)
-        #ax.plot(x,e,label=nbins[i])
-        ax.errorbar(x,e,yerr=std,fmt='x',label=nbins[i])
+        if iplot:
+            ax1.plot(x,e,'-o',label=nbins[i])
+            ax.errorbar(x,e,yerr=std,fmt='x',label=nbins[i])
 
-    ax.set_ylim(0.,)
-    fancy_legend(ax=ax,size=10)
+    if iplot:
+        ax1.plot(x[::ss],np.zeros((len(x[::ss]),)),'r|',ms=12)
+        ax.plot(x[::ss],np.zeros((len(x[::ss]),)),'r|',ms=8)
+        ax.set_ylim(0.,); ax.set_xlim(0.,ax.get_xlim()[1]*1.05)
+        ax1.set_ylim(0.,); ax1.set_xlim(0.,ax1.get_xlim()[1]*1.05)
+        fancy_legend(ax=ax, size=7,ncol=2)
+        fancy_legend(ax=ax1,size=7,ncol=2)
+        deco(iopt=8,ft=15,ax=ax);  deco(iopt=8,ft=15,ax=ax1)
+        fig.savefig('ss_%i_err_scatter_nsamp_%i.pdf'%(ss,nsample))
+        plt.close('all')
+    return x, e
+
+def influence_of_cnts_stats(
+        ss=3,bounds=[0.,0.5],
+        nbins=33, sigmas=[1e-5, 2e-5, 5e-5, 1e-4],nsample=5):
+    from MP.lib import mpl_lib,axes_label
+    import matplotlib.pyplot as plt
+    fancy_legend = mpl_lib.fancy_legend
+    wide_fig     = mpl_lib.wide_fig
+    deco         = axes_label.__deco__
+    fig = wide_fig(nw=1,nh=1);
+    ax=fig.axes[0]
+
+    M = []
+    for i in range(len(sigmas)):
+        Y = []
+        for j in range(nsample):
+            x, y = influence_of_nbin_scatter(
+                ss=ss,bounds=bounds,
+                nbins=[nbins],
+                iscatter=True,nsample=1,
+                iwgt=True,sigma=sigmas[i],iplot=False)
+            Y.append(y)
+        Y = np.array(Y).T
+        M = []
+        for k in range(len(x)):
+            M.append(Y[k].mean())
+        ax.plot(x,M,label='%6.0e'%sigmas[i])
+
+    ax.set_ylim(0.,); ax.set_xlim(0.,ax.get_xlim()[1]*1.05)
     deco(iopt=8,ft=15,ax=ax)
-    fig.savefig('ss_%i_err_scatter_nsamp_%i.pdf'%(ss,nsample))
-    plt.close('all')
+    fancy_legend(ax=ax, size=7,ncol=2)
+    fig.savefig('ee.pdf')
 
 def compare_exp_mod(ntot_psi=21):
     import numpy as np

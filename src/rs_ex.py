@@ -57,7 +57,7 @@ def ex_consistency(
         ifig=50,nxphi=3,
         exp_ref=[],exp_lab=[],mod_ext=None,
         mod_ref='STR_STR.OUT',sin2psimx=None,
-        iscatter=False,psimx=None,psi_nbin=1,
+        iscatter=False,sigma=5e-5,psimx=None,psi_nbin=1,
         ig_sub=True,istep=None,hkl=None,iplot=True,
         iwind=False,wdeg=2,ipsi_opt=1,fn_sff=None,
         pmargin=None,path='',
@@ -175,7 +175,7 @@ def ex_consistency(
         if iscatter:
             tdat_scatter = []
             for iphi in range(len(tdat_ref)):
-                dum = u_epshkl(tdat_ref[iphi],sigma=5e-5)
+                dum = u_epshkl(tdat_ref[iphi],sigma=sigma)
                 tdat_scatter.append(dum)
             tdat_scatter = np.array(tdat_scatter)
             model_rs.tdat = tdat_scatter
