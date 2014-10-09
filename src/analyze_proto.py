@@ -1,14 +1,55 @@
 ##
 import numpy as np
+from os import sep
 from RS import rs_exp
 from MP.lib import mpl_lib
 wide_fig=mpl_lib.wide_fig
 fancy_legend = mpl_lib.fancy_legend
 
 def main_reader(path='../dat/23JUL12', fref='Bsteel_BB_00.txt',
-                fn_sf ='YJ_Bsteel_BB.sff',icheck=False,isym=False):
+                fn_sf ='YJ_Bsteel_BB.sff',icheck=False,isym=False,
+                fc=None,fn_str=None):
+    """
+    Arguments
+    =========
+    """
+    if fc==None and fn_str==None:
+        print '---------------------------------------------'
+        print 'Strain information where SF/IG were measured'
+        print 'requires either fc or fn_str specified'
+        print 'If not the strain column in fn_sf is used,'
+        print 'subsequent analysis is performed by assuming'
+        print 'that the sample is in equibiaxial strain'
+        print '---------------------------------------------\n'
+        raw_input('press enter to proceed>>')
+
+        dat = open('%s%s%s'%(path,sep,fn_sf)).read()
+
+        ## Find proper line-breaker
+        lbs=['\r','\n']; lns = []
+        for i in range(len(lbs)):
+            lns.append(len(dat.split(lbs[i])))
+        lns = np.array(lns)
+        lb = lbs[lns.argmax()]
+        ## --
+
+        dat_line = dat.split(lb)
+        e1 = np.array(map(float,dat_line[4].split()[1:]))
+        e2 = e1[::]
+        e3 = -e1-e2
+        from MP.mat.mech import FlowCurve as FC
+        flow = FC()
+        flow.get_strain(e1,0,0)
+        flow.get_strain(e2,1,1)
+        flow.get_strain(e3,2,2)
+        flow.set_zero_shear_strain()
+        flow.get_vm_strain()
+        fc = flow
+
     import copy
-    EXP, SF, IG = rs_exp.read_main(path,fref,fn_sf,icheck,isym)
+    EXP, SF, IG = rs_exp.read_main(
+        path=path,fref=fref,fn_sf=fn_sf,fc=fc,fn_str=fn_str,
+        icheck=icheck,isym=isym)
 
     ## interpolate based on experimental phis, psis, IG
 
@@ -54,12 +95,49 @@ class StressAnalysis:
     def __init__(self,
                  path='/Users/yj/repo/rs_pack/dat/23Jul12',
                  fref='Bsteel_BB_00.txt',
-                 fn_sf='YJ_Bsteel_BB.sff',isym=False):
+                 fn_sf='YJ_Bsteel_BB.sff',isym=False,
+                 fc=None,fn_str=None):
+        import copy
         self.EXP,self.SF,self.IG,self.SF_orig,self.IG_orig\
-            = main_reader(path,fref,fn_sf,icheck=False,isym=isym)
+            = main_reader(path=path,
+                          fref=fref,
+                          fn_sf=fn_sf,
+                          fc=fc,fn_str=fn_str,
+                          icheck=False,
+                          isym=isym)
 
-        self.EXP.get_ehkl() # get ehkl based on d_avg
         self.nstp = self.EXP.flow.nstp
+
+        ############################################################
+        ## True below if-block in order to enable
+        ## 'flattening' d-spacing based on initial scatter in dspc
+        if False:
+            d_bar = np.zeros((self.EXP.nphi))
+            d_diff = np.zeros((self.EXP.nphi,self.EXP.npsi))
+            for iphi in range(self.EXP.nphi):
+                ds = []
+                for ipsi in range(self.EXP.npsi):
+                    d = self.EXP.P_scan[0].protophi[iphi].ppscans[ipsi].dspc
+                    ds.append(d)
+                m = np.array(ds).mean()
+                e = np.array(ds).std()
+                print 'STD (d) at phi %4.0f = %f'%(self.EXP.phis[iphi],e)
+                print 'Mean(d) at phi %4.0f = %f'%(self.EXP.phis[iphi],m)
+                d_bar[iphi] = m
+                for ipsi in range(self.EXP.npsi):
+                    d = self.EXP.P_scan[0].protophi[iphi].ppscans[ipsi].dspc
+                    d_diff[iphi,ipsi] = d - d_bar[iphi]
+
+            # ## should I flatten the error????
+            for istp in range(self.nstp):
+                for iphi in range(self.EXP.nphi):
+                    for ipsi in range(self.EXP.npsi):
+                        self.EXP.P_scan[istp].protophi[iphi].ppscans[ipsi].dspc\
+                            = self.EXP.P_scan[istp].protophi[iphi].ppscans[ipsi].dspc \
+                            - d_diff[iphi,ipsi]
+            pass
+        ############################################################
+        self.EXP.get_ehkl() # get ehkl based on d_avg
 
     def put_psi_offset(self,offset=0.0):
         self.EXP.put_psi_offset(offset=offset)
@@ -109,7 +187,7 @@ class StressAnalysis:
     def calc_Ei(self,ivo=None):
         """
         Given the 'assumed' macro stress (sigma),
-        esitmate the elastic strains...
+        estimate the elastic strains...
         """
         nphi = self.EXP.nphi
         npsi = self.EXP.npsi
@@ -129,17 +207,36 @@ class StressAnalysis:
                          self.Ei[iphi,ipsi] + \
                          sf[iphi,ipsi,k] * self.sigma[k]
 
-    def f_least_Ei_d0(self,array=[1.701,0,0,0,0,0],ivo=None):
+    def f_least_Ei_d0(self,array=[1.701,0,0,0,0,0],ivo=None,
+                      wgt=None):
+        """
+        Call the least square objective function
+        with allowing d0 to vary
+        """
         d0 = array[0]
         self.EXP.assign_d0(d0)
-        return self.f_least_Ei(stress=array[1:],ivo=ivo)
+        return self.f_least_Ei(stress=array[1:],ivo=ivo,wgt=wgt)
 
     def f_least_Ei_fixed_d0(self,array=[0,0,0,0,0,0],
-                            ivo=None,d0=None):
+                            ivo=None,d0=None,wgt=None):
+        """
+        Call the least square objective function
+        without allowing d0 to vary
+        """
         self.EXP.assign_d0(d0)
-        return self.f_least_Ei(stress=array,ivo=ivo)
+        return self.f_least_Ei(stress=array,ivo=ivo,wgt=wgt)
 
-    def f_least_Ei(self,stress=[0,0,0,0,0,0],ivo=None):
+    def f_least_Ei(self,stress=[0,0,0,0,0,0],ivo=None,
+                   wgt=None):
+        """
+        The least square objective function
+
+        Arguments
+        =========
+        stress = [0,0,0,0,0,0]
+        ivo    = None
+        wgt    = None
+        """
         self.sigma=np.array(stress)
         nphi = self.EXP.nphi
         npsi = self.EXP.npsi
@@ -153,13 +250,18 @@ class StressAnalysis:
                     self.IG.ig[self.istp,iphi,ipsi] -\
                     self.Ei[iphi,ipsi]
                 if np.isnan(d): d = 0
+                if type(wgt)!=type(None):
+                    d = d * wgt[iphi,ipsi]
                 f_array.append(d)
         return np.array(f_array)
 
-    def residuals(self,a,x,y,f):
-        return y-f(x,a)
+    def residuals(self,a,x,y,f): return y-f(x,a)
 
-    def find_sigma(self,ivo=None,istp=0,iplot=False):
+    def find_sigma(self,ivo=None,istp=0,iplot=False,
+                   iwgt=True):
+        """
+        Find stress.
+        """
         from scipy import optimize
         fmin = optimize.leastsq
         self.istp=istp
@@ -169,15 +271,22 @@ class StressAnalysis:
         # print ' ivo:', ivo
         # --core
 
+        if iwgt==False: wgt=None
+        elif iwgt:
+            wgt = np.zeros((self.EXP.nphi,self.EXP.npsi))
+            for iphi in range(self.EXP.nphi):
+                for ipsi in range(self.EXP.npsi):
+                    wgt[iphi,ipsi]=self.EXP.P_scan[istp].protophi[iphi].ppscans[ipsi].ints
+
         dat = fmin(self.f_least_Ei_d0,
-                   [1.1710,100,100,0,0,0,0],ivo,
+                   [1.1710,100,100,0,0,0,0],args=(ivo,wgt),
                    full_output=True)
         ## --core
         stress = dat[0][1:]
         d0 = dat[0][0]
 
         # dat = fmin(self.f_least_Ei_fixed_d0,
-        #            [100,100,0,0,0,0],args=(ivo,d0),
+        #            [100,100,0,0,0,0],args=(ivo,d0,wgt),
         #            full_output=True)
         # stress=dat[0]
 
@@ -202,14 +311,16 @@ class StressAnalysis:
 
         return stress, d0
 
-def main(path='/Users/yj/repo/rs_pack/dat/23Jul12',
-         fref='Bsteel_BB_00.txt',fn_sf='YJ_Bsteel_BB.sff',
+def main(path='/Users/yj/repo/rs_pack/dat/11Jul12',
+         fref='Bsteel_BB_00.txt',fn_sf='YJ_BB_10times.sff',
          fexp=None,
          iso_SF=False,
          ishow=False,
          ind_plot=False,
          psi_offset=0.0,
-         psi_sym=False):
+         psi_sym=False,
+         fc=None,
+         fn_str=None):
     """
     """
     if fexp==None:
@@ -232,7 +343,9 @@ def main(path='/Users/yj/repo/rs_pack/dat/23Jul12',
 
     RS_graphs = PdfPages('RS_Graphs.pdf')
     mystress = StressAnalysis(path=path,fref=fref,
-                              fn_sf=fn_sf,isym=psi_sym)
+                              fn_sf=fn_sf,isym=psi_sym,
+                              fc=fc,fn_str=fn_str)
+
     if psi_offset!=0: mystress.put_psi_offset(psi_offset)
     if psi_sym:
         print 'psi symmetry has been applied.'
@@ -251,9 +364,10 @@ def main(path='/Users/yj/repo/rs_pack/dat/23Jul12',
     s11 = []; s22 = []
     Eis = []; eps = []; igs = []
 
+    d_ehkl = np.zeros((mystress.EXP.nphi))
     for istp in range(mystress.nstp):
         stress, d0 = mystress.find_sigma(
-            ivo=[0,1],istp=istp,iplot=False)
+            ivo=[0,1],istp=istp,iplot=False,iwgt=True)
 
         dknot.append(d0)
         s11.append(stress[0])
@@ -264,6 +378,21 @@ def main(path='/Users/yj/repo/rs_pack/dat/23Jul12',
         ig   = mystress.IG.ig[istp]    # experimental eps_ig
         eps.append(ehkl.copy())
         igs.append(ig.copy())
+
+        if istp==0:
+            for iphi in range(mystress.EXP.nphi):
+                d_ehkl[iphi] = np.array(ehkl[iphi][::]).std()
+
+    print '-----------------------------------'
+    print 'Stard deviation in d_ehkl at istp=0\n'
+    print 'phi:',
+    for iphi in range(mystress.EXP.nphi):
+        print '%7.0f '%mystress.EXP.phis[iphi],
+    print 'avg'
+    print 'std:',
+    for iphi in range(mystress.EXP.nphi):
+        print '%7.1e '%d_ehkl[iphi],
+    print '%7.1e '%d_ehkl.mean()
 
     # macro flow object
     mystress.flow = mech.FlowCurve()
@@ -282,9 +411,12 @@ def main(path='/Users/yj/repo/rs_pack/dat/23Jul12',
                     right=0.15)
 
     from MP.lib import mpl_lib
+    # mx = eps_vm[mystress.EXP.flow.nstp-1],
+    # mn = eps_vm[0])
+    mx = 1.0; mn = 0.0
+    norm = mpl.colors.Normalize(vmin=mn, vmax=mx)
     cmap, c = mpl_lib.norm_cmap(
-        mx = eps_vm[mystress.EXP.flow.nstp-1],
-        mn = eps_vm[0]) # c.to_rbga()
+        mx=mx,mn=mn) # c.to_rbga()
 
     for iphi in range(mystress.EXP.nphi):
         x = mystress.EXP.psi
@@ -307,7 +439,7 @@ def main(path='/Users/yj/repo/rs_pack/dat/23Jul12',
     b = figs.axes[-1].get_position()
     axcb = figs.add_axes([0.88,b.y0,0.03,b.y1-b.y0])
     mpl_lib.add_cb(axcb,cmap=cmap,filled=True,
-                   ylab='Equivalent Strain')
+                   ylab='Equivalent Strain',norm=norm)
 
     RS_graphs.savefig(plt.gcf())
 
@@ -366,6 +498,11 @@ def main(path='/Users/yj/repo/rs_pack/dat/23Jul12',
 
     figs = wide_fig(nw=2,w1=0.2)
     figs.axes[0].plot(eps_vm, mystress.flow.sigma_vm,'x')
+    figs.axes[0].plot(mystress.SF_orig.flow.epsilon_vm,
+                      np.zeros((mystress.SF_orig.flow.nstp)),
+                      'o',ms=8,mfc='None',mec='r')
+
+
     figs.axes[1].plot(eps_vm, dknot,'o')
     eqv(figs.axes[0],ft=8,zero_xy=True)
     eqv(figs.axes[1],ft=8,zero_xy=False)

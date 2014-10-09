@@ -136,11 +136,13 @@ class ProtoExp:
             self.psis = []
 
             for i in range(self.nscan):
-                fn_tr = glob('%s%s%sData.txt'%(path,sep,flab[i]))[0]
-                igain=open(fn_tr,'r').readlines()[38].split(':')[1].split('\n')[0]
+                fn_check = glob('%s%s%sData*.txt'%(path,sep,flab[i]))[0]
+                igain=open(fn_check,'r').readlines()[58].split(':')[1].split('\n')[0]
                 if igain[1:4]!='P/G':
-                    print 'warning: check gain flag in the triaxial'
+                    print "Warning: check gain flag in the triaxial file '%s'"%fn_check
+                    print open(fn_check,'r').readlines()[58]
                     print igain[1:4]
+
                 dum = '%s%s%sData*Phi*.txt'%(path,sep,flab[i])
                 fs = glob(dum)
                 nphi = len(fs)
@@ -256,6 +258,7 @@ class ProtoExp:
 
         mx = max(self.flow.epsilon_vm)
         mn = min(self.flow.epsilon_vm)
+        norm = mpl.colors.Normalize(vmin=mn, vmax=mx)
         cmap, c = mpl_lib.norm_cmap(
             mx = mx, mn=mn)
 
@@ -284,8 +287,12 @@ class ProtoExp:
 
         b = figs.axes[-1].get_position()
         axcb = figs.add_axes([0.88,b.y0,0.03,b.y1-b.y0])
+
         mpl_lib.add_cb(axcb,cmap=cmap,filled=True,
-                       ylab='Equivalent Strain')
+                       ylab='Equivalent Strain',
+                       norm=norm
+        )
+
 
     def plot(self,istps=[-1]):
         ps = []

@@ -47,14 +47,17 @@ def check(EXP=None):
     pf.set_axis_off()
 
 def read_main(path='../dat/23JUL12',fref='Bsteel_BB_00.txt',
-              fn_sf='YJ_Bsteel_BB.sff',
+              fn_sf='YJ_Bsteel_BB.sff',fc=None,fn_str=None,
               icheck=False,isym=False):
+    """
+    Make ProtoExp, SF, IG and return them.
+    """
     import read_proto, os
     ExpProto = read_proto.ProtoExp(path,fref,isym)
     if icheck:check(ExpProto)
-
     if path==None: path='.'
-    SF, IG = read_IGSF(fn='%s%s%s'%(path,os.sep,fn_sf))
+    SF, IG = read_IGSF(fn='%s%s%s'%(path,os.sep,fn_sf),
+                       fc=fc,fn_str=fn_str)
     return ExpProto, SF, IG
 
 def read_IGSF(fn='YJ_Bsteel_BB.sff', fc=None, fn_str=None):
@@ -67,6 +70,7 @@ def read_IGSF(fn='YJ_Bsteel_BB.sff', fc=None, fn_str=None):
     =========
     fn = 'YJ_Bsteel_BB.sff' ; file name of sff file
     fc = None (should be a 'mech.FlowCurve' object)
+    fn_str = 'STR_STR.OUT'
     """
     import numpy as np
     import RS; reload(RS)
@@ -101,6 +105,7 @@ def read_IGSF(fn='YJ_Bsteel_BB.sff', fc=None, fn_str=None):
         IG.add_flow(-eps_macro*2,2,2)
         #IG.flow.set_zero_epsilon_ij(2,2)
         IG.flow.set_zero_shear_strain()
+
     elif fn==None:
         print 'SFF file name is missing.',
         print ' Empty SF, IG objects are returned'

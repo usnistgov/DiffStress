@@ -18,7 +18,7 @@ class SF:
         sf[nstp,nphi,npsi,nij]
         """
         self.flow = fc()
-        if sf!=None:
+        if type(sf)!=type(None):
             self.sf  = sf
             self.sf.shape
             # if len(self.sf.shape)!=4:
@@ -29,10 +29,10 @@ class SF:
             if self.nij!=6: print 'Stress factor'+\
                ' is not fully given in 6D'
 
-        if phi!=None:
+        if type(phi)!=type(None):
             self.phi = phi
             self.nphi = len(self.phi)
-        if psi!=None:
+        if type(psi)!=type(None):
             self.psi = psi
             self.sin2psi = np.sin(self.psi*np.pi/180.)**2
             self.npsi = len(self.psi)
