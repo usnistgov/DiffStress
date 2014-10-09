@@ -12,8 +12,15 @@ def main_reader(path='../dat/23JUL12', fref='Bsteel_BB_00.txt',
     """
     Arguments
     =========
+    path
+    fref
+    fn_sf
+    icheck
+    isym
+    fc
+    fn_str
     """
-    if fc==None and fn_str==None:
+    if type(fc)==type(None) and type(fn_str)==type(None):
         print '---------------------------------------------'
         print 'Strain information where SF/IG were measured'
         print 'requires either fc or fn_str specified'
@@ -45,6 +52,9 @@ def main_reader(path='../dat/23JUL12', fref='Bsteel_BB_00.txt',
         flow.set_zero_shear_strain()
         flow.get_vm_strain()
         fc = flow
+    elif type(fc)!=type(None):
+        print 'fc was given'
+        pass
 
     import copy
     EXP, SF, IG = rs_exp.read_main(
@@ -96,13 +106,13 @@ class StressAnalysis:
                  path='/Users/yj/repo/rs_pack/dat/23Jul12',
                  fref='Bsteel_BB_00.txt',
                  fn_sf='YJ_Bsteel_BB.sff',isym=False,
-                 fc=None,fn_str=None):
+                 fc_sf=None,fn_str=None):
         import copy
         self.EXP,self.SF,self.IG,self.SF_orig,self.IG_orig\
             = main_reader(path=path,
                           fref=fref,
                           fn_sf=fn_sf,
-                          fc=fc,fn_str=fn_str,
+                          fc=fc_sf,fn_str=fn_str,
                           icheck=False,
                           isym=isym)
 
@@ -313,19 +323,24 @@ class StressAnalysis:
 
 def main(path='/Users/yj/repo/rs_pack/dat/11Jul12',
          fref='Bsteel_BB_00.txt',fn_sf='YJ_BB_10times.sff',
-         fexp=None,
-         iso_SF=False,
-         ishow=False,
-         ind_plot=False,
-         psi_offset=0.0,
-         psi_sym=False,
-         fc=None,
-         fn_str=None):
+         fexp=None,iso_SF=False,ishow=False,ind_plot=False,
+         psi_offset=0.0,psi_sym=False,fc=None,fn_str=None,
+         iwgt=False):
     """
+    Arguments
+    =========
+    path
+    fref
+    fn_sf
+    fexp
+    iso_SF
+    ishow
+    ind_plot
+    psi_offset
+    psi_sym
+    fc
+    fn_str
     """
-    if fexp==None:
-        fexp='/Users/yj/repo/evpsc-dev/'\
-            'exp_dat/Bsteel/bulge/EXP_BULGE_JINKIM.txt',
     from MP.mat import mech
     from MP.lib import axes_label
     from MP.lib import mpl_lib
@@ -338,13 +353,16 @@ def main(path='/Users/yj/repo/rs_pack/dat/11Jul12',
     rm_inner =mpl_lib.rm_inner
     rm_lab = mpl_lib.rm_lab
     ticks_bin_u = mpl_lib.ticks_bins_ax_u
-
     plt.ioff()
+
+    if type(fexp)==type(None):
+        fexp='/Users/yj/repo/evpsc-dev/'\
+            'exp_dat/Bsteel/bulge/EXP_BULGE_JINKIM.txt',
 
     RS_graphs = PdfPages('RS_Graphs.pdf')
     mystress = StressAnalysis(path=path,fref=fref,
                               fn_sf=fn_sf,isym=psi_sym,
-                              fc=fc,fn_str=fn_str)
+                              fc_sf=None,fn_str=fn_str)
 
     if psi_offset!=0: mystress.put_psi_offset(psi_offset)
     if psi_sym:
@@ -367,7 +385,7 @@ def main(path='/Users/yj/repo/rs_pack/dat/11Jul12',
     d_ehkl = np.zeros((mystress.EXP.nphi))
     for istp in range(mystress.nstp):
         stress, d0 = mystress.find_sigma(
-            ivo=[0,1],istp=istp,iplot=False,iwgt=True)
+            ivo=[0,1],istp=istp,iplot=False,iwgt=iwgt)
 
         dknot.append(d0)
         s11.append(stress[0])
