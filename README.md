@@ -1,10 +1,10 @@
 rs
 ==
 
-Residual Stress analysis based on Proto raw data files
+Diffraction analysis tool that estimates stress present polycrystalline specimen.
 
 This python package allows one to analyze both experimental and
-model-predicted diffraction strain in order to estimate generalized
+model-predicted diffraction strain in order to estimate a generalized
 stress state of a polycrystalline sheets.
 
 For the purpose of experimental d-spacing analysis, it accepts
