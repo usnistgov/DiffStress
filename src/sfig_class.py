@@ -125,14 +125,25 @@ class SF:
         if hasattr(self, 'vf'): self.vf=vf[::]
         if hasattr(self, 'rsq'): self.rsq=rsq[::]
 
-    def interp_strain(self,epsilon_vm):
+    def interp_strain(self,epsilon_vm,
+                      iopt=0):
         """
-        Linearly interpolate the SF with respect to
-        the given VM strain
+        Apply a certain interpolation method
+        on the SF with respect to the given VM strain
 
         Arguments
         =========
         epsilon_vm = []
+        iopt=0: NN (piece-wise linear interpolation)
+            =1: Assign nearest data
+            =2: Cubic
+            =3: Quadratic
+            =4: Linear fit
+            =5: Poly2
+            =6: poly3
+            =7: Place-holder for power law fit
+            =8: zero
+            =9: slinear
         """
         self.sf_old = self.sf.copy()
         # self.flow.get_vm_strain()
@@ -143,10 +154,12 @@ class SF:
             for ipsi in range(self.npsi):
                 for k in range(self.nij):
                     y = self.sf_old[:,iphi,ipsi,k]
-                    self.sf_new[:,iphi,ipsi,k] = interp(
-                        xs=epsilon_vm,
-                        xp=self.flow.epsilon_vm,
-                        fp=y)
+                    self.sf_new[:,iphi,ipsi,k] \
+                        = rs.interpolate(
+                            xs=epsilon_vm,
+                            xp=self.flow.epsilon_vm,
+                            fp=y,
+                            iopt=iopt)
 
         self.sf = self.sf_new
         # Overwrite the flow? self.nstp also needs change
@@ -178,8 +191,8 @@ class SF:
             for iphi in range(self.nphi):
                 for k in range(self.nij):
                     y = self.sf_old[istp,iphi,:,k]
-                    self.sf_new[istp,iphi,:,k] = interp(
-                        x,x0,y)
+                    self.sf_new[istp,iphi,:,k] \
+                        = rs.interpolate(x,x0,y)
 
         self.sf = self.sf_new.copy()
         self.psi = psi.copy()
@@ -420,7 +433,25 @@ class IG:
         self.nstp = self.ig.shape[0]
     def add_flow(self,eps,i,j):
         self.flow.get_strain(eps,i,j)
-    def interp_strain(self,epsilon_vm):
+    def interp_strain(self,epsilon_vm,iopt=0):
+        """
+        Apply a certain interpolation method
+        on the IG with respect to the given VM strain
+
+        Arguments
+        =========
+        epsilon_vm = []
+        iopt=0: NN (piece-wise linear interpolation)
+            =1: Assign nearest data
+            =2: Cubic
+            =3: Quadratic
+            =4: Linear fit
+            =5: Poly2
+            =6: poly3
+            =7: Place-holder for power law fit
+            =8: zero
+            =9: slinear
+        """
         self.ig_old = self.ig.copy()
         self.flow.get_vm_strain()
         self.flow.epsilon_vm #
@@ -429,8 +460,12 @@ class IG:
         for iphi in range(self.nphi):
             for ipsi in range(self.npsi):
                 y = self.ig_old[:,iphi,ipsi]
-                self.ig_new[:,iphi,ipsi] = interp(
-                    epsilon_vm,self.flow.epsilon_vm,y)
+                self.ig_new[:,iphi,ipsi]\
+                    = rs.interpolate(
+                        xs=epsilon_vm,
+                        xp=self.flow.epsilon_vm,
+                        fp=y,
+                        iopt=iopt)
 
         self.ig = self.ig_new
         # Overwrite the flow? self.nstp also needs change

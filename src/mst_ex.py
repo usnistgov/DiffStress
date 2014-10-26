@@ -338,7 +338,7 @@ def plot_sf_psis(
             aig.set_xlim(0.,1.0)
             aig.set_ylim(-0.002,0.002)
 
-def use_intp_sfig(ss=2):
+def use_intp_sfig(ss=2,iopt=0):
     """
     Use "interpolated" SF/IG strains
     to calculate the influence of 'interpolation'
@@ -349,6 +349,18 @@ def use_intp_sfig(ss=2):
        * If ss is an integer, use it as 'step'
        * If ss is a list with intengers in it,
          use these element-wise integers to select.
+
+    interpolation method applied to SF/IG w.r.t. strain
+    iopt=0: NN (piece-wise linear interpolation)
+        =1: Assign nearest data
+        =2: Cubic
+        =3: Quadratic
+        =4: Linear fit
+        =5: Poly2
+        =6: poly3
+        =7: Place-holder for power law fit
+        =8: zero
+        =9: slinear
     """
     from rs import ResidualStress as RS
     from copy import copy
@@ -405,7 +417,8 @@ def use_intp_sfig(ss=2):
     StressFactor.flow = Flow
     StressFactor.flow.get_eqv()
     ##     2-2-3. Interpolate them at strains
-    StressFactor.interp_strain(epsilon_vm = _Flow_.epsilon_vm)
+    StressFactor.interp_strain(epsilon_vm = _Flow_.epsilon_vm,
+                               iopt=iopt)
     StressFactor.flow = _Flow_
     StressFactor.flow.get_eqv()
     StressFactor.nstp = StressFactor.flow.nstp
@@ -429,7 +442,8 @@ def use_intp_sfig(ss=2):
     IGStrain.flow = Flow
     IGStrain.flow.get_eqv()
     ##     2-2-3. Interpolate them at strains
-    IGStrain.interp_strain(epsilon_vm = _Flow_.epsilon_vm)
+    IGStrain.interp_strain(epsilon_vm = _Flow_.epsilon_vm,
+                           iopt=iopt)
     IGStrain.flow = _Flow_
     IGStrain.flow.get_eqv()
     IGStrain.nstp = IGStrain.flow.nstp
@@ -444,7 +458,8 @@ def influence_of_intp(ss=2,bounds=[0,0.5],
                       psi_nbin=13,iplot=False,
                       hkl=None,
                       iscatter=False,iwgt=False,
-                      sigma=5e-5):
+                      sigma=5e-5,
+                      intp_opt=0):
     """
     Parametric study to demonstrate the influence of
     psi binning
@@ -468,7 +483,7 @@ def influence_of_intp(ss=2,bounds=[0,0.5],
     fig = wide_fig(nw=3,nh=1);axs=fig.axes
 
     ## Use the reduced set over the consistency check
-    sf,ig = use_intp_sfig(ss=ss)
+    sf,ig = use_intp_sfig(ss=ss,iopt=intp_opt)
     sf_ext = sf.sf.swapaxes(1,-1).swapaxes(-2,-1)[::]*1e6
     ig_ext = ig.ig[::]
 
@@ -543,7 +558,7 @@ def influence_of_nbin(
         ss=3,bounds = [0,0.5],
         nbins = [11, 19, 25, 51],iscatter=False,
         sigma=1e-5,
-        iwgt=False):
+        iwgt=False,intp_opt=0):
     """
     Influence of psi bin size
 
@@ -554,6 +569,7 @@ def influence_of_nbin(
     nbins = [11, 19, 25, 51]
     iscatter = False
     iwgt     = False
+    intp_opt = 0   (Interpolation option)
     """
     from MP.lib import mpl_lib,axes_label
     import matplotlib.pyplot as plt
@@ -568,7 +584,8 @@ def influence_of_nbin(
         fw, e = influence_of_intp(
             ss=ss, bounds=bounds,
             psi_nbin = nb,iplot=False,
-            iscatter=iscatter,sigma=sigma,iwgt=iwgt)
+            iscatter=iscatter,sigma=sigma,iwgt=iwgt,
+            intp_opt=intp_opt)
         x = fw.epsilon_vm[::]
         y = e[::]
         ax.plot(x,y,label=nb)
@@ -590,7 +607,7 @@ def influence_of_nbin_scatter(
         ss=3,bounds=[0.0, 0.5],
         nbins=[7, 13, 23, 33],
         iscatter=True,nsample=5,iwgt=True,
-        sigma=5e-5,iplot=False):
+        sigma=5e-5,intp_opt=0,iplot=False):
     """
     Repeat influence_of_nbin examination
     to verify the error in stress analysis
@@ -612,7 +629,7 @@ def influence_of_nbin_scatter(
             ss=ss,bounds=bounds,
             nbins=nbins, iscatter=iscatter,
             sigma=sigma,
-            iwgt=iwgt)
+            iwgt=iwgt,intp_opt=intp_opt)
         Y.append(y)
     ## Y [nsample, nbin, nstp]
     Y = np.array(Y).swapaxes(0,-1).swapaxes(0,1)
@@ -651,11 +668,15 @@ def influence_of_nbin_scatter(
     return x, e
 
 def influence_of_cnts_stats(
-        ss=3,bounds=[0.,0.5],
-        nbins=33, sigmas=[1e-5, 2e-5, 5e-5, 1e-4],
-        nsample=5):
+        ss=3,bounds=[0.,0.3257],
+        nbins=13, sigmas=[1e-5, 2e-5, 5e-5, 1e-4],
+        nsample=5,intp_opt=0,iplot=False):
     from MP.lib import mpl_lib,axes_label
     import matplotlib.pyplot as plt
+
+    if iplot==False:
+        plt.ioff()
+
     fancy_legend = mpl_lib.fancy_legend
     wide_fig     = mpl_lib.wide_fig
     deco         = axes_label.__deco__
@@ -670,7 +691,9 @@ def influence_of_cnts_stats(
                 ss=ss,bounds=bounds,
                 nbins=[nbins],
                 iscatter=True,nsample=1,
-                iwgt=True,sigma=sigmas[i],iplot=False)
+                iwgt=True,sigma=sigmas[i],
+                intp_opt=intp_opt,
+                iplot=False)
             Y.append(y)
         Y = np.array(Y).T
         M = []; S=[]
@@ -697,6 +720,10 @@ def influence_of_cnts_stats(
     fancy_legend(ax=ax2, size=7,ncol=2)
 
     fig.savefig('ee.pdf')
+    if iplot==False:
+        plt.close('all')
+        plt.ion()
+    return x, M, S
 
 def compare_exp_mod(ntot_psi=21):
     import numpy as np
@@ -714,7 +741,6 @@ def compare_exp_mod(ntot_psi=21):
     SF.mask_vol()
     SF.plot(ylim=[-2,2])
 
-
     ## biaxial
     flow = FC()
     exx = open('YJ_Bsteel_BB.sff','r').read().split('\n')[4].split()[1:]
@@ -723,3 +749,54 @@ def compare_exp_mod(ntot_psi=21):
     flow.nstp = len(ezz)
     SF, dum = read_IGSF(fn='YJ_Bsteel_BB.sff',fc=flow)
     SF.plot(mxnphi=3,ylim=[-2,2])
+
+def influence_of_intp_extp(
+        ss=1,
+        bounds=[0.,0.5],
+        nbins=13,
+        sigmas=[1e-11],
+        nsample=5):
+    """
+    Influence of choice of interpolation/extrapolation
+    method on the resulting 'Uncertainity' in stress
+    analysis.
+
+    Arguments
+    =========
+    ss = 1
+    bounds = [0., 0.5]
+    nbins = 13
+    sigmas=[1e-11],
+    nsample=5
+    """
+    from MP.lib import mpl_lib,axes_label
+    import matplotlib.pyplot as plt
+
+
+    iopts = [0,1,2,3,4]
+    labs  = ['Piece-wise linear',
+             'Nearest data',
+             'Cubic',
+             'Quadratic',
+             'Linear fit']
+
+    xs=[];Ms=[];Ss=[]
+    for iopt in range(len(iopts)):
+        x,M,S = influence_of_cnts_stats(
+            ss=ss,bounds=bounds,
+            nbins=nbins,
+            sigmas=sigmas,
+            nsample=nsample,
+            intp_opt=iopt,iplot=False)
+        xs.append(x)
+        Ms.append(M)
+        Ss.append(S)
+
+    fig=mpl_lib.wide_fig(nw=1,nh=1);ax=fig.axes[0]
+    for iopt in range(len(iopts)):
+        x=xs[iopt]
+        M=Ms[iopt]
+        s=Ss[iopt]
+        ax.errorbar(x,M,yerr=S,label=labs[iopt])
+    ax.legend(loc='best').get_frame().set_alpha(0.5)
+    fig.savefig('dum.pdf')
