@@ -166,27 +166,194 @@ def read_exp(fn='Bsteel_BB_00.txt',path='rs'):
     strain = np.array(strain)
     return phis,psi,ehkl,dhkl,strain
 
-def interpolate(xs,xp,fp):
+# def __check_power_law_fit__():
+#     fig=plt.figure(1);ax=fig.add_subplot(111)
+#     x = np.linspace(1,10,10)
+#     y = np.cos(-x**2/8.0)
+
+#     ax.plot(x,y,'s',label='data')
+#     new_x = np.linspace(1,10,1000)
+#     y_lin = interpolate(new_x,x,y,iopt=1)
+#     ax.plot(new_x,y_lin,'--',label='NN')
+
+#     xlog = np.log(x)
+#     ylog = np.log(y)
+
+#     fig=plt.figure(2);ax=fig.add_subplot(111)
+#     ax.plot(xlog,ylog)
+
+#     z = np.polyfit(xlog,ylog,1)
+
+#     print z
+#     # f = np.poly1d(z)
+
+def __check_interpolate__():
+    fig=plt.figure();ax=fig.add_subplot(111)
+    x = np.linspace(2,9,10)
+    y = np.cos(-x**2/8.0)
+
+    ax.plot(x,y,'s',label='data')
+
+    new_x = np.linspace(1,10,1000)
+
+    y_nn = interpolate(new_x,x,y,iopt=0)
+    y_near = interpolate(new_x,x,y,iopt=1)
+    y_cub = interpolate(new_x,x,y,iopt=2)
+    y_qud = interpolate(new_x,x,y,iopt=3)
+    y_L = interpolate(new_x,x,y,iopt=4)
+    y_poly2 = interpolate(new_x,x,y,iopt=5)
+    y_poly3 = interpolate(new_x,x,y,iopt=6)
+    ## y_power = interpolate(new_x,x,y,iopt=7)
+    y_zero = interpolate(new_x,x,y,iopt=8)
+    y_slinear = interpolate(new_x,x,y,iopt=9)
+
+    ax.plot(new_x,y_nn,'-',label='piece-wise linear')
+    ax.plot(new_x,y_near,'--',label='Assign nearest')
+    ax.plot(new_x,y_cub,'--',label='Cubic')
+    ax.plot(new_x,y_qud,'--',label='Qudratic')
+    # ax.plot(new_x,y_zero,'--',label='Zero')
+    # ax.plot(new_x,y_slinear,'-',label='Slinear')
+    ax.plot(new_x,y_L,'--',label='L')
+    # # ax.plot(new_x,y_poly2,'--',label='Poly2')
+    # # ax.plot(new_x,y_poly3,'--',label='Poly3')
+    ## ax.plot(new_x,y_power,'--',label='Power')
+
+    ax.legend(loc='best',fancybox=True,
+              ncol=2).get_frame().set_alpha(0.5)
+
+    fig.savefig('fitting_ref.pdf')
+    pass
+
+def interpolate(xs,xp,fp,iopt=0):
     """
+    Various interpolation methods
+    Default is 'nearest-neighbour interpolation'.
+    Using NumPy's generic interp function,
+    'piecewise linear interpolation'
+
+    In case data is located beyond the bounds,
+    simply use the two last ending data points to
+    linearly extrapolate.
+
+    Choice of interpolation method
+      0: Piece wise linear (Linear intp by nearest neighbours)
+      1: Assign nearest data (nearest)
+      2: Cubic
+      3: Quadratic
+      4: Linear fit
+      5: Poly2
+      6: Poly3
+      7: Left for power law fit?
+      8: zero
+      9: slinear
+
     Arguments
     =========
     xs
     xp
     fp
-
+    iopt = 0
 
     (xp,fp) : given data
     """
+    from scipy.interpolate import interp1d
+
+    y_left=[]; y_right=[]
+    if any(xs[i]<xp[0] or xs[i]>xp[-1]
+           for i in range(len(xs)))\
+               and iopt!=7 and iopt!=4:
+        # print 'Part of the array should be',
+        # print 'exptrapolated.'
+
+        indices = []
+        xs_within = []; left=[]; right=[]
+        for i in range(len(xs)):
+            if not(xs[i]<xp[0] or xs[i]>xp[-1]):
+                xs_within.append(xs[i])
+
+            if xs[i]<xp[0]:
+                left.append(xs[i])
+            elif xs[i]>xp[-1]:
+                right.append(xs[i])
+
+        ## left
+        if len(left)>0:
+            x=xp[0:2]
+            y=fp[0:2]
+            z=np.polyfit(x,y,1)
+            f_lin = np.poly1d(z)
+            y_left = f_lin(left)
+
+        ## right
+        if len(right)>0:
+            x=xp[::-1][0:2][::-1]
+            y=fp[::-1][0:2][::-1]
+            z=np.polyfit(x,y,1)
+            f_lin = np.poly1d(z)
+            y_right = f_lin(right)
+
+        ## assigning only x points within the bounds
+        ## for "interpolation"
+        xs = xs_within[::]
+
+    # print y_left
+    # print y_right
+    # raise IOError
+
+
     if len(xp)!=len(fp): raise IOError, \
        'len(xp) should be equal to len(fp)'
-    intp = np.interp
-    if not (np.all(np.diff(xp)>=0)): raise ValueError, \
-       'xp is not monotonically increasing'
+    if not (np.all(np.diff(xp)>=0)):
+        raise ValueError, \
+            'xp is not monotonically increasing'
 
-    y = []
-    for i in range(len(xs)):
-        y.append(intp(xs[i],xp,fp))
-    return y
+    if iopt==0:
+        # piece-wise linear (nearest neightbour)
+        f= interp1d(xp,fp,'linear')
+    elif iopt==1:
+        # assign nearest value
+        f = interp1d(xp,fp,'nearest')
+    elif iopt==2:
+        f = interp1d(xp,fp,'cubic')
+    elif iopt==3:
+        f = interp1d(xp,fp,'quadratic')
+    elif iopt==4:
+        z = np.polyfit(xp,fp,1)
+        f = np.poly1d(z)
+    elif iopt==5:
+        z = np.polyfit(xp,fp,2)
+        f = np.poly1d(z)
+    elif iopt==6:
+        z = np.polyfit(xp,fp,3)
+        f = np.poly1d(z)
+    elif iopt==7:
+        raise IOError, 'Not completed.'
+        # x_dat = xp[::]
+        # xp = np.log(xp)
+        # fp = np.log(fp)
+        # z = np.polyfit(xp,fp,1)
+        # f = np.poly1d(z)
+    elif iopt==8:
+        f = interp1d(xp,fp,'zero')
+    elif iopt==9:
+        f = interp1d(xp,fp,'slinear')
+    else:
+        raise IOError, 'Unexpected iopt given'
+
+    try: y = f(xs)
+    except ValueError:
+        print 'Error occured'
+        raise IOError
+
+    Y=[]
+    for i in range(len(y_left)):
+        Y.append(y_left[i])
+    for i in range(len(y)):
+        Y.append(y[i])
+    for i in range(len(y_right)):
+        Y.append(y_right[i])
+
+    return Y
 
 def u_gaussian(epshkl,sigma=5e-5):
     return np.random.normal(0.,sigma) + epshkl
