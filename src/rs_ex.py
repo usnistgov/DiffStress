@@ -8,9 +8,14 @@ from numpy import pi, sin, cos
 def ex(ifig=50,
        exp_ref=['exp_dat/Bsteel/EXP_BULGE_JINKIM.txt',
                 'exp_dat/Bsteel/uni/avgstr_000.txt'],
-       exp_lab=['Exp bulge','Exp uniaxiai'],
+       exp_lab=['Exp bulge','Exp uniaxial'],
        mod_ref='STR_STR.OUT'):
     """
+    Arguments
+    =========
+    exp_ref = ['exp_dat'/Bsteel/EXP_BULGE_JINKIM.txt']
+    exp_lab = ['Exp bulge', 'Exp uniaxial')
+    mod_ref = 'STR_STR.OUT'
     """
     fig=plt.figure(ifig);ax=fig.add_subplot(111)
     myrs = ResidualStress()

@@ -14,8 +14,20 @@ fl = mpl_lib.fancy_legend
 def main_plot_flow_all(hkl='211',sin2psimx=0.5,
                        psi_nbin=1,pmargin=None,iplot_rs=False,
                        path=''):
-    """  """
+    """ 
+    Arguments
+    =========
+    hkl='211'
+    sin2psimx
+    psi_nbin = 1
+    pmargin = None
+    iplot_rs=False
+    path=''
+    """
     fns = read(hkl,prefix=path)
+    if len(fns)==0:
+        raise IOError, 'Check the path, 0 file was found'
+    plt.ioff()
     fig = wf(nw=3,nh=1,left=0.2,uw=3.5,
              w0=0,w1=0.3,right=0,iarange=True)
     ax1,ax2,ax3 = fig.axes
@@ -50,7 +62,6 @@ def main_plot_flow_all(hkl='211',sin2psimx=0.5,
         dsax = fdsa.sigma[0,0]; dsay = fdsa.sigma[1,1]
         for j in range(npoints):
             ax2.plot([wgtx[j],dsax[j]],[wgty[j],dsay[j]],'k-',alpha=0.5)
-        plt.show();plt.draw()
 
     ax1.set_xlim(-0.1,1.1); ax1.set_ylim(-50,700);
     ax2.set_xlim(-10,1000); ax2.set_ylim(-10,1000)
@@ -60,7 +71,11 @@ def main_plot_flow_all(hkl='211',sin2psimx=0.5,
     ax2.locator_params(nbins=3)
     ax2.grid('on'); plt.show()
 
-    fig.savefig('flow_allpaths_%s.pdf'%(hkl))
+    plt.ion()
+    plt.show();plt.draw()
+    fn = 'flow_allpaths_%s.pdf'%(hkl)
+    fig.savefig(fn)
+    print '%s has been saved.'%fn
     plt.close(fig)
 
     return np.array(errors)[0]

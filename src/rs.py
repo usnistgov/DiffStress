@@ -497,16 +497,16 @@ class DiffDat:
         nphi = self.nphi
         npsi = self.npsi
 
-        if self.sf!=None and nstp!=None:
+        if type(self.sf)!=type(None) and type(nstp)!=type(None):
             if (nstp,6,nphi,npsi) != sf.shape:
                 raise IOError, 'SF is not in right structure'
-        if self.ig!=None and nstp!=None:
+        if type(self.ig)!=type(None) and type(nstp)!=type(None):
             if (nstp,nphi,npsi) != ig.shape:
                 raise IOError, 'IG is not in right structure'
-        if self.ehkl!=None and nstp!=None:
+        if type(self.ehkl)!=type(None) and type(nstp)!=type(None):
             if (nstp,nphi,npsi) != ehkl.shape:
                 raise IOError, 'ehkl is not in right structure'
-        if self.dhkl!=None and nstp!=None:
+        if type(self.dhkl)!=type(None) and type(nstp)!=type(None):
             if (nstp,nphi,npsi) != dhkl.shape:
                 raise IOError, 'ehkl is not in right structure'
 
@@ -790,30 +790,23 @@ class ResidualStress:
                  #fnmod_ig='igstrain_unload_ph1.out',
                  #fnmod_ig='igstrain_bix_ph1.out',
                  fnmod_ig='igstrain_fbulk_ph1.out',
-
                  fnmod_sf='igstrain_fbulk_ph1.out',
-
                  fnmod_str='STR_STR.OUT',
-
                  fnexp_ehkl='Bsteel_BB_00.txt',
-
                  fnexp_sf='YJ_Bsteel_BB.sff',
-
-                 exppath='rs',
-
-                 fnPF='rs/new_flowcurves.dat',
+                 exppath='rs/Bsteel/BB',
+                 fnPF='rs/Bsteel/BB/new_flowcurves.dat',
                  ifig=1,i_ip=0):
         """
         Arguments
         =========
-        fnmod='int_els_ph1.out'
-        fnig='igstrain_unload_ph1.out'
-        fnsf='igstrain_fbulk_ph1.out'
-        fnstr='STR_STR.OUT'
-        fnexp_ehkl='Bsteel_BB_00.txt'
-
-        fnexp_sf='YJ_Bsteel_BB.sff'
-        exppath='rs'
+        fnmod = 'int_els_ph1.out'
+        fnig  = 'igstrain_unload_ph1.out'
+        fnsf  = 'igstrain_fbulk_ph1.out'
+        fnstr = 'STR_STR.OUT'
+        fnexp_ehkl = 'Bsteel_BB_00.txt'
+        fnexp_sf = 'YJ_Bsteel_BB.sff'
+        exppath = 'rs'
         ifig=1
 
         i_ip = 0 (collective stress analysis)
