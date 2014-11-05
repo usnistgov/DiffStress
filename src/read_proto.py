@@ -113,7 +113,7 @@ class ProtoExp:
             #print fref
 
             flab, e1, e2 = np.loadtxt(
-                fref,skiprows=2,dtype='str').T
+                fref,skiprows=2,dtype='str').T[:3]
 
             e1 = np.array(e1,dtype='float')
             e2 = np.array(e2,dtype='float')

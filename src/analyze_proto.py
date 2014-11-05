@@ -268,9 +268,17 @@ class StressAnalysis:
     def residuals(self,a,x,y,f): return y-f(x,a)
 
     def find_sigma(self,ivo=None,istp=0,iplot=False,
-                   iwgt=True):
+                   iwgt=True,ifix_d0=False,d0=1.701):
         """
         Find stress.
+
+        Arguments
+        =========
+        ivo = None
+        istp=0
+        iplot=False
+        iwgt=True
+        ifix_d0=False
         """
         from scipy import optimize
         fmin = optimize.leastsq
@@ -288,17 +296,18 @@ class StressAnalysis:
                 for ipsi in range(self.EXP.npsi):
                     wgt[iphi,ipsi]=self.EXP.P_scan[istp].protophi[iphi].ppscans[ipsi].ints
 
-        dat = fmin(self.f_least_Ei_d0,
-                   [1.1710,100,100,0,0,0,0],args=(ivo,wgt),
-                   full_output=True)
-        ## --core
-        stress = dat[0][1:]
-        d0 = dat[0][0]
-
-        # dat = fmin(self.f_least_Ei_fixed_d0,
-        #            [100,100,0,0,0,0],args=(ivo,d0,wgt),
-        #            full_output=True)
-        # stress=dat[0]
+        if ifix_d0:
+            dat = fmin(self.f_least_Ei_fixed_d0,
+                       [100,100,0,0,0,0],args=(ivo,d0,wgt),
+                       full_output=True)
+            stress=dat[0]
+        elif not(ifix_d0):
+            dat = fmin(self.f_least_Ei_d0,
+                       [1.1710,100,100,0,0,0,0],args=(ivo,wgt),
+                       full_output=True)
+            ## --core
+            stress = dat[0][1:]
+            d0 = dat[0][0]
 
         cov_x, infodict, mesg, ier = dat[1:]
         if not(ier in [1,2,3,4]):
@@ -321,10 +330,11 @@ class StressAnalysis:
 
         return stress, d0
 
-def main(path='/Users/yj/repo/rs_pack/dat/11Jul12',
-         fref='Bsteel_BB_00.txt',fn_sf='YJ_BB_10times.sff',
+def main(path='../dat/BB/',
+         fref='Bsteel_fref_DIC.txt',fn_sf='YJ_BB_10times.sff',
          fexp=None,iso_SF=False,ishow=False,ind_plot=False,
-         psi_offset=0.0,psi_sym=False,fc=None,fn_str=None,
+         psi_offset=0.0,psi_sym=False,fc=None,fn_str=None,ifix_d0=False,
+         d0_ref=1.17025,
          iwgt=False):
     """
     Arguments
@@ -340,6 +350,9 @@ def main(path='/Users/yj/repo/rs_pack/dat/11Jul12',
     psi_sym
     fc
     fn_str
+    ifix_d0
+    d0_ref=1.17025
+    iwgt=False
     """
     from MP.mat import mech
     from MP.lib import axes_label
@@ -385,7 +398,9 @@ def main(path='/Users/yj/repo/rs_pack/dat/11Jul12',
     d_ehkl = np.zeros((mystress.EXP.nphi))
     for istp in range(mystress.nstp):
         stress, d0 = mystress.find_sigma(
-            ivo=[0,1],istp=istp,iplot=False,iwgt=iwgt)
+            ivo=[0,1],istp=istp,iplot=False,iwgt=iwgt,
+            ifix_d0=ifix_d0,d0=d0_ref
+        )
 
         dknot.append(d0)
         s11.append(stress[0])
@@ -402,7 +417,7 @@ def main(path='/Users/yj/repo/rs_pack/dat/11Jul12',
                 d_ehkl[iphi] = np.array(ehkl[iphi][::]).std()
 
     print '-----------------------------------'
-    print 'Stard deviation in d_ehkl at istp=0\n'
+    print 'Standard deviation in d_ehkl at istp=0\n'
     print 'phi:',
     for iphi in range(mystress.EXP.nphi):
         print '%7.0f '%mystress.EXP.phis[iphi],

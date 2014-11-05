@@ -190,12 +190,10 @@ def read_exp(fn='Bsteel_BB_00.txt',path='rs'):
 def __check_interpolate__():
     fig=plt.figure();ax=fig.add_subplot(111)
     x = np.linspace(2,9,10)
-    y = np.cos(-x**2/8.0)
+    y = 3+x**2/8.*x*np.log(x)
 
     ax.plot(x,y,'s',label='data')
-
-    new_x = np.linspace(1,10,1000)
-
+    new_x = np.linspace(1,10,100)
     y_nn = interpolate(new_x,x,y,iopt=0)
     y_near = interpolate(new_x,x,y,iopt=1)
     y_cub = interpolate(new_x,x,y,iopt=2)
@@ -203,7 +201,11 @@ def __check_interpolate__():
     y_L = interpolate(new_x,x,y,iopt=4)
     y_poly2 = interpolate(new_x,x,y,iopt=5)
     y_poly3 = interpolate(new_x,x,y,iopt=6)
-    ## y_power = interpolate(new_x,x,y,iopt=7)
+    try:
+        y_power = interpolate(new_x,x,y,iopt=7)
+    except RuntimeError:
+        y_power = np.array(new_x) * np.nan
+        pass
     y_zero = interpolate(new_x,x,y,iopt=8)
     y_slinear = interpolate(new_x,x,y,iopt=9)
 
@@ -216,14 +218,12 @@ def __check_interpolate__():
     ax.plot(new_x,y_L,'--',label='L')
     # # ax.plot(new_x,y_poly2,'--',label='Poly2')
     # # ax.plot(new_x,y_poly3,'--',label='Poly3')
-    ## ax.plot(new_x,y_power,'--',label='Power')
-
+    ax.plot(new_x,y_power,'--',label='Power')
     ax.legend(loc='best',fancybox=True,
               ncol=2).get_frame().set_alpha(0.5)
-
     fig.savefig('fitting_ref.pdf')
-    pass
 
+def f_power(x,a1,a2,a3): return a1+a2*x**a3
 def interpolate(xs,xp,fp,iopt=0):
     """
     Various interpolation methods
@@ -327,12 +327,14 @@ def interpolate(xs,xp,fp,iopt=0):
         z = np.polyfit(xp,fp,3)
         f = np.poly1d(z)
     elif iopt==7:
-        raise IOError, 'Not completed.'
-        # x_dat = xp[::]
-        # xp = np.log(xp)
-        # fp = np.log(fp)
-        # z = np.polyfit(xp,fp,1)
-        # f = np.poly1d(z)
+        ## power law fit. y = a+bx^n
+        from scipy.optimize import curve_fit
+
+        x_dat = xp[::]
+        y_dat = fp[::]
+        popt, pcov = curve_fit(f_power, x_dat, y_dat)
+        a,b,n = popt
+        f = lambda x: a + b * x ** n
     elif iopt==8:
         f = interp1d(xp,fp,'zero')
     elif iopt==9:
@@ -430,15 +432,33 @@ class DiffDat:
                  *args
                  ):
         """
-        Complete data structure for a set of data for
-        diffraction-based stress analysis.
-        The key objects that require are:
+        Complete data structure for a set of diffraction
+        experiment data required for stress analysis.
+
+        Note that X-ray experiments and SF (DEC) experiment
+        may have different diffraction condition in terms
+        of orientations (phi,psi) at which diffraciton
+        experiments are conducted.
+
+        Main use of this class occurs within
+        "RS.ResidualStress" class. Usually, in-situ d-spacing
+        measurement is conducted at limited (phi,psi)
+        orientations. Whereas, DECs are measured at abundant
+        orientations. Also, d-spacings are measured at
+        as many plastic levels of interests as the experimentalist
+        wants. However, DECs are usually measured at only
+        a few plastic levels. To that end, DECs at unmeasured
+        plastic levels are subjected to either 'interpolation'
+        or 'extrapolation' of the obtained DEC data.
+
+        The key objects are:
+
         1) stress factor
-        2) Intergranular strain
-        3) Lattice strain
+        2) Intergranular (IG) strain; (eps0, eps^IG)
+        3) Lattice strain  (d^hkl)
         4) Macro strain at which the 'unknown' stress
-               will be found based on the mentioned
-               1), 2) and 3) elements.
+            will be found based on the mentioned
+            1), 2) and 3) elements.
 
         sf (nstp, k, nphi,npsi)
         ig (nstp, nphi, npsi)
@@ -459,55 +479,79 @@ class DiffDat:
         self.ijh = [[1,1],[2,2],[3,3],[1,2],[1,3],[2,3]]
         self.ijv = [[1,1],[2,2],[3,3],[2,3],[1,3],[1,2]]
         self.nstp = None
-        self.sf=sf
-        self.ig=ig
-        self.ehkl=ehkl
-        self.dhkl=dhkl
+        self.sf=sf;     self.ig=ig
+        self.ehkl = ehkl; self.dhkl = dhkl
+        self.phi  = phi; self.psi = psi
+        self.nphi = len(self.phi)
+        self.npsi = len(self.psi)
+        self.name = name
+        self.ndat = self.nphi * self.npsi
         self.vf=vf
-        self.ngr=np.array(ngr,dtype='int')
 
-        if type(self.vf)==type(None):
-            self.vf = np.zeros(self.ehkl.shape)*np.nan
-        if type(self.ngr)==type(None):
-            self.ngr = np.zeros(self.ehkl.shape)*np.nan
+        if type(ngr)!=type(None):
+            self.ngr=np.array(
+                ngr,dtype='int')
+        if type(self.vf)!=type(None):
+            self.vf = np.zeros(
+                self.ehkl.shape)*np.nan
+        if type(ngr)!=type(None):
+            self.ngr = np.zeros(
+                self.ehkl.shape)*np.nan
+        if type(sf)!=type(None):
+            # (nstp,k,nphi,npsi)
+            self.nstp = len(sf)
+        if type(ig)!=type(None):
+            # (nstp,k,nphi,npsi)
+            self.nstp = len(ig)
+        if type(ehkl)!=type(None):
+            # (nstp,k,nphi,npsi)
+            self.nstp = len(ehkl)
+        if type(dhkl)!=type(None):
+            # (nstp,k,nphi,npsi)
+            self.nstp = len(dhkl)
 
-        if type(sf)!=type(None): self.nstp = len(sf) # (nstp,k,nphi,npsi)
-        if type(ig)!=type(None): self.nstp = len(ig) # (nstp,k,nphi,npsi)
-        if type(ehkl)!=type(None): self.nstp = len(ehkl) # (nstp,k,nphi,npsi)
-        if type(dhkl)!=type(None): self.nstp = len(dhkl) # (nstp,k,nphi,npsi)
+        if self.nstp!=None: nstp = self.nstp
 
-        self.stress=stress
+        try:
+            self.__flow_assign__(stress,strain)
+        except:
+            print 'Stress given to rs.DiffDat',
+            print 'is not correct'
+
+        # self.__diff_con_assign__()
+        try:
+            self.__diff_con_assign__()
+        except:
+            print 'Diff condition given to rs.DiffDat',
+            print 'is not correct'
+
+    def __flow_assign__(self,stress,strain):
+        self.stress = stress
         self.strain = np.array(strain).copy()
-
         self.flow = FlowCurve()
         self.flow.get_6stress(stress.T)
         self.flow.get_6strain(strain.T)
+        self.strain_eff = self.strain.T[0]\
+                          + self.strain.T[1]
 
-        self.strain_eff = self.strain.T[0]+self.strain.T[1]
-        #self.flow.get_eqv()
-        #self.strain_eff = self.flow.epsilon_vm
-
-        self.phi=phi; self.psi=psi
-        self.nphi = len(self.phi)
-        self.npsi = len(self.psi)
-        self.name=name
-        self.ndat = self.nphi*self.npsi
-
-        if self.nstp!=None: nstp = self.nstp
-        nphi = self.nphi
-        npsi = self.npsi
-
-        if type(self.sf)!=type(None) and type(nstp)!=type(None):
+    def __diff_con_assign__(self):
+        nstp = self.nstp
+        nphi = self.nphi; npsi = self.npsi
+        if type(self.sf)!=type(None) and\
+           type(nstp)!=type(None):
             if (nstp,6,nphi,npsi) != sf.shape:
                 raise IOError, 'SF is not in right structure'
-        if type(self.ig)!=type(None) and type(nstp)!=type(None):
+        if type(self.ig)!=type(None) and\
+           type(nstp)!=type(None):
             if (nstp,nphi,npsi) != ig.shape:
                 raise IOError, 'IG is not in right structure'
-        if type(self.ehkl)!=type(None) and type(nstp)!=type(None):
-            if (nstp,nphi,npsi) != ehkl.shape:
+        if type(self.ehkl)!=type(None) and\
+           type(nstp)!=type(None):
+            if (nstp,nphi,npsi) != self.ehkl.shape:
                 raise IOError, 'ehkl is not in right structure'
-        if type(self.dhkl)!=type(None) and type(nstp)!=type(None):
-            if (nstp,nphi,npsi) != dhkl.shape:
+        if type(self.dhkl)!=type(None) and\
+           type(nstp)!=type(None):
+            if (nstp,nphi,npsi) != self.dhkl.shape:
                 raise IOError, 'ehkl is not in right structure'
 
     def interp_psi(self,psi,iopt=1):
@@ -527,7 +571,7 @@ class DiffDat:
             x = sign(x) * sin(x)**2
             x0 = sign(x0) * sin(x0)**2
 
-        if self.sf!=None:
+        if type(self.sf)!=type(None):
             sf_new = np.zeros((nstp,6,nphi,npsi_new))
             for istp in range(nstp):
                 for iphi in range(nphi):
@@ -535,21 +579,21 @@ class DiffDat:
                         y = self.sf[istp,k,iphi,:]
                         sf_new[istp,k,iphi,:] = \
                             interpolate(x,x0,y)
-        if self.ig!=None:
+        if type(self.ig)!=type(None):
             ig_new = np.zeros((nstp,nphi,npsi_new))
             for istp in range(nstp):
                 for iphi in range(nphi):
                     y = self.ig[istp,iphi,:]
                     ig_new[istp,iphi,:] = \
                         interpolate(x,x0,y)
-        if self.ehkl!=None:
+        if type(self.ehkl)!=type(None):
             ehkl_new = np.zeros((nstp,nphi,npsi_new))
             for istp in range(nstp):
                 for iphi in range(nphi):
                     y = self.ehkl[istp,iphi,:]
                     ehkl_new[istp,iphi,:] = \
                         interpolate(x,x0,y)
-        if self.dhkl!=None:
+        if type(self.dhkl)!=type(None):
             dhkl_new = np.zeros((nstp,nphi,npsi_new))
             for istp in range(nstp):
                 for iphi in range(nphi):
@@ -557,13 +601,13 @@ class DiffDat:
                     dhkl_new[istp,iphi,:] = \
                         interpolate(x,x0,y)
 
-        if self.sf!=None:
+        if type(self.sf)!=type(None):
             self.sf = sf_new.copy()
-        if self.ig!=None:
+        if type(self.ig)!=type(None):
             self.ig = ig_new.copy()
-        if self.ehkl!=None:
+        if type(self.ehkl)!=type(None):
             self.ehkl = ehkl_new.copy()
-        if self.dhkl!=None:
+        if type(self.dhkl)!=type(None):
             self.dhkl = dhkl_new.copy()
 
         self.psi = np.array(psi).copy()
@@ -651,19 +695,23 @@ class DiffDat:
         dhkl_new = np.zeros((nstp,nphi_new,npsi))
         ig_new = np.zeros((nstp,nphi_new,npsi))
         for i in range(len(ind)):
-            if self.sf!=None:
+            if type(self.sf)!=type(None):
                 sf_new[:,:,i,:] = self.sf[:,:,ind[i],:]
-            if self.ehkl!=None:
+            if type(self.ehkl)!=type(None):
                 ehkl_new[:,i,:] = self.ehkl[:,ind[i],:]
-            if self.dhkl!=None:
+            if type(self.dhkl)!=type(None):
                 dhkl_new[:,i,:] = self.dhkl[:,ind[i],:]
-            if self.ig!=None:
+            if type(self.ig)!=type(None):
                 ig_new[:,i,:] = self.ig[:,ind[i],:]
 
-        if self.sf!=None: self.sf = sf_new.copy()
-        if self.ehkl!=None: self.ehkl = ehkl_new.copy()
-        if self.dhkl!=None: self.dhkl = dhkl_new.copy()
-        if self.ig!=None: self.ig = ig_new.copy()
+        if type(self.sf)  !=type(None):
+            self.sf = sf_new.copy()
+        if type(self.ehkl)!=type(None):
+            self.ehkl = ehkl_new.copy()
+        if type(self.dhkl)!=type(None):
+            self.dhkl = dhkl_new.copy()
+        if type(self.ig)  !=type(None):
+            self.ig = ig_new.copy()
 
         self.phi = np.array(phi_new)
         self.nphi = len(self.phi)
@@ -784,34 +832,52 @@ class DiffDat:
             fig_ig.tight_layout()
 
 class ResidualStress:
-    def __init__(self,
-                 mod_ext=None,
-                 fnmod_epshkl='int_els_ph1.out',
-                 #fnmod_ig='igstrain_unload_ph1.out',
-                 #fnmod_ig='igstrain_bix_ph1.out',
-                 fnmod_ig='igstrain_fbulk_ph1.out',
-                 fnmod_sf='igstrain_fbulk_ph1.out',
-                 fnmod_str='STR_STR.OUT',
-                 fnexp_ehkl='Bsteel_BB_00.txt',
-                 fnexp_sf='YJ_Bsteel_BB.sff',
-                 exppath='rs/Bsteel/BB',
-                 fnPF='rs/Bsteel/BB/new_flowcurves.dat',
-                 ifig=1,i_ip=0):
+    def __init__(
+            self,
+            mod_ext=None,
+            fnmod_epshkl='int_els_ph1.out',
+            #fnmod_ig='igstrain_unload_ph1.out',
+            #fnmod_ig='igstrain_bix_ph1.out',
+            fnmod_ig='igstrain_fbulk_ph1.out',
+            fnmod_sf='igstrain_fbulk_ph1.out',
+            fnmod_str='STR_STR.OUT',
+            fnexp_ehkl='Bsteel_BB_00.txt',
+            fnexp_sf='YJ_Bsteel_BB.sff',
+            exppath='dat/23JUL12',
+            fnPF='rs/Bsteel/BB/new_flowcurves.dat',
+            ifig=1,i_ip=0):
         """
+        ResidualStress class
+        Reads ana analyze both
+         1) experimental (proto)
+         2) and model predicted (EVPSC)
+        diffraction results to analyze the stress
+        present in a polycrystaline material
+
         Arguments
         =========
-        fnmod = 'int_els_ph1.out'
-        fnig  = 'igstrain_unload_ph1.out'
-        fnsf  = 'igstrain_fbulk_ph1.out'
-        fnstr = 'STR_STR.OUT'
+        fnmod      = 'int_els_ph1.out'
+        fnig       = 'igstrain_unload_ph1.out'
+        fnsf       = 'igstrain_fbulk_ph1.out'
+        fnstr      = 'STR_STR.OUT'
         fnexp_ehkl = 'Bsteel_BB_00.txt'
-        fnexp_sf = 'YJ_Bsteel_BB.sff'
-        exppath = 'rs'
-        ifig=1
-
-        i_ip = 0 (collective stress analysis)
-               1 (stress analysis only to check consistency in model)
+        fnexp_sf   = 'YJ_Bsteel_BB.sff'
+        exppath    = 'rs'
+        ifig       = 1
+        i_ip       = 0 (collective stress analysis)
+                     1 (stress analysis only to check consistency in model)
+                     2 (read only the experimental eps^hkl
         """
+        from tempfile import mkstemp as mktemp
+        from time import asctime
+        from os import getcwd
+        self.log = open('rs.log','w') ###mktemp(dir=getcwd()
+        for i in range(72):
+            self.log.write('-')
+        self.log.write('\nLog file from '+\
+                       'rs.ResidualStress\n')
+        self.log.writelines(asctime())
+
         if mod_ext!=None:
             print "mod_ext <%s> is given"%mod_ext
             fnmod_epshkl = '%s.%s'%(
@@ -838,7 +904,10 @@ class ResidualStress:
         #from MP.ssort import sh as sort
 
         if i_ip==0:
-
+            print 'You are calling a deprecated feature.'
+            print 'Use analyze_proto.StressAnalysis for experiment'
+            print "And use this 'rs.ResidualStress' only for model data"
+            raise IOError
             # read model eps^hkl, eps^0, SF
             self.readmod(fnmod_epshkl=fnmod_epshkl,
                          fnmod_ig=fnmod_ig,fnmod_sf=fnmod_sf,
@@ -878,7 +947,6 @@ class ResidualStress:
             plt.figure(20).savefig('SF_PF.pdf')
             plt.figure(21).savefig('ehkl_PF.pdf')
             plt.figure(22).savefig('eps0_PF.pdf')
-
         elif i_ip==1:
             # read model eps^hkl, eps^0, SF
             self.readmod(fnmod_epshkl=fnmod_epshkl,
@@ -886,13 +954,21 @@ class ResidualStress:
                          fnmod_str=fnmod_str)
             self.dat_ref = self.dat_model
         elif i_ip==2:
+            print 'You are calling a deprecated feature.'
+            print 'Use analyze_proto.StressAnalysis'
+            raise IOError
             # read only the experimental eps^hkl
             self.readexp(fnexp_ehkl=fnexp_ehkl,
-                         fnexp_sf=fnexp_sf,path=exppath)
-
+                         fnexp_sf=fnexp_sf,
+                         path=exppath)
+            ## psi-interpolate
+            ## ref: self.dat_xray.interp_psi
+            self.dat_sf.interp_psi(psi=self.dat_xray.psi)
+            self.dat_sf.determine_phis(phi_new=self.dat_xray.phi)
         self.i_ip = i_ip
 
-    def readmod(self,fnmod_epshkl,fnmod_ig,fnmod_sf,fnmod_str,
+    def readmod(self,fnmod_epshkl,fnmod_ig,
+                fnmod_sf,fnmod_str,
                 psi_stp=1):
         """
         read model eps^hkl and ig-strain sf
@@ -997,9 +1073,16 @@ class ResidualStress:
             stress=self.stressm,
             vf=vf,ngr=ngr)
 
-    def readexp(self,fnexp_ehkl,fnexp_sf,path='rs'):
+    def readexp(self,fnexp_ehkl,
+                fnexp_sf,path):
         """
-        Read experimental eps^hkl, eps^0, stress factor
+        Read experimental properties
+
+        Arguments
+        =========
+        fnexp_ehkl : eps^hkl
+        fnexp_sf   : stress factor
+        path       : wd path
         """
         import os
         from MP.ssort import sh as sort
@@ -1007,11 +1090,14 @@ class ResidualStress:
         from MP.ssort import ind_swap as idsort
         from sff_plot import reader as read_sff
 
-        self.phise,self.psise,self.ehkle,self.dhkle,straine\
-            = read_exp(fnexp_ehkl,path='rs')
+        self.phise,self.psise,self.ehkle,\
+            self.dhkle,straine\
+            = read_exp(fnexp_ehkl,path=path)
 
-        self.sfe,self.eps0e,self.sfe_phis,self.sfe_psis,\
-            self.sfe_exx = read_sff('%s%s%s'%(path,os.sep,fnexp_sf))
+        self.sfe,self.eps0e,self.sfe_phis,\
+            self.sfe_psis,self.sfe_exx \
+            = read_sff('%s%s%s'%(path,os.sep,
+                                 fnexp_sf))
 
         print '\n*****************************************************'
         print ' Warning in strain_sf determination:'
@@ -1020,12 +1106,17 @@ class ResidualStress:
 
         self.straine=np.zeros((len(straine.T),6))
         for istp in range(len(self.straine)):
-            self.straine[istp][0] = straine[0][istp]
-            self.straine[istp][1] = straine[1][istp]
+            self.straine[istp][0] \
+                = straine[0][istp]
+            self.straine[istp][1] \
+                = straine[1][istp]
+
         self.strain_sf=np.zeros((len(self.sfe_exx),6))
         for istp in range(len(self.sfe_exx)):
-            self.strain_sf[istp][0] = self.sfe_exx[istp]
-            self.strain_sf[istp][1] = self.sfe_exx[istp]
+            self.strain_sf[istp][0] \
+                = self.sfe_exx[istp]
+            self.strain_sf[istp][1] \
+                = self.sfe_exx[istp]
         self.sfe_exx=np.array(self.sfe_exx)
         # # self.sf_exp[istr,iphi,npsis,6]
         self.sfe=self.sfe.swapaxes(1,3)#[istr,6,npsis,iphi]
@@ -1040,11 +1131,17 @@ class ResidualStress:
             = __torad__(self.phise,self.psise,self.sfe_phis,self.sfe_psis)
 
         ## self.dat_xray and self.dat_sf
-        self.dat_xray=DiffDat(phi=self.phise,psi=self.psise,
-            sf=None,ig=None,ehkl=self.ehkle,dhkl=self.dhkle,name='X-ray',
+        self.dat_xray=DiffDat(
+            phi=self.phise,psi=self.psise,
+            sf=None,ig=None,ehkl=self.ehkle,
+            dhkl=self.dhkle,name='X-ray',
             strain=self.straine)
-        self.dat_sf = DiffDat(phi = self.sfe_phis,psi = self.sfe_psis,
-            sf=self.sfe,ig=self.eps0e,ehkl=None,name='SF',
+
+        self.dat_sf = DiffDat(
+            phi = self.sfe_phis,
+            psi = self.sfe_psis,
+            sf=self.sfe,ig=self.eps0e,
+            ehkl=None,name='SF',
             strain=self.strain_sf)
 
     def readPF(self,fnPF):
@@ -1092,13 +1189,50 @@ class ResidualStress:
         self.dat_PF=DiffDat(phi=phi,psi=psi,sf=fij,ehkl=ehkl,ig=ig,
                             strain=new_strain)
 
+    def set_analysis_cond(self,i_ip,istp=0):
+        """
+        Set analysis condition prior to calling
+        self.find_sigma or self.find_sigma_d
+
+        Note that self.find_sigma requires
+         1) d-spacing (or elastic strain)
+         2) IG strain (optional)
+         3) DEC (Diffraction Elastic Constants)
+
+        Arguments
+        =========
+        i_ip = 2: run only for the consisting of
+                 only experimental data (DEC,dhkl,eps0)
+        istp = 0
+        """
+        if i_ip!=2: raise IOError, \
+           'Not prepared other than i_ip==2'
+
+        self.phis = self.dat_xray.phi.copy()
+        self.nphi = len(self.phis)
+        self.psis = self.dat_xray.psi.copy()
+        self.npsi = len(self.psis)
+
+        ## Assign DEC/IG/ehkl
+        self.sf = self.dat_sf.sf[istp].copy()
+        self.eps0 = self.dat_sf.ig[istp].copy()
+        self.ehkl = self.dat_xray.ehkl[istp].copy()
+
+        if self.ehkl.shape!=self.eps0.shape:
+            raise IOError, 'self.ehkl and self.eps0 are '+\
+                'not in compatible shape'
+
+        self.tdat = self.ehkl - self.eps0
+
     def analysis(self,iopt,istp,ifig=44):
         """
         Define the self.phis, self.psis, self.sf, self.ig, self.tdat
 
         Arguments
         =========
-        iopt=1
+        iopt = 1
+        istp =
+        ifig = 44
         """
         self.phis=self.dat_ref.phi.copy(); self.nphi = len(self.phis)
         self.psis=self.dat_ref.psi.copy(); self.npsi = len(self.psis)
@@ -1111,6 +1245,7 @@ class ResidualStress:
             self.sf   = self.dat_model.sf[istp].copy()
             self.eps0 = self.dat_model.ig[istp].copy()
             self.ehkl = self.dat_model.ehkl[istp].copy()
+
         if iopt==1:
             self.sf   = self.dat_sf.sf[istp].copy()
             self.eps0 = self.dat_sf.ig[istp].copy()
@@ -1237,16 +1372,53 @@ class ResidualStress:
             raise IOError, "Solution was not found."
         return stress
 
-    def find_sigma_d(self):
+    def find_sigma_d(self,ivo=None,iplot=False,
+                     iwgt=False):
+        """
+        Find stress based on d-spacing
+        """
         from scipy import optimize
         fmin = optimize.leastsq
         dat = fmin(self.f_least_d,x0=[0,0,0,0,0,0],full_output=True)
-        stress=dat[0]
+        stress = dat[0]
         cov_x, infodict, mesg, ier = dat[1:]
         if not(ier in [1,2,3,4]):
             raise IOError, "Solution was not found."
 
-        print stress
+        if iplot:
+            from MP.lib import mpl_lib, axes_label
+            wf=mpl_lib.wide_fig
+            fig_dhkl=wf(nw=self.nphi,nh=2,iarange=True)
+            sign_sin2psi=np.sign(self.psis)*np.sin(self.psis)**2
+
+            for iphi in range(self.nphi):
+                ## Observed eps^{hkl}
+                fig_dhkl.axes[iphi].plot(
+                    sign_sin2psi,
+                    self.ehkl[iphi],'bx')
+                ## fitted eps^{hkl}
+                fig_dhkl.axes[iphi].plot(
+                    sign_sin2psi,
+                    self.Di[iphi],'r--.')
+                ## DEC{hkl}
+                # F_{11}
+                fig_dhkl.axes[iphi+self.nphi].plot(
+                    sign_sin2psi,
+                    self.sf[0][iphi],'b-.')
+                # F_{22}
+                fig_dhkl.axes[iphi+self.nphi].plot(
+                    sign_sin2psi,
+                    self.sf[1][iphi],'b--.')
+
+                fig_dhkl.axes[iphi].set_title(
+                    r'$\phi=%3.1f^\circ$'%
+                    (self.phis[iphi]*180/np.pi))
+
+            mpl_lib.rm_inner(fig_dhkl.axes[:self.nphi])
+            axes_label.__deco__(fig_dhkl.axes[0],iopt=0,
+                                ipsi_opt=1)
+            mpl_lib.tune_xy_lim(fig_dhkl.axes[:self.nphi])
+        print 'Stress:',stress
 
     def xec(self):
         """ Isotropic X-ray elastic constants """
@@ -1274,7 +1446,13 @@ class ResidualStress:
                             + self.cffs[k,iphi,ipsi] * self.sigma[k]
 
     def calc_Di(self,d0c=None,d0=None):
-        self.Di = np.zeros(self.nphi, self,npsi)
+        """
+        Arguments
+        =========
+        d0c = None
+        d0  = None
+        """
+        self.Di = np.zeros((self.nphi, self.npsi))
         for iphi in range(self.nphi):
             for ipsi in range(self.npsi):
                 self.Di[iphi,ipsi] = 0

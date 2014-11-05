@@ -191,14 +191,14 @@ def ex_consistency(
         model_rs.npsi = len(model_rs.psis)
         wgt           = model_rs.dat_model.vf[istp][::]
 
-        if sin2psimx!=None or psimx!=None:
+        if type(sin2psimx)!=type(None) or type(psimx)!=type(None):
             filter_psi(model_rs,sin2psimx=sin2psimx,psimx=psimx)
             wgt = filter_psi2(
                 wgt,sin2psi=np.sin(model_rs.psis)**2,
                 bounds =[0., sin2psimx])
-            if sf_ext!=None:
+            if type(sf_ext)!=type(None):
                 model_rs.sf = sf_ext[istp]
-            elif ig_ext!=None:
+            elif type(ig_ext)!=type(None):
                 model_rs.ig = ig_ext[istp]
 
         if psi_nbin!=1:

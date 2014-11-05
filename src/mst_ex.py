@@ -571,9 +571,11 @@ def influence_of_intp(ss=2,bounds=[0,0.5],
 
 def influence_of_nbin(
         ss=3,bounds = [0,0.5],
-        nbins = [11, 19, 25, 51],iscatter=False,
+        nbins = [11, 19, 25, 51],
+        iscatter=False,
         sigma=1e-5,
-        iwgt=False,intp_opt=0):
+        iwgt=False,
+        intp_opt=0):
     """
     Influence of psi bin size
 
@@ -599,7 +601,8 @@ def influence_of_nbin(
         fw, e = influence_of_intp(
             ss=ss, bounds=bounds,
             psi_nbin = nb,iplot=False,
-            iscatter=iscatter,sigma=sigma,iwgt=iwgt,
+            iscatter=iscatter,sigma=sigma,
+            iwgt=iwgt,
             intp_opt=intp_opt)
         x = fw.epsilon_vm[::]
         y = e[::]
@@ -684,7 +687,7 @@ def influence_of_nbin_scatter(
 
 def influence_of_cnts_stats(
         ss=3,bounds=[0.,0.3257],
-        nbins=13, sigmas=[1e-5, 2e-5, 5e-5, 1e-4],
+        nbins=13, sigmas=[1e-5, 2e-5, 5e-5, 1e-4],iwgt=False,
         nsample=5,intp_opt=0,iplot=False):
     from MP.lib import mpl_lib,axes_label
     import matplotlib.pyplot as plt
@@ -706,7 +709,7 @@ def influence_of_cnts_stats(
                 ss=ss,bounds=bounds,
                 nbins=[nbins],
                 iscatter=True,nsample=1,
-                iwgt=True,sigma=sigmas[i],
+                iwgt=iwgt,sigma=sigmas[i],
                 intp_opt=intp_opt,
                 iplot=False)
             Y.append(y)
@@ -769,7 +772,7 @@ def influence_of_intp_extp(
         ss=1,
         bounds=[0.,0.5],
         nbins=13,
-        sigmas=[1e-11],
+        sigmas=[1e-11],iwgt=False,
         nsample=5):
     """
     Influence of choice of interpolation/extrapolation
@@ -787,13 +790,13 @@ def influence_of_intp_extp(
     from MP.lib import mpl_lib,axes_label
     import matplotlib.pyplot as plt
 
-
-    iopts = [0,1,2,3,4]
+    iopts = [0,1,2,3,4,7]
     labs  = ['Piece-wise linear',
              'Nearest data',
              'Cubic',
              'Quadratic',
-             'Linear fit']
+             'Linear fit',
+             'Power law fit']
 
     xs=[];Ms=[];Ss=[]
     for iopt in range(len(iopts)):
@@ -801,7 +804,7 @@ def influence_of_intp_extp(
             ss=ss,bounds=bounds,
             nbins=nbins,
             sigmas=sigmas,
-            nsample=nsample,
+            nsample=nsample,iwgt=False,
             intp_opt=iopt,iplot=False)
         xs.append(x)
         Ms.append(M)
