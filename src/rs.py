@@ -1,28 +1,34 @@
 ### residual stress calculation
 import matplotlib.pyplot as plt
+
 import numpy as np
+cos = np.cos; sin = np.sin; pi  = np.pi
 from MP.mat import mech
-from MP import read_blocks
-rb=read_blocks.main
 FlowCurve = mech.FlowCurve
-cos = np.cos
-sin = np.sin
-pi  = np.pi
+from MP import read_blocks
+rb = read_blocks.main
+
 def reader(fn='igstrain_load_ph1.out',isort=False,icheck=False):
+    """
+    Arguments
+    =========
+    fn = 'igstrain_load_ph1.out'
+    isort = False
+    icheck = False : plot the e(hkl) or not
+    """
     if isort: from MP.ssort import sh as sort
-    dl = open(fn).readlines()
+    dl  = open(fn).readlines()
     npb = dl[1].split()[0]
-    dl = dl[2:]
-    print npb
+    dl  = dl[2:]
+
     ds = open(fn).read()
     d = ds.split('npb')[1]
-    #d = np.loadtxt(fn,skiprows=2).T
     d = rb(fn,skiprows=2)
 
     steps = np.unique(d[0])
     nstp = len(steps)
 
-    #phis = np.unique(d[1]) # this shoudn't sort...
+    ## Find unique phi
     phis=[]
     for i in range(len(d[1])):
         pp = d[1][i]
@@ -31,14 +37,16 @@ def reader(fn='igstrain_load_ph1.out',isort=False,icheck=False):
 
     phis = np.array(phis)
     nphi = len(phis)
-    psis = []
 
+    ## Find unique psis
+    psis = []
     for i in range(len(dl)):
         d = dl[i].split()
-        st, ph, beta, psi1, psi2 = map(float, [d[0], d[1], d[2], d[3], d[4]])
+        st, ph, beta, psi1, psi2 = map(
+            float,[d[0], d[1], d[2], d[3], d[4]])
+
         if ph!=phis[0]: break
-        psis.append(psi1)
-        psis.append(psi2)
+        psis.append(psi1); psis.append(psi2)
 
     psis   = np.array(psis); npsis  = len(psis)
     epshkl = np.zeros((nstp,nphi,npsis))
@@ -78,12 +86,10 @@ def reader(fn='igstrain_load_ph1.out',isort=False,icheck=False):
                     ng = ngr[istp,:,ipsi]
                     vv = v[istp,:,ipsi]
                     ph, ep, ng, vv = sort(phis,ep,ng,vv)
-
                     epshkl[istp,:,ipsi] = ep[:,ipsi]
                     ngr[istp,:,ipsi] = ng[:,ipsi]
                     v[istp,:,ipsi] = vv[:,ipsi]
         else: pass
-
         # psi sort
         ps = psis.copy()
         ps.sort()
@@ -96,9 +102,7 @@ def reader(fn='igstrain_load_ph1.out',isort=False,icheck=False):
                     ep = epshkl[istp,iphi,:]
                     ng = ngr[istp,iphi,:]
                     vv = v[istp,iphi,:]
-
                     dum, ep, ng, vv = sort(psis,ep,ng,vv)
-
                     epshkl[istp,iphi,:] = ep[:]
                     ngr[istp,iphi,:] = ng[:]
                     v[istp,iphi,:] = vv[:]
@@ -106,6 +110,7 @@ def reader(fn='igstrain_load_ph1.out',isort=False,icheck=False):
         else:pass
 
     if icheck:
+        plt.figure()
         plt.plot(psis,epshkl[-3,0,:])
         plt.plot(psis,epshkl[-2,0,:])
         plt.plot(psis,epshkl[-1,0,:])
@@ -190,10 +195,10 @@ def read_exp(fn='Bsteel_BB_00.txt',path='rs'):
 def __check_interpolate__():
     fig=plt.figure();ax=fig.add_subplot(111)
     x = np.linspace(2,9,10)
-    y = 3+x**2/8.*x*np.log(x)
+    y = 5+(x-0.5)*(x-0.1)
 
-    ax.plot(x,y,'s',label='data')
-    new_x = np.linspace(1,10,100)
+    ax.plot(x,y,'s',mec='b',mfc='None',label='data')
+    new_x = np.linspace(1,10,1000)
     y_nn = interpolate(new_x,x,y,iopt=0)
     y_near = interpolate(new_x,x,y,iopt=1)
     y_cub = interpolate(new_x,x,y,iopt=2)
@@ -218,7 +223,7 @@ def __check_interpolate__():
     ax.plot(new_x,y_L,'--',label='L')
     # # ax.plot(new_x,y_poly2,'--',label='Poly2')
     # # ax.plot(new_x,y_poly3,'--',label='Poly3')
-    ax.plot(new_x,y_power,'--',label='Power')
+    ax.plot(new_x,y_power,'-',label='Power')
     ax.legend(loc='best',fancybox=True,
               ncol=2).get_frame().set_alpha(0.5)
     fig.savefig('fitting_ref.pdf')
@@ -466,9 +471,9 @@ class DiffDat:
         strain (nstp,6)
         vf (nstp,nphi,npsi)
 
-        ** We follow Hauk's convention for stress components
+        ** We follow Hauk's vectorized stress components
         ----------------------------------------------------
-           i  ij in (Voigt)    or     (Hauk)
+           i         Voigt      or      Hauk
            0         (1,1)             (1,1)
            1         (2,2)             (2,2)
            2         (3,3)             (3,3)
@@ -841,10 +846,10 @@ class ResidualStress:
             fnmod_ig='igstrain_fbulk_ph1.out',
             fnmod_sf='igstrain_fbulk_ph1.out',
             fnmod_str='STR_STR.OUT',
-            fnexp_ehkl='Bsteel_BB_00.txt',
-            fnexp_sf='YJ_Bsteel_BB.sff',
-            exppath='dat/23JUL12',
-            fnPF='rs/Bsteel/BB/new_flowcurves.dat',
+            fnexp_ehkl=None, #'Bsteel_BB_00.txt',
+            fnexp_sf=None, #'YJ_Bsteel_BB.sff',
+            exppath=None, #'dat/23JUL12',
+            fnPF=None, #'rs/Bsteel/BB/new_flowcurves.dat',
             ifig=1,i_ip=0):
         """
         ResidualStress class
@@ -876,7 +881,18 @@ class ResidualStress:
             self.log.write('-')
         self.log.write('\nLog file from '+\
                        'rs.ResidualStress\n')
-        self.log.writelines(asctime())
+        self.log.writelines(asctime()+'\n')
+
+        self.log.writelines("Arguments:\n")
+        self.log.writelines("mod_ext: %s\n"%mod_ext)
+        self.log.writelines("fnmod_epshkl: %s\n"%fnmod_epshkl)
+        self.log.writelines("fnmod_ig: %s\n"%fnmod_ig)
+        self.log.writelines("fnmod_sf: %s\n"%fnmod_sf)
+        self.log.writelines("fnmod_str: %s\n"%fnmod_str)
+        self.log.writelines("fnexp_ehkl: %s\n"%fnexp_ehkl)
+        self.log.writelines("fnexp_sf: %s\n"%fnexp_sf)
+        self.log.writelines("exppath: %s\n"%exppath)
+        self.log.writelines("fnPF: %s\n"%fnPF)
 
         if mod_ext!=None:
             print "mod_ext <%s> is given"%mod_ext
@@ -968,27 +984,43 @@ class ResidualStress:
         self.i_ip = i_ip
 
     def readmod(self,fnmod_epshkl,fnmod_ig,
-                fnmod_sf,fnmod_str,
-                psi_stp=1):
+                fnmod_sf,fnmod_str):
         """
-        read model eps^hkl and ig-strain sf
+        - Read model eps^hkl, sf and ig-strain (EVPSC format)
+        - All varaibles should be sorted by phi and psis
 
-        All varaibles are meant to be sorted by phi and psis
-
-        ## Selective use of psi should be possible for
-        ## parametric study
+        Arguments
+        =========
+        fnmod_epshkl : model-predicted e(hkl) file name
+        fnmod_ig     : model-predicted e^{IG}(hkl) file name
+        fnmod_sf     : model-predicted F_{ij}(hkl) file name
+        fnmod_str    : model-predicted 'STR_STR.OUT' file name
         """
+        ## log
+        self.log.write('\nself.readmod was called\n')
+        self.log.write(' Arguments\n=========\n')
+        self.log.write('  fnmod_epshkl:%s\n'%fnmod_epshkl)
+        self.log.write('  fnmod_ig:%s\n'%fnmod_ig)
+        self.log.write('  fnmod_sf:%s\n'%fnmod_sf)
+        self.log.write('  fnmod_str:%s\n'%fnmod_str)
+        ##
+
         from RS import pepshkl
         from pepshkl import reader2 as reader_sf
         from MP.ssort import sh as sort
         # eps^hkl from model
+
+        self.log.write('rs.reader reads fnmod_epshkl:%s\n'%
+                       fnmod_epshkl)
         datm = reader(fnmod_epshkl,isort=True)
+
         self.stepsm = map(int,datm[-1])
         self.psism = datm[0]; self.npsim = len(self.psism)
         self.phism = datm[1]; self.nphim = len(self.phism)
         self.psism = self.psism * pi / 180.
         self.phism = self.phism * pi / 180.
         self.ndatm = len(self.phism) * len(self.psism)
+
         ehklm = datm[2] # last state... steps, datm[2] -> epshkl
         ngr = datm[3]; vf = datm[4]
         ehklm_sorted = np.zeros((len(self.stepsm),self.nphim,self.npsim))
@@ -999,11 +1031,13 @@ class ResidualStress:
             try:
                 self.eps0m = reader(fn=fnmod_ig,isort=True)[2]
             except:
-                print '\n***********************************************************'
-                print 'Given fnmod_ig filename is %s'%fnmod_ig
-                print 'This file is not readable by reader method in rs.py module'
-                print 'trial with reader2 method in pepshkl.py module is performed'
-                print '***********************************************************\n'
+                self.log.write('\n****************************')
+                self.log.write('*******************************\n')
+                self.log.write('This file is not readable by')
+                self.log.write(' rs.reader \n')
+                self.log.write('attempt to use pepshkl.reader2\n')
+                self.log.write('\n****************************')
+                self.log.write('*******************************\n')
                 t,dum = reader_sf(fn=fnmod_ig,iopt=1)
                 # t[0] ! ehkl
                 # t[1] ! e (macro)
@@ -1015,21 +1049,32 @@ class ResidualStress:
                 # t[7] ! phi
                 # t[8] ! psi
                 # t[2] ![nst,nsf, nphi, npsi]
-                print 'IG strain (self.eps0m) was defined as e(hkl) - f_hkl*S(ij)'
+                self.log.write('IG strain defined ')
+                self.log.write('as e(hkl) - f_hkl*S(ij)\n')
                 self.eps0m=t[5][:,0,:,:]
+            else:
+                self.log.write('\n****************************')
+                self.log.write('*******************************\n')
+                self.log.write('Used rs.reader to read %s\n'%fnmod_ig)
+                self.log.write('\n****************************')
+                self.log.write('*******************************\n')
 
         elif fnmod_ig==None:
+            self.log.write('fnmod_ig was not given:\n')
+            self.log.write('all zero array for self.eps0m.\n')
             self.eps0m = np.zeros(self.ehklm.shape)
 
         # stress factor from model
         t, usf = reader_sf(fn=fnmod_sf)
         sfm = t[3] # [istp,k,phi,psi] {fhkl} Stress Factor
 
-        self.sfm = np.zeros((sfm.shape[0],6,sfm.shape[2],sfm.shape[3]))
+        self.sfm = np.zeros((sfm.shape[0],6,\
+                             sfm.shape[2],sfm.shape[3]))
         for istp in range(len(sfm)):
             for k in range(len(sfm[istp])):
                 for iphi in range(len(sfm[istp,k])):
-                    self.sfm[istp,k,iphi,:] = sfm[istp,k,iphi,:].copy()
+                    self.sfm[istp,k,iphi,:] \
+                        = sfm[istp,k,iphi,:].copy()
 
         dum_psi = t[8,0,0,0]
         dum = self.sfm[:,3,:,:] # SF_23
@@ -1049,16 +1094,11 @@ class ResidualStress:
         if len(dstr.shape)==1:
             dstr = np.array([dstr]).T
 
-        evm,svm,e11,e22,e33,e23,e13,e12,s11,s22,s33,s23,s13,s12 \
-            = dstr[:14]
+        evm,svm,e11,e22,e33,e23,e13,e12,\
+            s11,s22,s33,s23,s13,s12 = dstr[:14]
         self.strainm_con = np.array([e11,e22,e33,e12,e13,e23])
         self.stressm_con = np.array([s11,s22,s33,s12,s13,s23])
-        self.strainm = []
-        self.stressm = []
-
-        # for ist in range(len(self.stepsm)):
-        #     self.strainm.append(self.strainm_con.T[self.stepsm[ist]])
-        #     self.stressm.append(self.stressm_con.T[self.stepsm[ist]])
+        self.strainm = [] ; self.stressm = []
         for ist in range(len(self.stepsm)):
             self.strainm.append(self.strainm_con.T[ist])
             self.stressm.append(self.stressm_con.T[ist])

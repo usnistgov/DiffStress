@@ -122,9 +122,10 @@ def ex_consistency(
         ## ax1: Equivalent Stress/Strain
         ## ax2: Stress path in the plane stress space (RD/TD)
         ax1 = fig1.axes[0]; ax2 = fig1.axes[1]
-        ax2.set_axis_bgcolor('0.95')
+        #ax2.set_axis_bgcolor('0.95')
 
     ## i_ip = 1: model case
+
     model_rs = ResidualStress(
         mod_ext=mod_ext,
         fnmod_ig='igstrain_fbulk_ph1.out',
@@ -135,7 +136,6 @@ def ex_consistency(
     model_rs.dat_model.mask_vol()
     if pmargin!=None:
         model_rs.dat_model.mask_vol_margin(pmargin)
-
     if mod_ext==None: mod_ref='STR_STR.OUT'
     else:             mod_ref='%s.%s'%(
             mod_ref.split('.')[0],mod_ext)
@@ -144,18 +144,26 @@ def ex_consistency(
     flow_weight.get_model(fn=mod_ref)
     flow_weight.get_eqv() ## calc Von Mises stress/strain
 
-    if len(flow_weight.epsilon_vm)<5: lc='bx'
-    else:                             lc='bx-'
+    if len(flow_weight.epsilon_vm)<5: lc='k.'
+    else:                             lc='k-'
 
     if iplot:
         ax1.plot(flow_weight.epsilon_vm,flow_weight.sigma_vm,
-                 lc,label='Weighted avg',alpha=1.0)
+                 lc,label=r'$\langle \sigma^c \rangle$',
+                 alpha=1.0)
         axes_label.__eqv__(ax1,ft=10)
 
     ## plot all stress factors at individual deformation levels
     stress = []
     print '%8s%8s%8s%8s%8s%8s'%(
         'S11','S22','S33','S23','S13','S12')
+
+
+    ## 'Stage' model diffraction orientations to model_rs
+    model_rs.phis = model_rs.dat_model.phi
+    model_rs.psis = model_rs.dat_model.psi
+    model_rs.nphi = len(model_rs.phis)
+    model_rs.npsi = len(model_rs.psis)
 
     for istp in range(model_rs.dat_model.nstp):
         """
@@ -167,16 +175,18 @@ def ex_consistency(
         strain (nstp, 6)
         vf     (nstp, nphi, npsi)
         """
-        model_rs.sf   = model_rs.dat_model.sf[istp]
-        model_rs.eps0 = model_rs.dat_model.ig[istp]
-        model_rs.ehkl = model_rs.dat_model.ehkl[istp]
+        ## 'Stage' relevant properties to be used for analysis
+        model_rs.sf   = model_rs.dat_model.sf[istp][::]
+        model_rs.eps0 = model_rs.dat_model.ig[istp][::]
+        model_rs.ehkl = model_rs.dat_model.ehkl[istp][::]
+        wgt           = model_rs.dat_model.vf[istp][::]
 
         ## whether or not intergranular strain is subtracted.
         if ig_sub: model_rs.tdat = model_rs.ehkl - model_rs.eps0
-        else:      model_rs.tdat = model_rs.ehkl
+        else:      model_rs.tdat = model_rs.ehkl[::]
         tdat_ref = model_rs.tdat[::]
 
-        ## Inducing 'scatters'
+        ## Inducing counting stats noise in e(hkl)
         if iscatter:
             tdat_scatter = []
             for iphi in range(len(tdat_ref)):
@@ -185,13 +195,9 @@ def ex_consistency(
             tdat_scatter = np.array(tdat_scatter)
             model_rs.tdat = tdat_scatter
 
-        model_rs.phis = model_rs.dat_model.phi
-        model_rs.psis = model_rs.dat_model.psi
-        model_rs.nphi = len(model_rs.phis)
-        model_rs.npsi = len(model_rs.psis)
-        wgt           = model_rs.dat_model.vf[istp][::]
-
-        if type(sin2psimx)!=type(None) or type(psimx)!=type(None):
+        ## Use only finite range of psi tilts
+        if type(sin2psimx)!=type(None) or \
+           type(psimx)!=type(None):
             filter_psi(model_rs,sin2psimx=sin2psimx,psimx=psimx)
             wgt = filter_psi2(
                 wgt,sin2psi=np.sin(model_rs.psis)**2,
@@ -201,6 +207,7 @@ def ex_consistency(
             elif type(ig_ext)!=type(None):
                 model_rs.ig = ig_ext[istp]
 
+        ## Use a finite frequence of psi tilts
         if psi_nbin!=1:
             wgt = psi_reso3(wgt,psi=model_rs.psis,ntot=psi_nbin)
             psi_reso2(model_rs,ntot=psi_nbin)
@@ -255,18 +262,18 @@ def ex_consistency(
     flow_dsa.get_eqv()
     if iplot:
         ax1.plot(flow_dsa.epsilon_vm,flow_dsa.sigma_vm,'k+',
-                 label='Stress Analysis')
+                 label=r'$\hat{\sigma}^{RS}$')
         for i in range(len(exp_ref)):
             f = exp_ref[i]; lab = exp_lab[i]
             edat = np.loadtxt(f).T
             ax1.plot(edat[0],edat[1],'-',lw=2,label=lab)
             ## ax1.set_ylim(0.,800)
-        fancy_legend(ax1,size=10)
+        fancy_legend(ax1,size=10,nscat=2)
 
     sigma_wgt = flow_weight.sigma
 
     if iplot:
-        ax2.plot(sigma_wgt[0,0],sigma_wgt[1,1],'bx')
+        ax2.plot(sigma_wgt[0,0],sigma_wgt[1,1],'k-')
         ax2.plot(flow_dsa.sigma[0,0],flow_dsa.sigma[1,1],'k+')
 
         ## connector
@@ -384,9 +391,13 @@ def __model_fit_plot__(container,ifig,istp,nxphi=None,hkl=None,
         if hkl==None and ileg: label=r'$E_{i} - \varepsilon^{hkl}-\varepsilon^{hkl}_0$'
         elif hkl!=None and ileg: label=r'$E_{i} - \varepsilon^{%s}-\varepsilon^{%s}_0$'%(hkl,hkl)
         elif ileg!=True: label = None
-        av.plot(xv,vf[iphi],'r-')
-        ae.plot(x,Ei[iphi]*1e6-y,c2+m2,label=label)
 
+        if np.all(np.isnan(vf[iphi])):
+            print 'All volume fractions are nan'
+        else:
+            av.plot(xv,vf[iphi],'r-')
+
+        ae.plot(x,Ei[iphi]*1e6-y,c2+m2,label=label)
         deco(ax=ax,iopt=0,hkl=hkl,ipsi_opt=ipsi_opt)
         deco(ax=ae,iopt=0,hkl=hkl,ipsi_opt=ipsi_opt)
         if iphi==0 and ileg:
@@ -398,9 +409,9 @@ def __model_fit_plot__(container,ifig,istp,nxphi=None,hkl=None,
         ## all_stress_factor_hkl.pdf
         ax=axesf[iphi]
         if hkl==None and ileg:
-            lab1=r'$F_{11}$'; lab2=r'$F_{22}$'
+            lab1=r'$\mathbb{F}_{11}$'; lab2=r'$\mathbb{F}_{22}$'
         elif hkl!=None and ileg:
-            lab1=r'$F^{%s}_{11}$'%hkl; lab2=r'$F^{%s}_{22}$'%hkl
+            lab1=r'$\mathbb{F}^{\{%s\}}_{11}$'%hkl; lab2=r'$\mathbb{F}^{\{%s\}}_{22}$'%hkl
         elif ileg!=True:
             lab1=None; lab2=None
 
@@ -408,24 +419,36 @@ def __model_fit_plot__(container,ifig,istp,nxphi=None,hkl=None,
             if i==0:# and ileg:
                 lab=lab1
                 #st = c1+m1
-                c=c1
+                # c=c1
+                c='k'
                 st='r-'
+                marker = '.'
             elif i==1:# and ileg:
                 lab=lab2
                 #st = c2+m2
-                c=c2
+                # c=c2
+                c = 'gray'
                 st='b-'
+                marker = '+'
 
             if isf[i]:
-                l, = ax.plot(
-                    xv,sf[i][iphi]*1e6,st,label=lab)
-                ax.plot(xv,sf[i][iphi]*1e6,color=c,marker='.')
+                # l, = ax.plot(
+                #     xv,sf[i][iphi]*1e6,st,label=lab)
+                for j in range(len(sf[i][iphi][:])):
+                    if sf[i][iphi][j]!=0:
+                        if j==0:
+                            ax.plot(xv[j],sf[i][iphi][j]*1e6,ls='None',
+                                    color=c,marker=marker,
+                                    label=lab)
+                        else:
+                            ax.plot(xv[j],sf[i][iphi][j]*1e6,color=c,marker=marker)
+
 
         av.set_ylabel(r'Vol. $f(\phi,\psi)$',dict(fontsize=13))
         av.tick_params(axis='y',colors='red')
         av.yaxis.label.set_color('red')
         deco(ax=ax,iopt=1,hkl=hkl,ipsi_opt=ipsi_opt)
-        if iphi==0:fancy_legend(ax)
+        if iphi==0:fancy_legend(ax,nscat=1)
 
     if stress_wgt!=None:
         container.sigma = np.array(stress_wgt)

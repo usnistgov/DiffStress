@@ -14,7 +14,7 @@ fl = mpl_lib.fancy_legend
 def main_plot_flow_all(hkl='211',sin2psimx=0.5,
                        psi_nbin=1,pmargin=None,iplot_rs=False,
                        path=''):
-    """ 
+    """
     Arguments
     =========
     hkl='211'
@@ -160,7 +160,11 @@ def plot_rsq():
 
 def return_vf():
     """
-    Return volume fraction from 'int_els_ph1.out'
+    Return volume fraction and grains
+    in diffraction from 'int_els_ph1.out'
+
+    vdat: (nspt,nphi,npsis)
+    ngrd: (nspt,nphi,npsis)
     """
     from pepshkl import reader4
     tdat,_psis_,_vdat_,_ngrd_ = reader4(
@@ -622,10 +626,18 @@ def influence_of_nbin(
     return x, Y
 
 def influence_of_nbin_scatter(
-        ss=3,bounds=[0.0, 0.5],
-        nbins=[7, 13, 23, 33],
-        iscatter=True,nsample=5,iwgt=True,
-        sigma=5e-5,intp_opt=0,iplot=False):
+        ##
+        sigma=5e-5,
+
+        ##
+        ss=1,
+        bounds=[0.0, 0.5],
+        nbins=[10,10],
+        iscatter=True,
+        nsample=1,
+        iwgt=False,
+        intp_opt=0,
+        iplot=False):
     """
     Repeat influence_of_nbin examination
     to verify the error in stress analysis
@@ -686,9 +698,23 @@ def influence_of_nbin_scatter(
     return x, e
 
 def influence_of_cnts_stats(
-        ss=3,bounds=[0.,0.3257],
-        nbins=13, sigmas=[1e-5, 2e-5, 5e-5, 1e-4],iwgt=False,
-        nsample=5,intp_opt=0,iplot=False):
+        sigmas=[1e-5, 2e-5, 5e-5, 1e-4],
+
+        ##
+        ss=3,
+        bounds=[0.,0.3257],
+        nbins=13,
+        iwgt=False,
+        nsample=5,
+        intp_opt=0,
+        iplot=False,
+        DEC_freq_sym=True):
+    """
+    With fixing other variables, investigate the
+    propagation of counting stat error to the final
+    diffraction stress, by examining a number of
+    statistical ensembles (nsample)
+    """
     from MP.lib import mpl_lib,axes_label
     import matplotlib.pyplot as plt
 
@@ -701,41 +727,81 @@ def influence_of_cnts_stats(
     fig = wide_fig(nw=2,nh=1);
     ax1=fig.axes[0]; ax2=fig.axes[1]
 
+
+
+    ## test
+    rst=influence_of_nbin_scatter(sigmas[0])
+    print '\n\n**************'
+    print 'test completed'
+    print '**************\n\n'
+
     M = []
+    ls=['-+','-s','-o','-d','-t']
     for i in range(len(sigmas)):
+
+        ## parallelize??
+        import multiprocessing
+        from multiprocessing import Pool
+        NCPU = multiprocessing.cpu_count()
+
+        pool = Pool(processes = NCPU)
+        print 'NCPU:', NCPU
+        print 'pool %s'%pool
+        ## --
+
         Y = []
-        for j in range(nsample):
-            x, y = influence_of_nbin_scatter(
-                ss=ss,bounds=bounds,
-                nbins=[nbins],
-                iscatter=True,nsample=1,
-                iwgt=iwgt,sigma=sigmas[i],
-                intp_opt=intp_opt,
-                iplot=False)
-            Y.append(y)
+
+        results = [pool.apply_async(
+            influence_of_nbin_scatter,args=(sigmas[i],))
+                   for j in range(nsample)]
+        pool.join()
+
+
+        # for r in results:
+        #     print r.get()
+
+        # print np.array(RST).shape
+        # print RST
+        # raw_input("Completed test")
+        # return RST
+
+
+        ## End of parallel block
+
+
+        # for j in range(nsample):
+        #     x, y = influence_of_nbin_scatter(
+        #         ss=ss,bounds=bounds,
+        #         nbins=[nbins],
+        #         iscatter=True,nsample=1,
+        #         iwgt=iwgt,sigma=sigmas[i],
+        #         intp_opt=intp_opt,
+        #         iplot=False)
+        #     Y.append(y)
+
         Y = np.array(Y).T
         M = []; S=[]
         for k in range(len(x)):
             M.append(Y[k].mean())
             S.append(Y[k].std())
-        ax1.plot(x,M,label='%6.0e'%sigmas[i])
-        ax2.errorbar(x,M,yerr=S,label='%6.0e'%sigmas[i])
+        ax1.plot(x,M,ls[i],mfc='None',color='k',label='%6.0e'%sigmas[i])
+        ax2.errorbar(x,M,yerr=S,color='k',ls=ls[i],fmt='o') #,label='%6.0e'%sigmas[i])
 
-    if type(ss).__name__=='int':
+    if type(ss).__name__=='int' and DEC_freq_sym:
         ax1.plot(x[::ss],np.zeros((len(x[::ss]),)),'o',mec='r',mfc='None',ms=8)
         ax2.plot(x[::ss],np.zeros((len(x[::ss]),)),'o',mec='r',mfc='None',ms=8)
-    elif type(ss).__name__=='list':
+    elif type(ss).__name__=='list' and DEC_freq_sym:
         ax1.plot(x[ss],np.zeros((len(x[ss]),)),'o',mec='r',mfc='None',ms=8)
         ax2.plot(x[ss],np.zeros((len(x[ss]),)),'o',mec='r',mfc='None',ms=8)
 
     ax1.set_ylim(0.,); ax1.set_xlim(0.,ax1.get_xlim()[1]*1.05)
-    ax1.set_title(r'Error in $\varepsilon^\mathrm{hkl}$')
-    deco(iopt=8,ft=15,ax=ax1)
-    fancy_legend(ax=ax1, size=7,ncol=2)
+    #ax1.set_title(r'Error in $\varepsilon^\mathrm{hkl}$')
+    deco(iopt=9,ft=15,ax=ax1)
+    fancy_legend(ax=ax1, size=7,ncol=2,nscat=1)
     ax2.set_ylim(0.,); ax2.set_xlim(0.,ax2.get_xlim()[1]*1.05)
-    ax2.set_title(r'Error in $\varepsilon^\mathrm{hkl}$')
-    deco(iopt=8,ft=15,ax=ax2)
-    fancy_legend(ax=ax2, size=7,ncol=2)
+    #ax2.set_title(r'Error in $\varepsilon^\mathrm{hkl}$')
+    deco(iopt=9,ft=15,ax=ax2)
+    #fancy_legend(ax=ax2, size=7, ncol=2)
 
     fig.savefig('ee.pdf')
     if iplot==False:
@@ -772,7 +838,7 @@ def influence_of_intp_extp(
         ss=1,
         bounds=[0.,0.5],
         nbins=13,
-        sigmas=[1e-11],iwgt=False,
+        sigmas=[1e-5],iwgt=False,
         nsample=5):
     """
     Influence of choice of interpolation/extrapolation
@@ -804,7 +870,7 @@ def influence_of_intp_extp(
             ss=ss,bounds=bounds,
             nbins=nbins,
             sigmas=sigmas,
-            nsample=nsample,iwgt=False,
+            nsample=nsample,iwgt=iwgt,
             intp_opt=iopt,iplot=False)
         xs.append(x)
         Ms.append(M)
