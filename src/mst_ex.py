@@ -707,7 +707,8 @@ def influence_of_cnts_stats(
         nsample=4,
         intp_opt=0,
         iplot=False,
-        DEC_freq_sym=True):
+        DEC_freq_sym=True,
+        NCPU=0):
     """
     With fixing other variables, investigate the
     propagation of counting stat error to the final
@@ -720,11 +721,12 @@ def influence_of_cnts_stats(
     if iplot==False:
         plt.ioff()
 
-    fancy_legend = mpl_lib.fancy_legend
-    wide_fig     = mpl_lib.wide_fig
-    deco         = axes_label.__deco__
-    fig = wide_fig(nw=2,nh=1);
-    ax1=fig.axes[0]; ax2=fig.axes[1]
+    if iplot:
+        fancy_legend = mpl_lib.fancy_legend
+        wide_fig     = mpl_lib.wide_fig
+        deco         = axes_label.__deco__
+        fig = wide_fig(nw=2,nh=1);
+        ax1=fig.axes[0]; ax2=fig.axes[1]
 
     ## test
     x,y = influence_of_nbin_scatter(sigmas[0])
@@ -739,7 +741,7 @@ def influence_of_cnts_stats(
     ls=['-+','-s','-o','-d','-t']
     import multiprocessing
     from multiprocessing import Pool
-    NCPU = multiprocessing.cpu_count()
+    if NCPU==0: NCPU = multiprocessing.cpu_count()
     print 'NCPU: %i'%NCPU
     pool = Pool(processes = NCPU)
     func = influence_of_nbin_scatter
@@ -766,27 +768,30 @@ def influence_of_cnts_stats(
             M[i][k] = y[k].mean()
             S[i][k] = y[k].std()
 
-    for i in range(len(sigmas)):
-        ax1.plot(x,M[i],ls[i],mfc='None',color='k',label='%6.0e'%sigmas[i])
-        ax2.errorbar(x,M[i],yerr=S[i],color='k',ls=ls[i])
+    if iplot:
+        for i in range(len(sigmas)):
+            ax1.plot(x,M[i],ls[i],mfc='None',color='k',label='%6.0e'%sigmas[i])
+            ax2.errorbar(x,M[i],yerr=S[i],color='k',ls=ls[i])
 
-    if type(ss).__name__=='int' and DEC_freq_sym:
-        ax1.plot(x[::ss],np.zeros((len(x[::ss]),)),'o',mec='r',mfc='None',ms=8)
-        ax2.plot(x[::ss],np.zeros((len(x[::ss]),)),'o',mec='r',mfc='None',ms=8)
-    elif type(ss).__name__=='list' and DEC_freq_sym:
-        ax1.plot(x[ss],np.zeros((len(x[ss]),)),'o',mec='r',mfc='None',ms=8)
-        ax2.plot(x[ss],np.zeros((len(x[ss]),)),'o',mec='r',mfc='None',ms=8)
+        if type(ss).__name__=='int' and DEC_freq_sym:
+            ax1.plot(x[::ss],np.zeros((len(x[::ss]),)),'o',mec='r',mfc='None',ms=8)
+            ax2.plot(x[::ss],np.zeros((len(x[::ss]),)),'o',mec='r',mfc='None',ms=8)
+        elif type(ss).__name__=='list' and DEC_freq_sym:
+            ax1.plot(x[ss],np.zeros((len(x[ss]),)),'o',mec='r',mfc='None',ms=8)
+            ax2.plot(x[ss],np.zeros((len(x[ss]),)),'o',mec='r',mfc='None',ms=8)
 
-    ax1.set_ylim(0.,); ax1.set_xlim(0.,ax1.get_xlim()[1]*1.05)
-    deco(iopt=9,ft=15,ax=ax1)
-    fancy_legend(ax=ax1, size=7,ncol=2,nscat=1)
-    ax2.set_ylim(0.,); ax2.set_xlim(0.,ax2.get_xlim()[1]*1.05)
-    deco(iopt=9,ft=15,ax=ax2)
+        ax1.set_ylim(0.,); ax1.set_xlim(0.,ax1.get_xlim()[1]*1.05)
+        deco(iopt=9,ft=15,ax=ax1)
+        fancy_legend(ax=ax1, size=7,ncol=2,nscat=1)
+        ax2.set_ylim(0.,); ax2.set_xlim(0.,ax2.get_xlim()[1]*1.05)
+        deco(iopt=9,ft=15,ax=ax2)
 
-    fig.savefig('ee.pdf')
+        fig.savefig('ee.pdf')
+
     if iplot==False:
         plt.close('all')
         plt.ion()
+
     return x, M, S
 
 def compare_exp_mod(ntot_psi=21):

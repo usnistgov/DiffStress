@@ -66,7 +66,11 @@ def ex_consistency(
         ig_sub=True,istep=None,hkl=None,iplot=True,
         iwind=False,wdeg=2,ipsi_opt=1,fn_sff=None,
         pmargin=None,path='',
-        sf_ext=None,ig_ext=None,iwgt=False):
+        sf_ext=None,ig_ext=None,iwgt=False,
+
+        ##
+        verbose=False
+        ):
     """
     Consistency check between 'weighted average' stress and
     the stress obtained following the stress analysis method
@@ -155,7 +159,7 @@ def ex_consistency(
 
     ## plot all stress factors at individual deformation levels
     stress = []
-    print '%8s%8s%8s%8s%8s%8s'%(
+    if verbose: print '%8s%8s%8s%8s%8s%8s'%(
         'S11','S22','S33','S23','S13','S12')
 
     ## 'Stage' model diffraction orientations to model_rs
@@ -228,8 +232,9 @@ def ex_consistency(
             weight = wgt # None
             )
 
-        for i in range(6): print '%+7.1f'%(dsa_sigma[i]),
-        print ''
+        if verbose:
+            for i in range(6): print '%+7.1f'%(dsa_sigma[i]),
+            print ''
         stress.append(dsa_sigma)
         #-----------------------------------#
         if istp==0: ileg=True
@@ -307,6 +312,141 @@ def ex_consistency(
         plt.close(fig1); plt.close(fig2); plt.close(fig3); plt.close(fig4)
 
     return model_rs, flow_weight, flow_dsa
+
+
+def minimal_parallel_ex_consistency_(
+    ifig=50,nxphi=3,
+    exp_ref=[],exp_lab=[],mod_ext=None,
+    mod_ref='STR_STR.OUT',sin2psimx=None,
+    iscatter=False,sigma=5e-5,psimx=None,psi_nbin=1,
+    ig_sub=True,istep=None,hkl=None,iplot=True,
+    iwind=False,wdeg=2,ipsi_opt=1,fn_sff=None,
+    pmargin=None,path='',
+    sf_ext=None,ig_ext=None,iwgt=False):
+    """
+    minimal parallel version of ex_consistency
+    parallel in the sense that stress analysis is done
+    for individual step in parallel
+
+    Remove all plots.
+    """
+    from rs import ResidualStress,u_epshkl,filter_psi,\
+        filter_psi2,psi_reso, psi_reso2, psi_reso3
+    from MP.mat import mech # mech is a module
+    FlowCurve = mech.FlowCurve
+
+    model_rs = ResidualStress(
+        mod_ext=mod_ext,
+        fnmod_ig='igstrain_fbulk_ph1.out',
+        fnmod_sf='igstrain_fbulk_ph1.out',
+        i_ip=1)
+
+    ## masking array element based on diffraction volume
+    model_rs.dat_model.mask_vol()
+    if pmargin!=None: model_rs.dat_model.\
+            mask_vol_margin(pmargin)
+    if mod_ext==None: mod_ref='STR_STR.OUT'
+    else:             mod_ref='%s.%s'%(
+        mod_ref.split('.')[0],mod_ext)
+
+    flow_weight = FlowCurve(name='Model weighted')
+    flow_weight.get_model(fn=mod_ref)
+    flow_weight.get_eqv() ## calc Von Mises stress/strain
+
+    if len(flow_weight.epsilon_vm)<5: lc='k.'
+    else:                             lc='k-'
+
+    stress = []
+    print '%8s%8s%8s%8s%8s%8s'%(
+        'S11','S22','S33','S23','S13','S12')
+
+    ## 'Stage' model diffraction orientations to model_rs
+    model_rs.phis = model_rs.dat_model.phi
+    model_rs.psis = model_rs.dat_model.psi
+    model_rs.nphi = len(model_rs.phis)
+    model_rs.npsi = len(model_rs.psis)
+
+    ############################################################
+    ## *Serial* Loop over the deformation steps
+    for istp in range(model_rs.dat_model.nstp):
+        """
+        Dimensions of data arrays for:
+        ==============================
+        sf     (nstp, k, nphi, npsi)
+        ig     (nstp, nphi, npsi)
+        ehkl   (nstp, nphi, npsi)
+        strain (nstp, 6)
+        vf     (nstp, nphi, npsi)
+        """
+        ## 'Stage' relevant properties to be used for analysis
+        model_rs.sf   = model_rs.dat_model.sf[istp][::]
+        model_rs.eps0 = model_rs.dat_model.ig[istp][::]
+        model_rs.ehkl = model_rs.dat_model.ehkl[istp][::]
+        wgt           = model_rs.dat_model.vf[istp][::]
+
+        ## whether or not intergranular strain is subtracted.
+        if ig_sub: model_rs.tdat = model_rs.ehkl - model_rs.eps0
+        else:      model_rs.tdat = model_rs.ehkl[::]
+        tdat_ref = model_rs.tdat[::]
+
+        ## Inducing counting stats noise in e(hkl)
+        if iscatter:
+            tdat_scatter = []
+            for iphi in range(len(tdat_ref)):
+                dum = u_epshkl(tdat_ref[iphi],sigma=sigma)
+                tdat_scatter.append(dum)
+            tdat_scatter = np.array(tdat_scatter)
+            model_rs.tdat = tdat_scatter
+
+        ## Use only finite range of psi tilts
+        if type(sin2psimx)!=type(None) or \
+           type(psimx)!=type(None):
+            filter_psi(model_rs,sin2psimx=sin2psimx,psimx=psimx)
+            wgt = filter_psi2(
+                wgt,sin2psi=np.sin(model_rs.psis)**2,
+                bounds =[0., sin2psimx])
+            if type(sf_ext)!=type(None):
+                model_rs.sf = sf_ext[istp]
+            elif type(ig_ext)!=type(None):
+                model_rs.ig = ig_ext[istp]
+
+        ## Use a finite frequence of psi tilts
+        if psi_nbin!=1:
+            wgt = psi_reso3(wgt,psi=model_rs.psis,ntot=psi_nbin)
+            psi_reso2(model_rs,ntot=psi_nbin)
+
+        #-----------------------------------#
+        ## find the sigma ...
+        s11 = model_rs.dat_model.flow.sigma[0,0][istp]
+        s22 = model_rs.dat_model.flow.sigma[1,1][istp]
+
+        if iwgt: pass
+        else: wgt = None # overwrite wgt
+
+        dsa_sigma = model_rs.find_sigma(
+            ivo=[0,1],
+            init_guess=[0,0,0,0,0,0],
+            #init_guess=[s11,s22,0,0,0,0],
+            weight = wgt # None
+            )
+
+        for i in range(6): print '%+7.1f'%(dsa_sigma[i]),
+        print ''
+        stress.append(dsa_sigma)
+        #-----------------------------------#
+
+    # end of the serial loop over deformation steps
+    ############################################################
+
+    stress   = np.array(stress).T # diffraction stress
+    flow_dsa = FlowCurve(name='Diffraction Stress')
+    flow_dsa.get_6stress(stress)
+    flow_dsa.get_33strain(model_rs.dat_model.flow.epsilon)
+    flow_dsa.get_eqv()
+
+    sigma_wgt = flow_weight.sigma
+    return model_rs, flow_weight, flow_dsa
+
 
 def __model_fit_plot__(container,ifig,istp,nxphi=None,hkl=None,
                        stress_wgt=None,ivo=None,fig=None,figs=None,fige=None,
