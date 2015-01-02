@@ -728,56 +728,37 @@ def influence_of_cnts_stats(
     ax1=fig.axes[0]; ax2=fig.axes[1]
 
 
-
     ## test
     rst=influence_of_nbin_scatter(sigmas[0])
     print '\n\n**************'
     print 'test completed'
     print '**************\n\n'
+    raw_input('ready?')
 
     M = []
     ls=['-+','-s','-o','-d','-t']
     for i in range(len(sigmas)):
 
-        ## parallelize??
+        ## Parallelize
         import multiprocessing
         from multiprocessing import Pool
         NCPU = multiprocessing.cpu_count()
-
         pool = Pool(processes = NCPU)
         print 'NCPU:', NCPU
         print 'pool %s'%pool
         ## --
 
-        Y = []
 
         results = [pool.apply_async(
-            influence_of_nbin_scatter,args=(sigmas[i],))
+                influence_of_nbin_scatter,args=(sigmas[i],))
                    for j in range(nsample)]
+        pool.close()
         pool.join()
 
-
-        # for r in results:
-        #     print r.get()
-
-        # print np.array(RST).shape
-        # print RST
-        # raw_input("Completed test")
-        # return RST
-
-
-        ## End of parallel block
-
-
-        # for j in range(nsample):
-        #     x, y = influence_of_nbin_scatter(
-        #         ss=ss,bounds=bounds,
-        #         nbins=[nbins],
-        #         iscatter=True,nsample=1,
-        #         iwgt=iwgt,sigma=sigmas[i],
-        #         intp_opt=intp_opt,
-        #         iplot=False)
-        #     Y.append(y)
+        Y = []
+        for rst in results:
+            x,y = rst.get()
+            Y.append(y)
 
         Y = np.array(Y).T
         M = []; S=[]
