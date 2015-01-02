@@ -699,13 +699,12 @@ def influence_of_nbin_scatter(
 
 def influence_of_cnts_stats(
         sigmas=[1e-5, 2e-5, 5e-5, 1e-4],
-
         ##
         ss=3,
-        bounds=[0.,0.3257],
-        nbins=13,
+        bounds=[0.,0.5],
+        nbins=10,
         iwgt=False,
-        nsample=5,
+        nsample=4,
         intp_opt=0,
         iplot=False,
         DEC_freq_sym=True):
@@ -727,18 +726,19 @@ def influence_of_cnts_stats(
     fig = wide_fig(nw=2,nh=1);
     ax1=fig.axes[0]; ax2=fig.axes[1]
 
-
     ## test
-    rst=influence_of_nbin_scatter(sigmas[0])
+    x,y = influence_of_nbin_scatter(sigmas[0])
+
     print '\n\n**************'
     print 'test completed'
     print '**************\n\n'
-    raw_input('ready?')
+
+    Y_all = np.zeros((len(sigmas), nsample, len(x)))
 
     M = []
     ls=['-+','-s','-o','-d','-t']
-    for i in range(len(sigmas)):
 
+    for i in range(len(sigmas)):
         ## Parallelize
         import multiprocessing
         from multiprocessing import Pool
@@ -748,25 +748,32 @@ def influence_of_cnts_stats(
         print 'pool %s'%pool
         ## --
 
-
         results = [pool.apply_async(
                 influence_of_nbin_scatter,args=(sigmas[i],))
                    for j in range(nsample)]
+
         pool.close()
         pool.join()
 
-        Y = []
-        for rst in results:
-            x,y = rst.get()
-            Y.append(y)
+        ## Y = []
+        ##for rst in results:
+        for j in range(len(results)):
+            x,y = results[j].get()
+            Y_all[i][j][:] = y[::]
+            ## Y.append(y)
 
-        Y = np.array(Y).T
-        M = []; S=[]
+    M = np.zeros((len(sigmas),len(x)))
+    S = np.zeros((len(sigmas),len(x)))
+    for i in range(len(sigmas)):
+        y = Y_all[i][:][:]
+        y = y.T[::] ## len(x), nsample
         for k in range(len(x)):
-            M.append(Y[k].mean())
-            S.append(Y[k].std())
-        ax1.plot(x,M,ls[i],mfc='None',color='k',label='%6.0e'%sigmas[i])
-        ax2.errorbar(x,M,yerr=S,color='k',ls=ls[i],fmt='o') #,label='%6.0e'%sigmas[i])
+            M[i][k] = y[k].mean()
+            S[i][k] = y[k].std()
+
+    for i in range(len(sigmas)):
+        ax1.plot(x,M[i],ls[i],mfc='None',color='k',label='%6.0e'%sigmas[i])
+        ax2.errorbar(x,M[i],yerr=S[i],color='k',ls=ls[i])
 
     if type(ss).__name__=='int' and DEC_freq_sym:
         ax1.plot(x[::ss],np.zeros((len(x[::ss]),)),'o',mec='r',mfc='None',ms=8)
@@ -776,13 +783,10 @@ def influence_of_cnts_stats(
         ax2.plot(x[ss],np.zeros((len(x[ss]),)),'o',mec='r',mfc='None',ms=8)
 
     ax1.set_ylim(0.,); ax1.set_xlim(0.,ax1.get_xlim()[1]*1.05)
-    #ax1.set_title(r'Error in $\varepsilon^\mathrm{hkl}$')
     deco(iopt=9,ft=15,ax=ax1)
     fancy_legend(ax=ax1, size=7,ncol=2,nscat=1)
     ax2.set_ylim(0.,); ax2.set_xlim(0.,ax2.get_xlim()[1]*1.05)
-    #ax2.set_title(r'Error in $\varepsilon^\mathrm{hkl}$')
     deco(iopt=9,ft=15,ax=ax2)
-    #fancy_legend(ax=ax2, size=7, ncol=2)
 
     fig.savefig('ee.pdf')
     if iplot==False:
