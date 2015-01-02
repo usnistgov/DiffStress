@@ -158,13 +158,14 @@ def ex_consistency(
     print '%8s%8s%8s%8s%8s%8s'%(
         'S11','S22','S33','S23','S13','S12')
 
-
     ## 'Stage' model diffraction orientations to model_rs
     model_rs.phis = model_rs.dat_model.phi
     model_rs.psis = model_rs.dat_model.psi
     model_rs.nphi = len(model_rs.phis)
     model_rs.npsi = len(model_rs.psis)
 
+    ############################################################
+    ## *Serial* Loop over the deformation steps
     for istp in range(model_rs.dat_model.nstp):
         """
         Dimensions of data arrays for:
@@ -252,6 +253,8 @@ def ex_consistency(
             fs.savefig(f2);fe.savefig(f1);f_er.savefig(f3)
             plt.close(f1);plt.close(f2);plt.close(f3)
             plt.ion()
+    # end of the serial loop over deformation steps
+    ############################################################
 
     if iplot: fe.close(); fs.close(); f_er.close()
 
@@ -260,6 +263,9 @@ def ex_consistency(
     flow_dsa.get_6stress(stress)
     flow_dsa.get_33strain(model_rs.dat_model.flow.epsilon)
     flow_dsa.get_eqv()
+
+
+    ## Various plots
     if iplot:
         ax1.plot(flow_dsa.epsilon_vm,flow_dsa.sigma_vm,'k+',
                  label=r'$\hat{\sigma}^{RS}$')

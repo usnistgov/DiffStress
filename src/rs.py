@@ -363,10 +363,10 @@ def interpolate(xs,xp,fp,iopt=0):
     return Y
 
 def u_gaussian(epshkl,sigma=5e-5):
-    np.random.seed()
     return np.random.normal(0.,sigma) + epshkl
 
 def u_epshkl(e,sigma=5e-5):
+    np.random.seed()
     a=[]
     for i in range(len(e)):
         d = u_gaussian(e[i],sigma)

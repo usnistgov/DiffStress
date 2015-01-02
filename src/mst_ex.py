@@ -737,30 +737,25 @@ def influence_of_cnts_stats(
 
     M = []
     ls=['-+','-s','-o','-d','-t']
+    import multiprocessing
+    from multiprocessing import Pool
+    NCPU = multiprocessing.cpu_count()
+    print 'NCPU: %i'%NCPU
+    pool = Pool(processes = NCPU)
+    func = influence_of_nbin_scatter
+    results = []
+    for i in range(len(sigmas)):
+        results.append([])
+        for j in range(nsample):
+            results[i].append(pool.apply_async(func, args=(sigmas[i],)))
+    pool.close()
+    pool.join()
 
     for i in range(len(sigmas)):
-        ## Parallelize
-        import multiprocessing
-        from multiprocessing import Pool
-        NCPU = multiprocessing.cpu_count()
-        pool = Pool(processes = NCPU)
-        print 'NCPU:', NCPU
-        print 'pool %s'%pool
-        ## --
-
-        results = [pool.apply_async(
-                influence_of_nbin_scatter,args=(sigmas[i],))
-                   for j in range(nsample)]
-
-        pool.close()
-        pool.join()
-
-        ## Y = []
-        ##for rst in results:
-        for j in range(len(results)):
-            x,y = results[j].get()
+        for j in range(nsample):
+            x,y = results[i][j].get()
             Y_all[i][j][:] = y[::]
-            ## Y.append(y)
+
 
     M = np.zeros((len(sigmas),len(x)))
     S = np.zeros((len(sigmas),len(x)))
