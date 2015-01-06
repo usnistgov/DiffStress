@@ -11,6 +11,21 @@ from MP.mat.mech import find_err
 wf = mpl_lib.wide_fig
 fl = mpl_lib.fancy_legend
 
+
+def write_args(f,**kwargs):
+    """
+    Write keyword arguements to the file
+    """
+    f.write('nhead including this line: %i\n'%(len(kwargs)+4))
+    for i in range(80): f.write('-')
+    f.write('\n')
+
+    for key in kwargs:
+        f.write('%12s  =  %12s \n'%(key, kwargs[key]))
+    for i in range(80): f.write('-')
+    f.write('\n')
+
+
 def main_plot_flow_all(hkl='211',sin2psimx=0.5,
                        psi_nbin=1,pmargin=None,iplot_rs=False,
                        path=''):
@@ -357,7 +372,7 @@ def plot_sf_psis(
             aig.set_xlim(0.,1.0)
             aig.set_ylim(-0.002,0.002)
 
-def use_intp_sfig(ss=2,iopt=0):
+def use_intp_sfig(ss=2,iopt=0,iplot=False):
     """
     Use "interpolated" SF/IG strains
     to calculate the influence of 'interpolation'
@@ -380,6 +395,8 @@ def use_intp_sfig(ss=2,iopt=0):
         =7: Place-holder for power law fit
         =8: zero
         =9: slinear
+
+    iplot = False
     """
     from rs import ResidualStress as RS
     from copy import copy
@@ -467,10 +484,12 @@ def use_intp_sfig(ss=2,iopt=0):
     IGStrain.flow.get_eqv()
     IGStrain.nstp = IGStrain.flow.nstp
 
-    StressFactor0.plot()
-    StressFactor.plot()
-    IGStrain0.plot()
-    IGStrain.plot()
+    if iplot:
+        StressFactor0.plot()
+        StressFactor.plot()
+        IGStrain0.plot()
+        IGStrain.plot()
+
     return StressFactor, IGStrain
 
 def influence_of_intp(ss=2,bounds=[0,0.5],
@@ -479,6 +498,7 @@ def influence_of_intp(ss=2,bounds=[0,0.5],
                       iscatter=False,iwgt=False,
                       sigma=5e-5,
                       intp_opt=0):
+
     """
     Parametric study to demonstrate the influence of
     psi binning
@@ -488,18 +508,21 @@ def influence_of_intp(ss=2,bounds=[0,0.5],
     ss       = 2 (step size)
     bounds   = sin2psi bounds
     psi_nbin = Number of psi data points in use
+    iplot    = False
     hkl      = None
     iscatter = False
     iwgt     = False
     """
-    from MP.mat.mech import find_err
     from rs import filter_psi2
     from rs_ex import ex_consistency as main
-    from MP.lib import mpl_lib,axes_label
-    import matplotlib.pyplot as plt
-    wide_fig     = mpl_lib.wide_fig
-    deco         = axes_label.__deco__
-    fig = wide_fig(nw=3,nh=1);axs=fig.axes
+    from MP.mat.mech import find_err
+
+    if iplot:
+        from MP.lib import mpl_lib,axes_label
+        import matplotlib.pyplot as plt
+        wide_fig     = mpl_lib.wide_fig
+        deco         = axes_label.__deco__
+        fig = wide_fig(nw=3,nh=1);axs=fig.axes
 
     ## Use the reduced set over the consistency check
     sf,ig = use_intp_sfig(ss=ss,iopt=intp_opt)
@@ -523,53 +546,59 @@ def influence_of_intp(ss=2,bounds=[0,0.5],
 
     fw, fd = rst[1], rst[2]
 
-    axs[0].plot(fw.epsilon_vm,fw.sigma_vm,'b-x',
-                label='Weight Avg.')
-    axs[0].plot(fd.epsilon_vm,fd.sigma_vm,'k+',
-                label='Diff Stress')
+    if iplot:
+        axs[0].plot(fw.epsilon_vm,fw.sigma_vm,'b-x',
+                    label='Weight Avg.')
+        axs[0].plot(fd.epsilon_vm,fd.sigma_vm,'k+',
+                    label='Diff Stress')
 
     if type(ss).__name__=='int':
         x = fd.epsilon_vm[::ss]; y = fd.sigma_vm[::ss]
     elif type(ss).__name__=='list':
         x = fd.epsilon_vm[ss]; y = fd.sigma_vm[ss]
 
-    label='SF/IG acqusition'
-    axs[0].plot(x,y,'o',mec='r',mfc='None',
-                alpha=0.8,label=label)
+    if iplot:
+        label='SF/IG acqusition'
+        axs[0].plot(x,y,'o',mec='r',mfc='None',
+                    alpha=0.8,label=label)
+        axs[1].plot(fw.sigma[0,0],fw.sigma[1,1],'b-x')
+        axs[1].plot(fd.sigma[0,0],fd.sigma[1,1],'k+')
+
     npoints = len(fw.sigma[0,0])
-
-    axs[1].plot(fw.sigma[0,0],fw.sigma[1,1],'b-x')
-    axs[1].plot(fd.sigma[0,0],fd.sigma[1,1],'k+')
-
     wgtx, wgty = fw.sigma[0,0], fw.sigma[1,1]
     dsax, dsay = fd.sigma[0,0], fd.sigma[1,1]
-    for i in range(npoints):
-        axs[1].plot([wgtx[i],dsax[i]],
-                    [wgty[i],dsay[i]],'k-',alpha=0.2)
+
+    if iplot:
+        for i in range(npoints):
+            axs[1].plot([wgtx[i],dsax[i]],
+                        [wgty[i],dsay[i]],
+                        'k-',alpha=0.2)
 
     e = find_err(fw,fd)
-    axs[2].plot(fw.epsilon_vm, e, 'x')
+    if iplot: axs[2].plot(fw.epsilon_vm, e, 'x')
 
-    if type(ss).__name__=='int':
+    if type(ss).__name__=='int' and iplot:
         axs[2].plot(fw.epsilon_vm[::ss],e[::ss],
                     'o',mec='r',mfc='None',label=label)
-    elif type(ss).__name__=='list':
+    elif type(ss).__name__=='list' and iplot:
         axs[2].plot(fw.epsilon_vm[ss],e[ss],
                     'o',mec='r',mfc='None',label=label)
 
-    axes_label.__eqv__(axs[0],ft=10)
-    axs[1].set_aspect('equal')
-    axs[1].set_xlabel(r'$\bar{\Sigma}_{11}$',dict(fontsize=15))
-    axs[1].set_ylabel(r'$\bar{\Sigma}_{22}$',dict(fontsize=15))
-    axs[1].set_ylim(-100,700); axs[1].set_xlim(-100,700)
-
-    axs[0].legend(loc='best',fontsize=10).get_frame().set_alpha(0.5)
-    deco(iopt=8,ft=15,ax=axs[2])
-
     if type(ss).__name__=='int':    dum=ss
     elif type(ss).__name__=='list': dum =len(ss)
-    fig.savefig('flow_dd_bin%i_ss%i.pdf'%(psi_nbin,dum))
-    plt.close(fig)
+
+    if iplot:
+        axes_label.__eqv__(axs[0],ft=10)
+        axs[1].set_aspect('equal')
+        axs[1].set_xlabel(r'$\bar{\Sigma}_{11}$',dict(fontsize=15))
+        axs[1].set_ylabel(r'$\bar{\Sigma}_{22}$',dict(fontsize=15))
+        axs[1].set_ylim(-100,700); axs[1].set_xlim(-100,700)
+
+        axs[0].legend(loc='best',fontsize=10).get_frame().set_alpha(0.5)
+        deco(iopt=8,ft=15,ax=axs[2])
+
+        fig.savefig('flow_dd_bin%i_ss%i.pdf'%(psi_nbin,dum))
+        plt.close(fig)
 
     return fw, e
 
@@ -579,7 +608,8 @@ def influence_of_nbin(
         iscatter=False,
         sigma=1e-5,
         iwgt=False,
-        intp_opt=0):
+        intp_opt=0,
+        iplot=False):
     """
     Influence of psi bin size
 
@@ -591,13 +621,15 @@ def influence_of_nbin(
     iscatter = False
     iwgt     = False
     intp_opt = 0   (Interpolation option)
+    iplot    = False
     """
-    from MP.lib import mpl_lib,axes_label
-    import matplotlib.pyplot as plt
-    fancy_legend = mpl_lib.fancy_legend
-    wide_fig     = mpl_lib.wide_fig
-    deco         = axes_label.__deco__
-    fig = wide_fig(nw=1,nh=1);ax=fig.axes[0]
+    if iplot:
+        from MP.lib import mpl_lib,axes_label
+        import matplotlib.pyplot as plt
+        fancy_legend = mpl_lib.fancy_legend
+        wide_fig     = mpl_lib.wide_fig
+        deco         = axes_label.__deco__
+        fig = wide_fig(nw=1,nh=1);ax=fig.axes[0]
 
     Y = []
     for i in range(len(nbins)):
@@ -610,60 +642,68 @@ def influence_of_nbin(
             intp_opt=intp_opt)
         x = fw.epsilon_vm[::]
         y = e[::]
-        ax.plot(x,y,label=nb)
+        if iplot: ax.plot(x,y,label=nb)
         Y.append(y)
-
-
-    fancy_legend(ax=ax,size=10)
-    deco(iopt=8,ft=15,ax=ax)
 
     if type(ss).__name__=='int':    dum=ss
     elif type(ss).__name__=='list': dum =len(ss)
-    fig.savefig('ss%i_err.pdf'%dum)
-    plt.close('all')
+
+    if iplot:
+        fancy_legend(ax=ax,size=10)
+        deco(iopt=8,ft=15,ax=ax)
+        fig.savefig('ss%i_err.pdf'%dum)
+        plt.close('all')
 
     ## Y [nbins, nsteps]
     return x, Y
 
 def influence_of_nbin_scatter(
-        ##
-        sigma=5e-5,
+    ##
+    sigma=5e-5,
 
-        ##
-        ss=1,
-        bounds=[0.0, 0.5],
-        nbins=[10,10],
-        iscatter=True,
-        nsample=1,
-        iwgt=False,
-        intp_opt=0,
-        iplot=False):
+    ##
+    ss=1,
+    bounds=[0.0, 0.5],
+    nbins=[10,10], ## main arg
+    iscatter=True,
+    nsample=1,
+    iwgt=False,
+    intp_opt=0,
+    iplot=False):
     """
     Repeat influence_of_nbin examination
     to verify the error in stress analysis
     pertaining to that in eps(hkl,phi,psi)
     """
-    from MP.lib import mpl_lib,axes_label
-    import matplotlib.pyplot as plt
-    fancy_legend = mpl_lib.fancy_legend
-    wide_fig     = mpl_lib.wide_fig
-    deco         = axes_label.__deco__
     if iplot:
+        from MP.lib import mpl_lib,axes_label
+        import matplotlib.pyplot as plt
+        fancy_legend = mpl_lib.fancy_legend
+        wide_fig     = mpl_lib.wide_fig
+        deco         = axes_label.__deco__
         fig = wide_fig(nw=2,nh=1);
         ax=fig.axes[0]
         ax1=fig.axes[1]
 
-    Y = []
-    for i in range(nsample):
-        x, y = influence_of_nbin(
-            ss=ss,bounds=bounds,
-            nbins=nbins, iscatter=iscatter,
-            sigma=sigma,
-            iwgt=iwgt,intp_opt=intp_opt)
-        Y.append(y)
-    ## Y [nsample, nbin, nstp]
-    Y = np.array(Y).swapaxes(0,-1).swapaxes(0,1)
-    ## Y [nbin, nstp, nsample]
+    for i in range(len(nbins)):
+        nbin = nbins[i]
+        for j in range(nsample):
+            x, y = influence_of_nbin(
+                ss=ss,bounds=bounds,
+                nbins=[nbin], iscatter=iscatter,
+                sigma=sigma,
+                iwgt=iwgt,intp_opt=intp_opt)
+
+            if i==0 and j==0:
+                Y = np.zeros((len(nbins),len(x),nsample))
+                pass
+
+            Y[i,:,j] = y[0][:]
+
+
+    # ## Y [nsample, nbin, nstp]
+    # Y = np.array(Y).swapaxes(0,-1).swapaxes(0,1)
+    # ## Y [nbin, nstp, nsample]
     nbin, nstp, nsamp = Y.shape
 
     for i in range(nbin):
@@ -700,8 +740,8 @@ def influence_of_nbin_scatter(
 def influence_of_cnts_stats(
         sigmas=[1e-5, 2e-5, 5e-5, 1e-4],
         ##
-        ss=3,
         bounds=[0.,0.5],
+        ss=3,
         nbins=10,
         iwgt=False,
         nsample=4,
@@ -714,26 +754,75 @@ def influence_of_cnts_stats(
     propagation of counting stat error to the final
     diffraction stress, by examining a number of
     statistical ensembles (nsample)
+
+
+    Arguments
+    =========
+    sigmas
+    bounds
+    ss
+    nbins
+    iwgt
+    nsample
+    intp_opt
+    iplot
+    DEC_freq_sym
+    NCPU
     """
-    from MP.lib import mpl_lib,axes_label
-    import matplotlib.pyplot as plt
-
-    if iplot==False:
-        plt.ioff()
-
     if iplot:
+        import matplotlib.pyplot as plt
+        from MP.lib import mpl_lib,axes_label
+
         fancy_legend = mpl_lib.fancy_legend
         wide_fig     = mpl_lib.wide_fig
         deco         = axes_label.__deco__
         fig = wide_fig(nw=2,nh=1);
         ax1=fig.axes[0]; ax2=fig.axes[1]
 
-    ## test
-    x,y = influence_of_nbin_scatter(sigmas[0])
+    ## if iplot==False:
+    ##     plt.ioff()
 
+    ## test
+    print '\n\n****************'
+    print 'test run started'
+    print '****************\n\n'
+    ## raw_input()
+
+
+    # ## debugging begins
+    # fn = 'influence_of_cnts_stats.log'
+    # f = open(fn,'w')
+    # write_args(
+    #     f,
+    #     sigma=sigmas[0],
+    #     ss=ss,
+    #     bounds=bounds,
+    #     nbins=[nbins],
+    #     iscatter=True,
+    #     nsample=1,
+    #     iwgt=iwgt,
+    #     intp_opt=intp_opt,
+    #     iplot=False
+    #     )
+    # f.close()
+    # ## debugging ends
+
+    x,y = influence_of_nbin_scatter(
+        sigma=sigmas[0],
+        ss=ss,
+        bounds=bounds,
+        nbins=[nbins],
+        iscatter=True,
+        nsample=1,
+        iwgt=iwgt,
+        intp_opt=intp_opt,
+        iplot=False
+        )
     print '\n\n**************'
     print 'test completed'
     print '**************\n\n'
+    ## raw_input()
+
 
     Y_all = np.zeros((len(sigmas), nsample, len(x)))
 
@@ -749,15 +838,42 @@ def influence_of_cnts_stats(
     for i in range(len(sigmas)):
         results.append([])
         for j in range(nsample):
-            results[i].append(pool.apply_async(func, args=(sigmas[i],)))
+            results[i].append(
+                pool.apply_async(
+                    func,
+                    args=(
+                        sigmas[i],
+                        ss,
+                        bounds,
+                        [nbins],
+                        True,
+                        1,
+                        False,
+                        intp_opt,
+                        False,
+                        ),
+                    # kwds={
+                    #     'ss':ss,
+                    #     'bounds':bounds,
+                    #     'nbins':nbins,
+                    #     'iscatter':True,
+                    #     'nsample':1,
+                    #     'iwgt':iwgt,
+                    #     'intp_opt':intp_opt,
+                    #     'iplot':False
+                    # }
+                    )
+                )
+
     pool.close()
     pool.join()
+
+
 
     for i in range(len(sigmas)):
         for j in range(nsample):
             x,y = results[i][j].get()
             Y_all[i][j][:] = y[::]
-
 
     M = np.zeros((len(sigmas),len(x)))
     S = np.zeros((len(sigmas),len(x)))
@@ -788,9 +904,9 @@ def influence_of_cnts_stats(
 
         fig.savefig('ee.pdf')
 
-    if iplot==False:
-        plt.close('all')
-        plt.ion()
+    # if iplot==False:
+    #     plt.close('all')
+    #     plt.ion()
 
     return x, M, S
 

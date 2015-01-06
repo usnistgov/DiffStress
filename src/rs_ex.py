@@ -5,6 +5,19 @@ A collection of scripts that make use of residual stress module
 import numpy as np
 from numpy import pi, sin, cos
 
+def write_args(f,**kwargs):
+    """
+    Write keyword arguements to the file
+    """
+    f.write('nhead including this line: %i\n'%(len(kwargs)+4))
+    for i in range(80): f.write('-')
+    f.write('\n')
+
+    for key in kwargs:
+        f.write('%12s  =  %12s \n'%(key, kwargs[key]))
+    for i in range(80): f.write('-')
+    f.write('\n')
+
 def ex(ifig=50,
        exp_ref=['exp_dat/Bsteel/EXP_BULGE_JINKIM.txt',
                 'exp_dat/Bsteel/uni/avgstr_000.txt'],
@@ -59,17 +72,34 @@ def ex(ifig=50,
     return stress
 
 def ex_consistency(
-        ifig=50,nxphi=3,
-        exp_ref=[],exp_lab=[],mod_ext=None,
-        mod_ref='STR_STR.OUT',sin2psimx=None,
-        iscatter=False,sigma=5e-5,psimx=None,psi_nbin=1,
-        ig_sub=True,istep=None,hkl=None,iplot=True,
-        iwind=False,wdeg=2,ipsi_opt=1,fn_sff=None,
-        pmargin=None,path='',
-        sf_ext=None,ig_ext=None,iwgt=False,
+        ifig=50,
+        nxphi=3,
+        exp_ref=[],
+        exp_lab=[],
+        mod_ext=None,
+        mod_ref='STR_STR.OUT',
+        sin2psimx=None,
+        iscatter=False,
+        sigma=5e-5,
+        psimx=None,
+        psi_nbin=1,
+        ig_sub=True,
+        istep=None,
+        hkl=None,
+        iplot=True,
+        iwind=False,
+        wdeg=2,
+        ipsi_opt=1,
+        fn_sff=None,
+        pmargin=None,
+        path='',
+        sf_ext=None,
+        ig_ext=None,
+        iwgt=False,
 
         ##
-        verbose=False
+        verbose=False,
+        ilog=False,
         ):
     """
     Consistency check between 'weighted average' stress and
@@ -100,7 +130,48 @@ def ex_consistency(
     sf_ext    : Overwrite stress factor
     ig_ext    : Overwrite IG strain
     iwgt      : Whether or not accounting for 'weight'
+
+    ## debugging
+    verbose   : False
+    ilog      : True
     """
+    if ilog:
+        fn = 'ex_consistency.log'
+        f = open(fn,'w')
+        write_args(f=f,
+                   ifig=ifig,
+                   nxphi=nxphi,
+                   exp_ref=exp_ref,
+                   exp_lab=exp_lab,
+                   mod_ext=mod_ext,
+                   mod_ref=mod_ref,
+                   sin2psimx=sin2psimx,
+                   iscatter=iscatter,
+                   sigma=sigma,
+                   psimx=psimx,
+                   psi_nbin=psi_nbin,
+                   ig_sub=ig_sub,
+                   istep=istep,
+                   hkl=hkl,
+                   iplot=iplot,
+                   iwind=iwind,
+                   wdeg=wdeg,
+                   ipsi_opt=ipsi_opt,
+                   fn_sff=fn_sff,
+                   pmargin=pmargin,
+                   path=path,
+                   sf_ext=sf_ext,
+                   ig_ext=ig_ext,
+                   iwgt=iwgt,
+
+                   ##
+                   verbose=verbose,
+                   ilog=ilog,
+                   )
+        f.close()
+        raw_input('log is created and closed.')
+
+
     from rs import ResidualStress,u_epshkl,filter_psi,\
         filter_psi2,psi_reso, psi_reso2, psi_reso3
 
@@ -214,7 +285,8 @@ def ex_consistency(
 
         ## Use a finite frequence of psi tilts
         if psi_nbin!=1:
-            wgt = psi_reso3(wgt,psi=model_rs.psis,ntot=psi_nbin)
+            wgt = psi_reso3(wgt,psi=model_rs.psis,
+                            ntot=psi_nbin)
             psi_reso2(model_rs,ntot=psi_nbin)
 
         #-----------------------------------#
