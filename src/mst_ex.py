@@ -178,8 +178,8 @@ def return_vf():
     Return volume fraction and grains
     in diffraction from 'int_els_ph1.out'
 
-    vdat: (nspt,nphi,npsis)
-    ngrd: (nspt,nphi,npsis)
+    vdat: (nstp,nphi,npsis)
+    ngrd: (nstp,nphi,npsis)
     """
     from pepshkl import reader4
     tdat,_psis_,_vdat_,_ngrd_ = reader4(
@@ -384,6 +384,9 @@ def use_intp_sfig(ss=2,iopt=0,iplot=False):
        * If ss is a list with intengers in it,
          use these element-wise integers to select.
 
+         thus ss is the inverse of a "frequency" per
+         plastic incremental step
+
     interpolation method applied to SF/IG w.r.t. strain
     iopt=0: NN (piece-wise linear interpolation)
         =1: Assign nearest data
@@ -397,9 +400,16 @@ def use_intp_sfig(ss=2,iopt=0,iplot=False):
         =9: slinear
 
     iplot = False
+
+
+
     """
     from rs import ResidualStress as RS
     from copy import copy
+
+    ## 0. Read volume fraction and number of grains
+    vf_dat,ngr_dat = return_vf() ## read vf/ngr
+
     ## 1. Read original SF/IG/FLow
     RS_model = RS(mod_ext=None,
                   fnmod_ig='igstrain_fbulk_ph1.out',
@@ -498,10 +508,9 @@ def influence_of_intp(ss=2,bounds=[0,0.5],
                       iscatter=False,iwgt=False,
                       sigma=5e-5,
                       intp_opt=0):
-
     """
-    Parametric study to demonstrate the influence of
-    psi binning
+    Parametric study to demonstrate the uncertainty
+    for a fixed intp_opt
 
     Arguments
     =========
@@ -512,6 +521,8 @@ def influence_of_intp(ss=2,bounds=[0,0.5],
     hkl      = None
     iscatter = False
     iwgt     = False
+    sigma    = 5e-5
+    intp_opt = 0
     """
     from rs import filter_psi2
     from rs_ex import ex_consistency as main
@@ -525,7 +536,7 @@ def influence_of_intp(ss=2,bounds=[0,0.5],
         fig = wide_fig(nw=3,nh=1);axs=fig.axes
 
     ## Use the reduced set over the consistency check
-    sf,ig = use_intp_sfig(ss=ss,iopt=intp_opt)
+    sf,ig = use_intp_sfig(ss=ss,iopt=intp_opt,iplot=False)
     sf_ext = sf.sf.swapaxes(1,-1).swapaxes(-2,-1)[::]*1e6
     ig_ext = ig.ig[::]
 
@@ -536,13 +547,14 @@ def influence_of_intp(ss=2,bounds=[0,0.5],
     ig_ext = filter_psi2(
         obj=ig_ext,sin2psi=sf.sin2psi,bounds=bounds)
 
-    # # # Reduce binning
+    ### Reduce binning
     ## consistency check
     rst = main(sin2psimx=bounds[1],psi_nbin=psi_nbin,
                sf_ext=sf_ext,ig_ext=ig_ext,
                iplot=iplot,hkl=hkl,iscatter=iscatter,
                sigma=sigma,
-               iwgt=iwgt)
+               iwgt=iwgt,
+               vf_ext=None)
 
     fw, fd = rst[1], rst[2]
 
@@ -609,7 +621,8 @@ def influence_of_nbin(
         sigma=1e-5,
         iwgt=False,
         intp_opt=0,
-        iplot=False):
+        iplot=False,):
+
     """
     Influence of psi bin size
 
@@ -639,7 +652,8 @@ def influence_of_nbin(
             psi_nbin = nb,iplot=False,
             iscatter=iscatter,sigma=sigma,
             iwgt=iwgt,
-            intp_opt=intp_opt)
+            intp_opt=intp_opt,
+            )
         x = fw.epsilon_vm[::]
         y = e[::]
         if iplot: ax.plot(x,y,label=nb)
@@ -669,11 +683,24 @@ def influence_of_nbin_scatter(
     nsample=1,
     iwgt=False,
     intp_opt=0,
-    iplot=False):
+    iplot=False,):
+
     """
     Repeat influence_of_nbin examination
     to verify the error in stress analysis
     pertaining to that in eps(hkl,phi,psi)
+
+    Arguments
+    =========
+    sigma    = 5e-5
+    ss       = 1
+    bounds   = [0,0.5]
+    nbins    = [10,10]
+    iscatter = True
+    nsample  = 1
+    iwgt     = False
+    intp_opt = 0
+    iplot    = False
     """
     if iplot:
         from MP.lib import mpl_lib,axes_label
@@ -681,9 +708,9 @@ def influence_of_nbin_scatter(
         fancy_legend = mpl_lib.fancy_legend
         wide_fig     = mpl_lib.wide_fig
         deco         = axes_label.__deco__
-        fig = wide_fig(nw=2,nh=1);
-        ax=fig.axes[0]
-        ax1=fig.axes[1]
+        fig          = wide_fig(nw=2,nh=1);
+        ax           = fig.axes[0]
+        ax1          = fig.axes[1]
 
     for i in range(len(nbins)):
         nbin = nbins[i]
@@ -692,7 +719,9 @@ def influence_of_nbin_scatter(
                 ss=ss,bounds=bounds,
                 nbins=[nbin], iscatter=iscatter,
                 sigma=sigma,
-                iwgt=iwgt,intp_opt=intp_opt)
+                iwgt=iwgt,
+                intp_opt=intp_opt,)
+
 
             if i==0 and j==0:
                 Y = np.zeros((len(nbins),len(x),nsample))
@@ -700,10 +729,6 @@ def influence_of_nbin_scatter(
 
             Y[i,:,j] = y[0][:]
 
-
-    # ## Y [nsample, nbin, nstp]
-    # Y = np.array(Y).swapaxes(0,-1).swapaxes(0,1)
-    # ## Y [nbin, nstp, nsample]
     nbin, nstp, nsamp = Y.shape
 
     for i in range(nbin):
@@ -737,24 +762,31 @@ def influence_of_nbin_scatter(
         plt.close('all')
     return x, e
 
-def influence_of_cnts_stats(
-        sigmas=[1e-5, 2e-5, 5e-5, 1e-4],
-        ##
-        bounds=[0.,0.5],
-        ss=3,
-        nbins=10,
-        iwgt=False,
-        nsample=4,
-        intp_opt=0,
-        iplot=False,
-        DEC_freq_sym=True,
-        NCPU=0):
-    """
-    With fixing other variables, investigate the
-    propagation of counting stat error to the final
-    diffraction stress, by examining a number of
-    statistical ensembles (nsample)
 
+
+#############################################
+## Function influence_of_cnts_stats is the ##
+## main function that rs_grid is using.    ##
+#############################################
+def influence_of_cnts_stats(
+    ## characteristics of an ensemble for stress data
+    sigmas=[1e-5, 2e-5, 5e-5, 1e-4],
+    bounds=[0.,0.5],
+    ss=3,
+    nbins=10,
+    iwgt=False,
+    nsample=4,
+    intp_opt=0,
+    iplot=False,
+    DEC_freq_sym=True,
+
+    NCPU=0):
+    """
+    With fixing other variables, investigates the
+    propagation of counting stat error on to the final
+    diffraction stress by examining a number of
+    statistical ensembles (nsample) characterized
+    by arguments given
 
     Arguments
     =========
@@ -776,36 +808,12 @@ def influence_of_cnts_stats(
         fancy_legend = mpl_lib.fancy_legend
         wide_fig     = mpl_lib.wide_fig
         deco         = axes_label.__deco__
-        fig = wide_fig(nw=2,nh=1);
-        ax1=fig.axes[0]; ax2=fig.axes[1]
+        fig          = wide_fig(nw=2,nh=1)
+        ax1,ax2      = fig.axes[0], fig.axes[1]
 
-    ## if iplot==False:
-    ##     plt.ioff()
-
-    ## test
     print '\n\n****************'
     print 'test run started'
     print '****************\n\n'
-    ## raw_input()
-
-
-    # ## debugging begins
-    # fn = 'influence_of_cnts_stats.log'
-    # f = open(fn,'w')
-    # write_args(
-    #     f,
-    #     sigma=sigmas[0],
-    #     ss=ss,
-    #     bounds=bounds,
-    #     nbins=[nbins],
-    #     iscatter=True,
-    #     nsample=1,
-    #     iwgt=iwgt,
-    #     intp_opt=intp_opt,
-    #     iplot=False
-    #     )
-    # f.close()
-    # ## debugging ends
 
     x,y = influence_of_nbin_scatter(
         sigma=sigmas[0],
@@ -816,16 +824,14 @@ def influence_of_cnts_stats(
         nsample=1,
         iwgt=iwgt,
         intp_opt=intp_opt,
-        iplot=False
+        iplot=False,
         )
     print '\n\n**************'
     print 'test completed'
     print '**************\n\n'
     ## raw_input()
 
-
     Y_all = np.zeros((len(sigmas), nsample, len(x)))
-
     M = []
     ls=['-+','-s','-o','-d','-t']
     import multiprocessing
@@ -833,14 +839,14 @@ def influence_of_cnts_stats(
     if NCPU==0: NCPU = multiprocessing.cpu_count()
     print 'NCPU: %i'%NCPU
     pool = Pool(processes = NCPU)
-    func = influence_of_nbin_scatter
+
     results = []
     for i in range(len(sigmas)):
         results.append([])
         for j in range(nsample):
             results[i].append(
                 pool.apply_async(
-                    func,
+                    influence_of_nbin_scatter,
                     args=(
                         sigmas[i],
                         ss,
@@ -850,26 +856,17 @@ def influence_of_cnts_stats(
                         1,
                         False,
                         intp_opt,
-                        False,
-                        ),
-                    # kwds={
-                    #     'ss':ss,
-                    #     'bounds':bounds,
-                    #     'nbins':nbins,
-                    #     'iscatter':True,
-                    #     'nsample':1,
-                    #     'iwgt':iwgt,
-                    #     'intp_opt':intp_opt,
-                    #     'iplot':False
-                    # }
-                    )
-                )
+                        False,),))
 
+            pass
+        pass
     pool.close()
     pool.join()
 
 
 
+
+    ## below is to post-process the results
     for i in range(len(sigmas)):
         for j in range(nsample):
             x,y = results[i][j].get()
@@ -888,26 +885,18 @@ def influence_of_cnts_stats(
         for i in range(len(sigmas)):
             ax1.plot(x,M[i],ls[i],mfc='None',color='k',label='%6.0e'%sigmas[i])
             ax2.errorbar(x,M[i],yerr=S[i],color='k',ls=ls[i])
-
         if type(ss).__name__=='int' and DEC_freq_sym:
             ax1.plot(x[::ss],np.zeros((len(x[::ss]),)),'o',mec='r',mfc='None',ms=8)
             ax2.plot(x[::ss],np.zeros((len(x[::ss]),)),'o',mec='r',mfc='None',ms=8)
         elif type(ss).__name__=='list' and DEC_freq_sym:
             ax1.plot(x[ss],np.zeros((len(x[ss]),)),'o',mec='r',mfc='None',ms=8)
             ax2.plot(x[ss],np.zeros((len(x[ss]),)),'o',mec='r',mfc='None',ms=8)
-
         ax1.set_ylim(0.,); ax1.set_xlim(0.,ax1.get_xlim()[1]*1.05)
         deco(iopt=9,ft=15,ax=ax1)
         fancy_legend(ax=ax1, size=7,ncol=2,nscat=1)
         ax2.set_ylim(0.,); ax2.set_xlim(0.,ax2.get_xlim()[1]*1.05)
         deco(iopt=9,ft=15,ax=ax2)
-
         fig.savefig('ee.pdf')
-
-    # if iplot==False:
-    #     plt.close('all')
-    #     plt.ion()
-
     return x, M, S
 
 def compare_exp_mod(ntot_psi=21):

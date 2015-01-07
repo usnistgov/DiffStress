@@ -95,6 +95,7 @@ def ex_consistency(
         path='',
         sf_ext=None,
         ig_ext=None,
+        vf_ext=None,
         iwgt=False,
 
         ##
@@ -129,11 +130,12 @@ def ex_consistency(
     path      : place holder for strain path
     sf_ext    : Overwrite stress factor
     ig_ext    : Overwrite IG strain
+    vf_ext    : Overwrite grain volume fraction (nstp,nphi,npsi)
     iwgt      : Whether or not accounting for 'weight'
 
     ## debugging
     verbose   : False
-    ilog      : True
+    ilog      : False
     """
     if ilog:
         fn = 'ex_consistency.log'
@@ -162,6 +164,7 @@ def ex_consistency(
                    path=path,
                    sf_ext=sf_ext,
                    ig_ext=ig_ext,
+                   vf_ext=vf_ext,
                    iwgt=iwgt,
 
                    ##
@@ -169,7 +172,7 @@ def ex_consistency(
                    ilog=ilog,
                    )
         f.close()
-        raw_input('log is created and closed.')
+        print 'log has been saved to ',fn
 
 
     from rs import ResidualStress,u_epshkl,filter_psi,\
@@ -207,10 +210,26 @@ def ex_consistency(
         fnmod_sf='igstrain_fbulk_ph1.out',
         i_ip=1)
 
-    ## masking array element based on diffraction volume
-    model_rs.dat_model.mask_vol()
-    if pmargin!=None:
-        model_rs.dat_model.mask_vol_margin(pmargin)
+    ## Mask data based on volume fraction ##
+    if type(vf_ext).__name__=='NoneType':
+        model_rs.dat_model.mask_vol()
+        if pmargin!=None:
+            model_rs.dat_model.mask_vol_margin(pmargin)
+    elif type(vf_ext).__name__=='ndarray':
+        shape1 = mode_rs.dat_model.vf.shape
+        shape2 = vf_ext.shape
+        if shape1==shape2:
+            mode_rs.dat_model.vf[::] = vf_ext[::]
+        else:
+            raise IOError, 'shape mismatch'
+        model_rs.dat_model.mask_vol()
+        if pmargin!=None:
+            model_rs.dat_model.mask_vol_margin(pmargin)
+    else:
+        raise IOError,\
+            'Unexpected type of vf_ext was given'
+
+
     if mod_ext==None: mod_ref='STR_STR.OUT'
     else:             mod_ref='%s.%s'%(
             mod_ref.split('.')[0],mod_ext)
