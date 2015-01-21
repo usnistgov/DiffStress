@@ -72,36 +72,12 @@ def ex(ifig=50,
     return stress
 
 def ex_consistency(
-        ifig=50,
-        nxphi=3,
-        exp_ref=[],
-        exp_lab=[],
-        mod_ext=None,
-        mod_ref='STR_STR.OUT',
-        sin2psimx=None,
-        iscatter=False,
-        sigma=5e-5,
-        psimx=None,
-        psi_nbin=1,
-        ig_sub=True,
-        istep=None,
-        hkl=None,
-        iplot=True,
-        iwind=False,
-        wdeg=2,
-        ipsi_opt=1,
-        fn_sff=None,
-        pmargin=None,
-        path='',
-        sf_ext=None,
-        ig_ext=None,
-        vf_ext=None,
-        iwgt=False,
-
-        ##
-        verbose=False,
-        ilog=False,
-        ):
+        ifig=50,nxphi=3,exp_ref=[],exp_lab=[],mod_ext=None,
+        mod_ref='STR_STR.OUT',sin2psimx=None,iscatter=False,
+        sigma=5e-5,psimx=None,psi_nbin=1,ig_sub=True,istep=None,
+        hkl=None,iplot=True,iwind=False,wdeg=2,ipsi_opt=1,
+        fn_sff=None,pmargin=None,path='',sf_ext=None,ig_ext=None,
+        vf_ext=None,iwgt=False,verbose=False,ilog=False):
     """
     Consistency check between 'weighted average' stress and
     the stress obtained following the stress analysis method
@@ -140,40 +116,18 @@ def ex_consistency(
     if ilog:
         fn = 'ex_consistency.log'
         f = open(fn,'w')
-        write_args(f=f,
-                   ifig=ifig,
-                   nxphi=nxphi,
-                   exp_ref=exp_ref,
-                   exp_lab=exp_lab,
-                   mod_ext=mod_ext,
-                   mod_ref=mod_ref,
-                   sin2psimx=sin2psimx,
-                   iscatter=iscatter,
-                   sigma=sigma,
-                   psimx=psimx,
-                   psi_nbin=psi_nbin,
-                   ig_sub=ig_sub,
-                   istep=istep,
-                   hkl=hkl,
-                   iplot=iplot,
-                   iwind=iwind,
-                   wdeg=wdeg,
-                   ipsi_opt=ipsi_opt,
-                   fn_sff=fn_sff,
-                   pmargin=pmargin,
-                   path=path,
-                   sf_ext=sf_ext,
-                   ig_ext=ig_ext,
-                   vf_ext=vf_ext,
-                   iwgt=iwgt,
-
-                   ##
-                   verbose=verbose,
-                   ilog=ilog,
-                   )
+        write_args(
+            f=f,ifig=ifig,nxphi=nxphi,exp_ref=exp_ref,
+            exp_lab=exp_lab,mod_ext=mod_ext,mod_ref=mod_ref,
+            sin2psimx=sin2psimx,iscatter=iscatter,sigma=sigma,
+            psimx=psimx,psi_nbin=psi_nbin,ig_sub=ig_sub,
+            istep=istep,hkl=hkl,iplot=iplot,iwind=iwind,
+            wdeg=wdeg,ipsi_opt=ipsi_opt,fn_sff=fn_sff,
+            pmargin=pmargin,path=path,sf_ext=sf_ext,
+            ig_ext=ig_ext,vf_ext=vf_ext,iwgt=iwgt,
+            verbose=verbose,ilog=ilog)
         f.close()
         print 'log has been saved to ',fn
-
 
     from rs import ResidualStress,u_epshkl,filter_psi,\
         filter_psi2,psi_reso, psi_reso2, psi_reso3
@@ -201,14 +155,12 @@ def ex_consistency(
         ## ax2: Stress path in the plane stress space (RD/TD)
         ax1 = fig1.axes[0]; ax2 = fig1.axes[1]
         #ax2.set_axis_bgcolor('0.95')
+        pass
 
-    ## i_ip = 1: model case
-
+    ## i_ip = 1: ioption for the model data
     model_rs = ResidualStress(
-        mod_ext=mod_ext,
-        fnmod_ig='igstrain_fbulk_ph1.out',
-        fnmod_sf='igstrain_fbulk_ph1.out',
-        i_ip=1)
+        mod_ext=mod_ext,fnmod_ig='igstrain_fbulk_ph1.out',
+        fnmod_sf='igstrain_fbulk_ph1.out',i_ip=1)
 
     ## Mask data based on volume fraction ##
     if type(vf_ext).__name__=='NoneType':
@@ -218,21 +170,16 @@ def ex_consistency(
     elif type(vf_ext).__name__=='ndarray':
         shape1 = mode_rs.dat_model.vf.shape
         shape2 = vf_ext.shape
-        if shape1==shape2:
-            mode_rs.dat_model.vf[::] = vf_ext[::]
-        else:
-            raise IOError, 'shape mismatch'
+        if shape1==shape2:mode_rs.dat_model.vf[::] = vf_ext[::]
+        else:raise IOError, 'shape mismatch'
         model_rs.dat_model.mask_vol()
         if pmargin!=None:
             model_rs.dat_model.mask_vol_margin(pmargin)
-    else:
-        raise IOError,\
-            'Unexpected type of vf_ext was given'
-
+    else: raise IOError,\
+        'Unexpected type of vf_ext was given'
 
     if mod_ext==None: mod_ref='STR_STR.OUT'
-    else:             mod_ref='%s.%s'%(
-            mod_ref.split('.')[0],mod_ext)
+    else: mod_ref='%s.%s'%(mod_ref.split('.')[0],mod_ext)
 
     flow_weight = FlowCurve(name='Model weighted')
     flow_weight.get_model(fn=mod_ref)
@@ -316,10 +263,18 @@ def ex_consistency(
         if iwgt: pass
         else: wgt = None # overwrite wgt
 
+        ## find the stress by fitting the elastic strains
+        print '--'
+        print model_rs.tdat.shape
+        print model_rs.nphi
+        print model_rs.phis
+        print model_rs.npsi
+        print model_rs.psis
+        print model_rs.sf.shape
+        print '--'
         dsa_sigma = model_rs.find_sigma(
             ivo=[0,1],
-            init_guess=[0,0,0,0,0,0],
-            #init_guess=[s11,s22,0,0,0,0],
+            init_guess=[0,0,0,0,0,0],#init_guess=[s11,s22,0,0,0,0],
             weight = wgt # None
             )
 
@@ -347,6 +302,9 @@ def ex_consistency(
                 ivo=[0,1],hkl=hkl,ileg=ileg,iwind=False,
                 ipsi_opt=ipsi_opt)
             fs.savefig(f2);fe.savefig(f1);f_er.savefig(f3)
+            f1.clf();plt.draw()
+            f2.clf();plt.draw()
+            f3.clf();plt.draw()
             plt.close(f1);plt.close(f2);plt.close(f3)
             plt.ion()
     # end of the serial loop over deformation steps
@@ -595,12 +553,15 @@ def __model_fit_plot__(container,ifig,istp,nxphi=None,hkl=None,
 
     for iphi in range(nphi):
         ax = axes[iphi]; av = axesv[iphi]; ae = ax_er[iphi]
-
-        x  = sin2psi_opt(psis,ipsi_opt)
-        xv = sin2psi_opt(container.dat_model.psi,ipsi_opt)
-        if iwind:
-            x = sin2psi_opt(psis,2)
-            xv = sin2psi_opt(container.dat_model.psi,2)
+        ## convert psi to user's convenience.
+        if iphi==0 or True:
+            x  = sin2psi_opt(psis[::],ipsi_opt)
+            xv = sin2psi_opt(container.dat_model.psi[::],ipsi_opt)
+            if iwind:
+                x = sin2psi_opt(psis[::],2)
+                xv = sin2psi_opt(container.dat_model.psi[::],2)
+            print 'x.shape',x.shape,x[0],x[-1]
+        print Ei[iphi].shape
 
         ## E_{i}
         if ileg: label=r'$E_{i}$ (fitting)'
@@ -617,6 +578,7 @@ def __model_fit_plot__(container,ifig,istp,nxphi=None,hkl=None,
         y = tdat[iphi]*1e6
         ax.plot(x,y,'bx',label=label)
         if iwind:
+            raise IOError, 'iwind is not stable'
             xerr = []
             for i in range(len(psis)):
                 X = psis[i]*180./np.pi; Y = y[i]

@@ -42,11 +42,13 @@ def ex1(mx=0.5,w_rad=5.):
 
 def sin2psi_opt(psi,iopt):
     """
-    psi is radian
-
-    iopt=0 (sin2psi)
-    iopt=1 (+-sin2psi)
-    iopt=2 (psi)
+    Arguments
+    =========
+    psi  :the angle in radian
+    iopt : Convert psi according to below options
+         0 (sin2psi)
+         1 (+-sin2psi)
+         2 (psi) use psi as-recieved.
     """
     signs = sign(psi)
     sin2psi = sin(psi)**2

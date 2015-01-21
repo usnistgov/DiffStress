@@ -1476,9 +1476,9 @@ class ResidualStress:
         ivo = None
         """
         self.Ei = np.zeros((self.nphi,self.npsi))
+        ## self.Ei[iphi,ipsi] = 0
         for iphi in range(self.nphi):
             for ipsi in range(self.npsi):
-                self.Ei[iphi,ipsi] = 0
                 for k in range(6): # six components
                     # once ivo is given, optimization runs only
                     # for the given ivo components
