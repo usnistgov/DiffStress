@@ -675,7 +675,6 @@ def influence_of_nbin_scatter(
     ##
     sigma=5e-5,
 
-    ##
     ss=1,
     bounds=[0.0, 0.5],
     nbins=[10,10], ## main arg
@@ -722,10 +721,9 @@ def influence_of_nbin_scatter(
                 iwgt=iwgt,
                 intp_opt=intp_opt,)
 
-
             if i==0 and j==0:
+                ## Getting Y array shaped.
                 Y = np.zeros((len(nbins),len(x),nsample))
-                pass
 
             Y[i,:,j] = y[0][:]
 
@@ -779,9 +777,10 @@ def influence_of_cnts_stats(
     intp_opt=0,
     iplot=False,
     DEC_freq_sym=True,
-
     NCPU=0):
     """
+    Influence of counting statistics uncertainty
+
     With fixing other variables, investigates the
     propagation of counting stat error on to the final
     diffraction stress by examining a number of
@@ -814,7 +813,6 @@ def influence_of_cnts_stats(
     print '\n\n****************'
     print 'test run started'
     print '****************\n\n'
-
     x,y = influence_of_nbin_scatter(
         sigma=sigmas[0],
         ss=ss,
@@ -839,14 +837,14 @@ def influence_of_cnts_stats(
     if NCPU==0: NCPU = multiprocessing.cpu_count()
     print 'NCPU: %i'%NCPU
     pool = Pool(processes = NCPU)
-
+    func = influence_of_nbin_scatter
     results = []
     for i in range(len(sigmas)):
         results.append([])
         for j in range(nsample):
             results[i].append(
                 pool.apply_async(
-                    influence_of_nbin_scatter,
+                    func,
                     args=(
                         sigmas[i],
                         ss,
@@ -857,14 +855,9 @@ def influence_of_cnts_stats(
                         False,
                         intp_opt,
                         False,),))
-
-            pass
-        pass
+    ## close and join
     pool.close()
     pool.join()
-
-
-
 
     ## below is to post-process the results
     for i in range(len(sigmas)):
@@ -880,6 +873,17 @@ def influence_of_cnts_stats(
         for k in range(len(x)):
             M[i][k] = y[k].mean()
             S[i][k] = y[k].std()
+
+    nbins = 10
+    H  = np.zeros((len(sigmas), len(x), nbins))
+    BE = np.zeros((len(sigmas), len(x), nbins+1))
+    for i in range(len(sigmas)):
+        y = Y_all[i][:][:]
+        y = y.T[::] ## len(x), nsample
+        for k in range(len(x)):
+            hist,bin_edges = np.histogram(y[k],bins=10)
+            H[i,k,:] = hist[::]
+            BE[i,k,:] = bin_edges[::]
 
     if iplot:
         for i in range(len(sigmas)):
@@ -897,7 +901,7 @@ def influence_of_cnts_stats(
         ax2.set_ylim(0.,); ax2.set_xlim(0.,ax2.get_xlim()[1]*1.05)
         deco(iopt=9,ft=15,ax=ax2)
         fig.savefig('ee.pdf')
-    return x, M, S
+    return x, M, S, H, BE
 
 def compare_exp_mod(ntot_psi=21):
     import numpy as np
@@ -956,7 +960,7 @@ def influence_of_intp_extp(
 
     xs=[];Ms=[];Ss=[]
     for iopt in range(len(iopts)):
-        x,M,S = influence_of_cnts_stats(
+        x,M,S,h,b = influence_of_cnts_stats(
             ss=ss,bounds=bounds,
             nbins=nbins,
             sigmas=sigmas,
