@@ -372,7 +372,8 @@ def plot_sf_psis(
             aig.set_xlim(0.,1.0)
             aig.set_ylim(-0.002,0.002)
 
-def use_intp_sfig(ss=2,iopt=0,iplot=False):
+def use_intp_sfig(ss=2,iopt=0,iplot=False,
+                  iwgt=False):
     """
     Use "interpolated" SF/IG strains
     to calculate the influence of 'interpolation'
@@ -383,11 +384,11 @@ def use_intp_sfig(ss=2,iopt=0,iplot=False):
        * If ss is an integer, use it as 'step'
        * If ss is a list with intengers in it,
          use these element-wise integers to select.
+         thus ss is the inverse of a "frequency"
+         : times per a plastic incremental step
+         interpolation method applied to SF/IG
+         with respect to strain
 
-         thus ss is the inverse of a "frequency" per
-         plastic incremental step
-
-    interpolation method applied to SF/IG w.r.t. strain
     iopt=0: NN (piece-wise linear interpolation)
         =1: Assign nearest data
         =2: Cubic
@@ -400,9 +401,8 @@ def use_intp_sfig(ss=2,iopt=0,iplot=False):
         =9: slinear
 
     iplot = False
-
-
-
+    iwgt  = False
+           (if True, assign np.nan if sf==0)
     """
     from rs import ResidualStress as RS
     from copy import copy
@@ -415,25 +415,32 @@ def use_intp_sfig(ss=2,iopt=0,iplot=False):
                   fnmod_ig='igstrain_fbulk_ph1.out',
                   fnmod_sf='igstrain_fbulk_ph1.out',
                   i_ip=1)
+
+    ## assign nan for sf==0
     _SF_   = RS_model.dat_model.sf[::]
     _IG_   = RS_model.dat_model.ig[::]
-    _Flow_ = RS_model.dat_model.flow; _Flow_.get_eqv()
-    print _Flow_.epsilon_vm
+
+    if iwgt:
+        _SF_[_SF_==0]=np.nan
+        _IG_[_IG_==0]=np.nan
+
+    _Flow_ = RS_model.dat_model.flow
+    _Flow_.get_eqv()
     Flow   = copy(_Flow_)
     _nstp_ = _Flow_.nstp
-    print _nstp_
 
-    ## 2. Create a set of SF/IG/Flow interpolated at
-    #   several plastic increments
+    ## 2. Create a set of SF/IG/Flow interpolated
+    #     at several plastic increments
 
     ##   2-1. Reduce the SF/IG/FLow nstp
     # Half of the original plastic increments
 
-
     if type(ss).__name__=='int':
         SF = _SF_[::ss]; IG = _IG_[::ss]
-        Flow.epsilon = Flow.epsilon.swapaxes(0,-1)[::ss].swapaxes(0,-1)
-        Flow.sigma   = Flow.sigma.swapaxes(0,-1)[::ss].swapaxes(0,-1)
+        Flow.epsilon = Flow.epsilon.swapaxes(
+            0,-1)[::ss].swapaxes(0,-1)
+        Flow.sigma   = Flow.sigma.swapaxes(
+            0,-1)[::ss].swapaxes(0,-1)
         Flow.nstp    = Flow.nstp / ss
         Flow.get_eqv()
     elif type(ss).__name__=='list':
@@ -442,6 +449,7 @@ def use_intp_sfig(ss=2,iopt=0,iplot=False):
         Flow.sigma   = Flow.sigma[:,:,ss]
         Flow.nstp    = len(ss)
         Flow.get_eqv()
+    else: raise IOError, 'Unexpected type for ss'
 
     ##   2-2. Create the SF object
     import sfig_class
@@ -449,22 +457,27 @@ def use_intp_sfig(ss=2,iopt=0,iplot=False):
     SF0 = _SF_.swapaxes(1,-1).swapaxes(1,2)
     StressFactor0 = sfig_class.SF()
     StressFactor0.add_data(
-        sf=SF0[::]*1e-6,phi=RS_model.dat_model.phi[::]*180./np.pi,
+        sf =SF0[::]*1e-6,
+        phi=RS_model.dat_model.phi[::]*180./np.pi,
         psi=RS_model.dat_model.psi[::]*180./np.pi)
-    StressFactor0.flow = _Flow_; StressFactor0.flow.get_eqv()
+    StressFactor0.flow = _Flow_
+    StressFactor0.flow.get_eqv()
     StressFactor0.mask_vol()
 
-    #      2-2-2. Rearrange SF [stp,nij,nphi,npsi] -> [nstp,nphi,nspi,nij]
+    #      2-2-2. Rearrange SF [stp,nij,nphi,npsi]
+    #                      -> [nstp,nphi,nspi,nij]
     SF = SF.swapaxes(1,-1).swapaxes(1,2)
     StressFactor = sfig_class.SF()
     StressFactor.add_data(
-        sf=SF[::]*1e-6,phi=RS_model.dat_model.phi[::]*180./np.pi,
+        sf=SF[::]*1e-6,
+        phi=RS_model.dat_model.phi[::]*180./np.pi,
         psi=RS_model.dat_model.psi[::]*180./np.pi)
     StressFactor.flow = Flow
     StressFactor.flow.get_eqv()
     ##     2-2-3. Interpolate them at strains
-    StressFactor.interp_strain(epsilon_vm = _Flow_.epsilon_vm,
-                               iopt=iopt)
+    StressFactor.interp_strain(
+        epsilon_vm = _Flow_.epsilon_vm,
+        iopt=iopt)
     StressFactor.flow = _Flow_
     StressFactor.flow.get_eqv()
     StressFactor.nstp = StressFactor.flow.nstp
@@ -474,22 +487,26 @@ def use_intp_sfig(ss=2,iopt=0,iplot=False):
     IG0 = _IG_[::]
     IGStrain0 = sfig_class.IG()
     IGStrain0.add_data(
-        ig=IG0[::],phi=RS_model.dat_model.phi[::]*180./np.pi,
+        ig=IG0[::],
+        phi=RS_model.dat_model.phi[::]*180./np.pi,
         psi=RS_model.dat_model.psi[::]*180./np.pi)
-    IGStrain0.flow = _Flow_; IGStrain0.flow.get_eqv()
+    IGStrain0.flow = _Flow_
+    IGStrain0.flow.get_eqv()
     ## IGStrain0.mask_vol()
 
-    #      2-2-2. Rearrange IG [stp,nij,nphi,npsi] -> [nstp,nphi,nspi,nij]
-    ## IG = IG.swapaxes(1,-1).swapaxes(1,2)
+    #      2-2-2. Rearrange IG [stp,nij,nphi,npsi]
+    #                      -> [nstp,nphi,nspi,nij]
     IGStrain = sfig_class.IG()
     IGStrain.add_data(
-        ig=IG[::],phi=RS_model.dat_model.phi[::]*180./np.pi,
+        ig=IG[::],
+        phi=RS_model.dat_model.phi[::]*180./np.pi,
         psi=RS_model.dat_model.psi[::]*180./np.pi)
     IGStrain.flow = Flow
     IGStrain.flow.get_eqv()
     ##     2-2-3. Interpolate them at strains
-    IGStrain.interp_strain(epsilon_vm = _Flow_.epsilon_vm,
-                           iopt=iopt)
+    IGStrain.interp_strain(
+        epsilon_vm = _Flow_.epsilon_vm,
+        iopt=iopt)
     IGStrain.flow = _Flow_
     IGStrain.flow.get_eqv()
     IGStrain.nstp = IGStrain.flow.nstp
@@ -499,8 +516,18 @@ def use_intp_sfig(ss=2,iopt=0,iplot=False):
         StressFactor.plot()
         IGStrain0.plot()
         IGStrain.plot()
+        pass
 
     return StressFactor, IGStrain
+
+# def z2n(array):
+#     arr = array[::]
+#     return arr[arr==0]=np.nan
+
+# def replace_0tn(*args):
+#     a=[]
+#     for arg in args: a.ppend(z2n(arg))
+#     return a
 
 def influence_of_intp(ss=2,bounds=[0,0.5],
                       psi_nbin=13,iplot=False,
@@ -533,41 +560,50 @@ def influence_of_intp(ss=2,bounds=[0,0.5],
         import matplotlib.pyplot as plt
         wide_fig     = mpl_lib.wide_fig
         deco         = axes_label.__deco__
-        fig = wide_fig(nw=3,nh=1);axs=fig.axes
+        fig          = wide_fig(nw=3,nh=1)
+        axs          = fig.axes
 
     ## Use the reduced set over the consistency check
-    sf,ig = use_intp_sfig(ss=ss,iopt=intp_opt,iplot=False)
+    sf, ig = use_intp_sfig(
+        ss=ss,iopt=intp_opt,iplot=False,
+        iwgt=False)
+
     sf_ext = sf.sf.swapaxes(1,-1).swapaxes(-2,-1)[::]*1e6
     ig_ext = ig.ig[::]
 
     ##
     # Filtering against sin2psi
     sf_ext = filter_psi2(
-        obj=sf_ext,sin2psi=sf.sin2psi,bounds=bounds)
+        obj=sf_ext,sin2psi=sf.sin2psi,
+        bounds=bounds)
     ig_ext = filter_psi2(
-        obj=ig_ext,sin2psi=sf.sin2psi,bounds=bounds)
+        obj=ig_ext,sin2psi=sf.sin2psi,
+        bounds=bounds)
 
     ### Reduce binning
     ## consistency check
-    rst = main(sin2psimx=bounds[1],psi_nbin=psi_nbin,
+    rst = main(sin2psimx=bounds[1],
+               psi_nbin=psi_nbin,
                sf_ext=sf_ext,ig_ext=ig_ext,
-               iplot=iplot,hkl=hkl,iscatter=iscatter,
-               sigma=sigma,
-               iwgt=iwgt,
+               iplot=iplot,hkl=hkl,
+               iscatter=iscatter,
+               sigma=sigma,iwgt=iwgt,
                vf_ext=None)
 
     fw, fd = rst[1], rst[2]
 
     if iplot:
-        axs[0].plot(fw.epsilon_vm,fw.sigma_vm,'b-x',
-                    label='Weight Avg.')
-        axs[0].plot(fd.epsilon_vm,fd.sigma_vm,'k+',
-                    label='Diff Stress')
+        axs[0].plot(fw.epsilon_vm,fw.sigma_vm,
+                    'b-x',label='Weight Avg.')
+        axs[0].plot(fd.epsilon_vm,fd.sigma_vm,
+                    'k+',label='Diff Stress')
 
     if type(ss).__name__=='int':
-        x = fd.epsilon_vm[::ss]; y = fd.sigma_vm[::ss]
+        x = fd.epsilon_vm[::ss];
+        y = fd.sigma_vm[::ss]
     elif type(ss).__name__=='list':
-        x = fd.epsilon_vm[ss]; y = fd.sigma_vm[ss]
+        x = fd.epsilon_vm[ss];
+        y = fd.sigma_vm[ss]
 
     if iplot:
         label='SF/IG acqusition'

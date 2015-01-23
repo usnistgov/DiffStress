@@ -302,11 +302,11 @@ class SF:
                 y = self.sf[j,i,:,0] * 1e12
                 l, = figs.axes[i].plot(
                     np.sign(self.psi)*sin(self.psi*np.pi/180.)**2,
-                    y,'-x',color=cl)
+                    y,'x',color=cl)
                 y = self.sf[j,i,:,1] * 1e12
                 figs.axes[i].plot(
                     np.sign(self.psi)*sin(self.psi*np.pi/180.)**2,
-                    y,'--.',color=cl)
+                    y,'+',color=cl)
 
                 if j==0:
                     figs.axes[i].set_title(

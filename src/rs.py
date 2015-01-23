@@ -7,6 +7,7 @@ from MP.mat import mech
 FlowCurve = mech.FlowCurve
 from MP import read_blocks
 rb = read_blocks.main
+from lib import write_args
 
 def reader(fn='igstrain_load_ph1.out',isort=False,icheck=False):
     """
@@ -877,23 +878,22 @@ class ResidualStress:
         from tempfile import mkstemp as mktemp
         from time import asctime
         from os import getcwd
+
+
         self.log = open('rs.log','w') ###mktemp(dir=getcwd()
-        for i in range(72):
-            self.log.write('-')
         self.log.write('\nLog file from '+\
                        'rs.ResidualStress\n')
-        self.log.writelines(asctime()+'\n')
-
-        self.log.writelines("Arguments:\n")
-        self.log.writelines("mod_ext: %s\n"%mod_ext)
-        self.log.writelines("fnmod_epshkl: %s\n"%fnmod_epshkl)
-        self.log.writelines("fnmod_ig: %s\n"%fnmod_ig)
-        self.log.writelines("fnmod_sf: %s\n"%fnmod_sf)
-        self.log.writelines("fnmod_str: %s\n"%fnmod_str)
-        self.log.writelines("fnexp_ehkl: %s\n"%fnexp_ehkl)
-        self.log.writelines("fnexp_sf: %s\n"%fnexp_sf)
-        self.log.writelines("exppath: %s\n"%exppath)
-        self.log.writelines("fnPF: %s\n"%fnPF)
+        write_args(
+            f=self.log,ihead=False,time=asctime(),
+            mod_ext=mod_ext,
+            fnmod_epshkl=fnmod_epshkl,
+            fnmod_ig=fnmod_ig,
+            fnmod_sf=fnmod_sf,
+            fnmod_str=fnmod_str,
+            fnexp_ehkl=fnexp_ehkl,
+            fnexp_sf=fnexp_sf,
+            exppath=exppath,
+            fnPF=fnPF)
 
         if mod_ext!=None:
             print "mod_ext <%s> is given"%mod_ext
@@ -1000,11 +1000,11 @@ class ResidualStress:
         ## log
         self.log.write('\nself.readmod was called\n')
         self.log.write(' Arguments\n=========\n')
-        self.log.write('  fnmod_epshkl:%s\n'%fnmod_epshkl)
-        self.log.write('  fnmod_ig:%s\n'%fnmod_ig)
-        self.log.write('  fnmod_sf:%s\n'%fnmod_sf)
-        self.log.write('  fnmod_str:%s\n'%fnmod_str)
-        ##
+        write_args(f=self.log,ihead=False,
+                   fnmod_epshkl=fnmod_epshkl,
+                   fnmod_ig=fnmod_ig,
+                   fnmod_sf=fnmod_sf,
+                   fnmod_str=fnmod_str)
 
         from RS import pepshkl
         from pepshkl import reader2 as reader_sf
@@ -1406,7 +1406,8 @@ class ResidualStress:
         ##
 
         dat=fmin(f_objf,init_guess,args=least_args,
-                 full_output=True,xtol=1e-12,ftol=1e-12,maxfev=1000)
+                 full_output=True,xtol=1e-12,ftol=1e-12,
+                 maxfev=1000)
         stress=dat[0]
         cov_x, infodict, mesg, ier = dat[1:]
         if not(ier in [1,2,3,4]):
@@ -1476,9 +1477,9 @@ class ResidualStress:
         ivo = None
         """
         self.Ei = np.zeros((self.nphi,self.npsi))
+        ## self.Ei[iphi,ipsi] = 0
         for iphi in range(self.nphi):
             for ipsi in range(self.npsi):
-                self.Ei[iphi,ipsi] = 0
                 for k in range(6): # six components
                     # once ivo is given, optimization runs only
                     # for the given ivo components
@@ -1666,6 +1667,12 @@ def psi_reso2(mod=None,ntot=2):
     # mod.dat_model.psi  = psis[::]
     # mod.dat_model.npsi = len(mod.dat_model.psi)
 
+def psi_reso4(psi,ntot=2,*args):
+    rst = []
+    for arg in (args):
+        rst.append(psi_reso3(arg,psi,ntot))
+    return rst
+
 def psi_reso3(obj,psi,ntot=2):
     """
     Reduce elements along the psi axis,
@@ -1798,6 +1805,7 @@ def filter_psi(mod=None,psimx=None,sin2psimx=None):
     mod.dat_model.npsi  = len(mod.dat_model.psi)
 
 
+
 def filter_psi2(obj=None,sin2psi=[],bounds=[0.,1.]):
     """
     Limit psi values - trim some elements from the obj
@@ -1825,3 +1833,9 @@ def filter_psi2(obj=None,sin2psi=[],bounds=[0.,1.]):
 
     new_obj = new_obj_t.swapaxes(0,-1)
     return new_obj
+
+def filter_psi3(sin2psi=[],bounds=[0.,1.],*args):
+    rst=[]
+    for arg in args:
+        rst.append(filter_psi2(arg,sin2psi,bounds))
+    return rst
