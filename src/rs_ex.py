@@ -65,7 +65,8 @@ def ex_consistency(
         sigma=5e-5,psimx=None,psi_nbin=1,ig_sub=True,istep=None,
         hkl=None,iplot=True,iwind=False,wdeg=2,ipsi_opt=1,
         fn_sff=None,pmargin=None,path='',sf_ext=None,ig_ext=None,
-        vf_ext=None,iwgt=False,verbose=False,ilog=False):
+        vf_ext=None,iwgt=False,verbose=False,ilog=False,
+        dec_inv_frq=1,dec_interp=1):
     """
     Consistency check between 'weighted average' stress and
     the stress obtained following the stress analysis method
@@ -103,7 +104,12 @@ def ex_consistency(
     iwgt      : Whether or not accounting for 'weight'
     pmargin   : portional margin of volume that should exceed to
                 contribute to the ehkl/SF/IG in model_rs
-    #4. Misc.
+
+    #4. DEC related
+    dec_inv_frq   : Inverse Frequency of DEC measures along EVM (nstp)
+    dec_interp: Interpolation method for the incomplete DEC
+
+    #5. Misc.
     exp_ref   : experimental reference
     mod_ref   : model's weighted average flow curves are given
 
@@ -139,8 +145,9 @@ def ex_consistency(
 
     from rs import ResidualStress,u_epshkl,filter_psi,\
         filter_psi3,psi_reso, psi_reso2, psi_reso3,psi_reso4
-
+    from mst_ex import use_intp_sfig, return_vf
     from MP.mat import mech # mech is a module
+
     FlowCurve = mech.FlowCurve
 
     if iplot:
@@ -186,77 +193,114 @@ def ex_consistency(
     """
 
     ## SF/IG/ehkl
-    model_ehkls = model_rs.dat_model.ehkl[::]
+    model_ehkls = np.copy(model_rs.dat_model.ehkl)
     if isf_ext and iig_ext:
-        model_sfs = sf_ext[::]
-        model_igs = ig_ext[::]
+        model_sfs = sf_ext.copy()
+        model_igs = ig_ext.copy()
     elif isf_ext!=iig_ext:
         raise IOError, 'isf_ext should equal to iig_ext'
     ## if isf_ext False and isf_ext False
     else:
-        model_sfs = model_rs.dat_model.sf[::]
-        model_igs = model_rs.dat_model.ig[::]
+        model_sfs = model_rs.dat_model.sf.copy()
+        model_igs = model_rs.dat_model.ig.copy()
 
     ## VF
-    if not(ivf_ext):
-        model_vfs = model_rs.dat_model.vf[::]
-    else: model_vfs = vf_ext[::]
+    if not(ivf_ext): model_vfs, model_ngr = return_vf()
+    else: model_vfs = vf_ext.copy()
 
     ## whether or not vf would be used as weights in
     ## the least-sq estimator
     if not(iwgt): wgt = None # overwrite wgt
 
     # Apply process
-    # 1. Confine the range of sin2psi (or psi)
+    # 0. Use of interpolated SF?
+    # 1. Limit the range of sin2psi (or psi)
     # 2. Finite number of tiltings
     # 3. Assign tdat
     # 4. Perturb ehkl (common)
     # 5. Filter based on vf?
 
     ## Unstaged but the 'raw' arrays
-    raw_psis = model_rs.dat_model.psi[::]
-    raw_vfs  = model_vfs[::]
-    raw_ehkl = model_rs.dat_model.ehkl[::]
-    raw_sfs  = model_sfs
+    raw_psis = model_rs.dat_model.psi.copy()
+    raw_vfs  = model_vfs.copy()
+    raw_ehkl = np.copy(model_rs.dat_model.ehkl)
+    raw_sfs  = model_sfs.copy()
 
     ## staged arrays for stress estimation
-    model_rs.psis = model_rs.dat_model.psi[::]
-    model_rs.phis = model_rs.dat_model.phi[::]
+    model_rs.psis = model_rs.dat_model.psi.copy()
+    model_rs.phis = model_rs.dat_model.phi.copy()
     model_rs.npsi = len(model_rs.psis)
     model_rs.nphi = len(model_rs.phis)
     sin2psis_init = np.sin(model_rs.psis)**2
+
+    # 0. Use interpolated SF
+
+    _sf_, _ig_ = use_intp_sfig(
+        dec_inv_frq,iopt=dec_interp,
+        iplot=False,iwgt=False)
+    ## swapping axes to comply with what is used
+    ## in dat_model.sf
+    _sf_ = _sf_.sf.swapaxes(1,3).swapaxes(2,3)
+    _sf_ = _sf_ *1e6
+
+    # 0.5 Mask DEC where volume fraction
+    ## model_ngr or model_vfs
+    for i in range(len(model_vfs)):
+        for j in range(len(model_vfs[i])):
+            for k in range(len(model_vfs[i][j])):
+                if model_ngr[i,j,k]==0:
+                    _sf_[i,:,j,k]=np.nan
+                    # _ig_[i,j,k]=np.nan
+                    raw_sfs[i,:,j,k]=np.nan
+                    model_sfs[i,:,j,k]=np.nan
+                    raw_ehkl[i,j,k] = np.nan
+                for m in range(6):
+                    if _sf_[i,m,j,k]==0 or raw_sfs[i,m,j,k]==0:
+                        # print 'encountered zero sf'
+                        _sf_[i,m,j,k] = np.nan
+                        raw_sfs[i,m,j,k] = np.nan
+                        model_sfs[i,m,j,k] = np.nan
+                        raw_ehkl[i,j,k] = np.nan
+
     # 1. Limit the range of sin2psi (or psi)
     if type(sin2psimx)!=type(None) or \
        type(psimx)!=type(None):
         if type(sin2psimx)!=type(None):
             bounds=[0., sin2psimx]
         elif type(psimx)!=type(None):
-            bounds=[0., np.sin(psimx*np.pi/180.)**2]
+            bounds=[0.,np.sin(psimx*np.pi/180.)**2]
 
-        raw_sfs,model_sfs,model_igs,model_vfs,model_ehkls,raw_psis \
+        raw_sfs,model_sfs,model_igs,model_vfs,\
+            model_ehkls,raw_psis,_sf_,raw_vfs\
             = filter_psi3(
-                sin2psis_init,bounds,raw_sfs,model_sfs,model_igs,
-                model_vfs,model_ehkls,raw_psis)
+                sin2psis_init,bounds,
+                raw_sfs,model_sfs,model_igs,model_vfs,
+                model_ehkls,raw_psis,_sf_,raw_vfs)
 
         ## reduce the psis in model_rs
         model_rs.psis, = filter_psi3(
             sin2psis_init,bounds,
-            model_rs.psis[::])
+            model_rs.psis.copy())
         model_rs.npsi = len(model_rs.psis)
+
+    DEC_interp = _sf_.copy()
 
     # 2. Finite number of tiltings
     if psi_nbin!=1:
-        model_sfs, model_igs, model_vfs, model_ehkls \
-            = psi_reso4(model_rs.psis, psi_nbin,
-                        model_sfs,model_igs,model_vfs,
-                        model_ehkls)
+        model_sfs, model_igs, model_vfs, \
+            model_ehkls, _sf_ \
+            = psi_reso4(
+                model_rs.psis, psi_nbin,
+                model_sfs,model_igs,
+                model_vfs,model_ehkls,_sf_)
         model_rs.psis, = psi_reso4(
-            model_rs.psis[::],psi_nbin,model_rs.psis[::])
+            model_rs.psis.copy(),psi_nbin,
+            model_rs.psis.copy())
         model_rs.npsi = len(model_rs.psis)
 
     # 3. Assign tdat
     if ig_sub: model_tdats = model_ehkls - model_igs
-    else: model_tdats = model_ehkls[::]
+    else: model_tdats = model_ehkls.copy()
 
     # 4. Perturb ehkl (common)
     if iscatter:
@@ -267,50 +311,43 @@ def ex_consistency(
                 tdats[istp,iphi,:] = u_epshkl(
                     model_tdats[istp,iphi],
                     sigma=sigma)
-    else: tdats=model_tdats[::]
-
-    # 5. Filter based on vf
-    # if not(ivf_ext): model_rs.dat_model.mask_vol()
-    # elif ivf_ext:
-    #     shape1 = model_rs.dat_model.vf.shape
-    #     shape2 = vf_ext.shape
-    #     if shape1==shape2: model_rs.dat_model.vf[::] =\
-    #        vf_ext[::]
-    #     else:raise IOError, 'shape mismatch'
-    #     model_rs.dat_model.mask_vol()
-
-    # if pmargin!=None: model_rs.dat_model.\
-    #    mask_vol_margin(pmargin)
-
+    else: tdats=model_tdats.copy()
 
     ## end of data process
     #------------------------------------------------------------#
 
     if mod_ext==None: mod_ref='STR_STR.OUT'
-    else: mod_ref='%s.%s'%(mod_ref.split('.')[0],mod_ext)
+    else: mod_ref='%s.%s'%(mod_ref.split('.')[0],
+    mod_ext)
 
     flow_weight = FlowCurve(name='Model weighted')
     flow_weight.get_model(fn=mod_ref)
-    flow_weight.get_eqv() ## calc Von Mises stress/strain
+    ## calc Von Mises stress/strain
+    flow_weight.get_eqv()
 
     if len(flow_weight.epsilon_vm)<5: lc='k.'
     else:                             lc='k-'
 
     if iplot:
-        ax1.plot(flow_weight.epsilon_vm,flow_weight.sigma_vm,
-                 lc,label=r'$\langle \sigma^c \rangle$',
-                 alpha=1.0)
+        ax1.plot(
+            flow_weight.epsilon_vm,
+            flow_weight.sigma_vm,
+            lc,label=r'$\langle \sigma^c \rangle$',
+            alpha=1.0)
         axes_label.__eqv__(ax1,ft=10)
 
-    ## plot all stress factors at individual deformation levels
+    ## plot all stress factors at individual
+    ## deformation levels
+
     stress = []
-    if verbose: print '%8s%8s%8s%8s%8s%8s'%(
+    if verbose or True: print '%8s%8s%8s%8s%8s%8s'%(
         'S11','S22','S33','S23','S13','S12')
 
-    ############################################################
+    ################################################
     ## *Serial* Loop over the deformation steps
-    # nstp = model_rs.dat_model.nstp
-    nstp = 3 ## debugging
+    ref_psis = model_rs.psis.copy()
+    nstp = model_rs.dat_model.nstp
+    # nstp = 3 ## debugging
     for istp in range(nstp):
         """
         Dimensions of data arrays for:
@@ -321,23 +358,42 @@ def ex_consistency(
         strain (nstp, 6)
         vf     (nstp, nphi, npsi)
         """
-        model_rs.sf = model_sfs[istp][::]
-        model_rs.eps0 = model_igs[istp][::]
-        model_rs.ehkl = model_ehkls[istp][::]
-        model_rs.tdat = tdats[istp][::]
+        print 'processing: %2.2i/%2.2i'%(istp,nstp)
+        #model_rs.sf = model_sfs[istp].copy()
+
+        ## filter signals where any data is nan
+        ref = _sf_[istp].copy()
+        inds = []
+
+        ## masking can be improved by being
+        ## specific on phi axis -> require fix in RS.rs
+        # for iphi in range(len(ref[0])):
+        for ipsi in range(len(ref_psis)):
+            if not(np.isnan(ref[0:2,:,ipsi]).any()):
+                inds.append(ipsi)
+
+        model_rs.sf  = _sf_[istp][:,:,inds]
+        model_rs.psis = ref_psis[inds]
+        model_rs.npsi = len(model_rs.psis)
+        model_rs.eps0 = model_igs[istp][:,inds]
+        model_rs.ehkl = model_ehkls[istp][:,inds]
+        model_rs.tdat = tdats[istp][:,inds]
 
         #-----------------------------------#
         ## find the sigma ...
-        s11 = model_rs.dat_model.flow.sigma[0,0][istp]
-        s22 = model_rs.dat_model.flow.sigma[1,1][istp]
+        s11 = model_rs.dat_model.\
+              flow.sigma[0,0][istp]
+        s22 = model_rs.dat_model.\
+              flow.sigma[1,1][istp]
 
-        ## find the stress by fitting the elastic strains
+        ## find the stress by fitting
+        ## the elastic strains
         dsa_sigma = model_rs.find_sigma(
             ivo=[0,1],
-            init_guess=[0,0,0,0,0,0],#init_guess=[s11,s22,0,0,0,0],
+            init_guess=[0,0,0,0,0,0],#[s11,s22,0,0,0,0],
             weight = wgt) # None
 
-        if verbose:
+        if verbose or True:
             for i in range(6): print '%+7.1f'%(dsa_sigma[i]),
             print ''
         stress.append(dsa_sigma)
@@ -345,7 +401,7 @@ def ex_consistency(
         full_Ei = np.zeros((model_rs.nphi,len(raw_psis)))
         for iphi in range(model_rs.nphi):
             for ipsi in range(len(raw_psis)):
-                for k in range(6):
+                for k in range(2):
                     full_Ei[iphi,ipsi] \
                         = full_Ei[iphi,ipsi]+\
                         raw_sfs[istp,k,iphi,ipsi]*dsa_sigma[k]
@@ -369,8 +425,10 @@ def ex_consistency(
                 ## stress_wgt: the mechanical stress.
                 ## will be used as a reference line
                 istp=istp,nxphi=nxphi,stress_wgt=[s11,s22,0,0,0,0],
-                wgt=raw_vfs[istp][::],wgt_psi=raw_psis,
-                full_Ei=full_Ei,
+                wgt=raw_vfs[istp].copy(),wgt_psi=raw_psis,
+                full_Ei = full_Ei,
+                full_DEC = raw_sfs[istp].copy(),
+                DEC_interp = DEC_interp[istp].copy(),
                 ivo=[0,1],hkl=hkl,ileg=ileg,iwind=False,
                 ipsi_opt=ipsi_opt)
             fs.savefig(f2);fe.savefig(f1);f_er.savefig(f3)
@@ -431,163 +489,15 @@ def ex_consistency(
 
     return model_rs, flow_weight, flow_dsa
 
-
-def minimal_parallel_ex_consistency_(
-    ifig=50,nxphi=3,
-    exp_ref=[],exp_lab=[],mod_ext=None,
-    mod_ref='STR_STR.OUT',sin2psimx=None,
-    iscatter=False,sigma=5e-5,psimx=None,psi_nbin=1,
-    ig_sub=True,istep=None,hkl=None,iplot=True,
-    iwind=False,wdeg=2,ipsi_opt=1,fn_sff=None,
-    pmargin=None,path='',
-    sf_ext=None,ig_ext=None,iwgt=False):
-    """
-    minimal parallel version of ex_consistency
-    parallel in the sense that stress analysis is done
-    for individual step in parallel
-
-    Remove all plots.
-    """
-    from rs import ResidualStress,u_epshkl,filter_psi,\
-        filter_psi2,psi_reso, psi_reso2, psi_reso3
-    from MP.mat import mech # mech is a module
-    FlowCurve = mech.FlowCurve
-
-    model_rs = ResidualStress(
-        mod_ext=mod_ext,
-        fnmod_ig='igstrain_fbulk_ph1.out',
-        fnmod_sf='igstrain_fbulk_ph1.out',
-        i_ip=1)
-
-    ## masking array element based on diffraction volume
-    model_rs.dat_model.mask_vol()
-    if pmargin!=None: model_rs.dat_model.\
-            mask_vol_margin(pmargin)
-    if mod_ext==None: mod_ref='STR_STR.OUT'
-    else:             mod_ref='%s.%s'%(
-        mod_ref.split('.')[0],mod_ext)
-
-    flow_weight = FlowCurve(name='Model weighted')
-    flow_weight.get_model(fn=mod_ref)
-    flow_weight.get_eqv() ## calc Von Mises stress/strain
-
-    if len(flow_weight.epsilon_vm)<5: lc='k.'
-    else:                             lc='k-'
-
-    stress = []
-    print '%8s%8s%8s%8s%8s%8s'%(
-        'S11','S22','S33','S23','S13','S12')
-
-    ## 'Stage' model diffraction orientations to model_rs
-    model_rs.phis = model_rs.dat_model.phi
-    model_rs.psis = model_rs.dat_model.psi
-    model_rs.nphi = len(model_rs.phis)
-    model_rs.npsi = len(model_rs.psis)
-
-    ############################################################
-    ## *Serial* Loop over the deformation steps
-    for istp in range(model_rs.dat_model.nstp):
-        """
-        Dimensions of data arrays for:
-        ==============================
-        sf     (nstp, k, nphi, npsi)
-        ig     (nstp, nphi, npsi)
-        ehkl   (nstp, nphi, npsi)
-        strain (nstp, 6)
-        vf     (nstp, nphi, npsi)
-        """
-        ## 'Stage' relevant properties to be used for analysis
-        model_rs.sf   = model_rs.dat_model.sf[istp][::]
-        model_rs.eps0 = model_rs.dat_model.ig[istp][::]
-        model_rs.ehkl = model_rs.dat_model.ehkl[istp][::]
-        wgt           = model_rs.dat_model.vf[istp][::]
-
-        ## whether or not intergranular strain is subtracted.
-        if ig_sub: model_rs.tdat = model_rs.ehkl - model_rs.eps0
-        else:      model_rs.tdat = model_rs.ehkl[::]
-        tdat_ref = model_rs.tdat[::]
-
-        ## Inducing counting stats noise in e(hkl)
-        if iscatter:
-            tdat_scatter = []
-            for iphi in range(len(tdat_ref)):
-                dum = u_epshkl(tdat_ref[iphi],sigma=sigma)
-                tdat_scatter.append(dum)
-            tdat_scatter = np.array(tdat_scatter)
-            model_rs.tdat = tdat_scatter
-
-        ## Use only finite range of psi tilts
-        if type(sin2psimx)!=type(None) or \
-           type(psimx)!=type(None):
-            filter_psi(model_rs,sin2psimx=sin2psimx,psimx=psimx)
-            wgt = filter_psi2(
-                wgt,sin2psi=np.sin(model_rs.psis)**2,
-                bounds =[0., sin2psimx])
-            if type(sf_ext)!=type(None):
-                model_rs.sf = sf_ext[istp]
-            elif type(ig_ext)!=type(None):
-                model_rs.ig = ig_ext[istp]
-
-        ## Use a finite frequence of psi tilts
-        if psi_nbin!=1:
-
-            ## psi_reso3: Reduce elements along the psi axis
-            wgt = psi_reso3(wgt[::],psi=model_rs.psis,ntot=psi_nbin)
-            # ## psi_reso2: Make data nearly-equal spaced along psi
-            # ## or along sin2psi given the number of desired data points
-            # psi_reso2(model_rs,ntot=psi_nbin)
-
-            ## psi_reso4 : using psi_reso3
-            model_rs.sf, model_rs.eps0, model_rs.ehkl \
-                = psi_reso4(psi,psi_nbin, model_rs.sf[::],
-                            model_rs.eps0[::], model_rs.ehkl[::])
-            if ig_sub: model_rs.tdat = model_rs.ehkl - model_rs.eps0
-            else:      model_rs.tdat = model_rs.ehkl[::]
-            tdat_ref = model_rs.tdat[::]
-
-
-
-        #-----------------------------------#
-        ## find the sigma ...
-        s11 = model_rs.dat_model.flow.sigma[0,0][istp]
-        s22 = model_rs.dat_model.flow.sigma[1,1][istp]
-
-        if iwgt: pass
-        else: wgt = None # overwrite wgt
-
-        dsa_sigma = model_rs.find_sigma(
-            ivo=[0,1],
-            init_guess=[0,0,0,0,0,0],
-            #init_guess=[s11,s22,0,0,0,0],
-            weight = wgt # None
-            )
-
-        for i in range(6): print '%+7.1f'%(dsa_sigma[i]),
-        print ''
-        stress.append(dsa_sigma)
-        #-----------------------------------#
-
-    # end of the serial loop over deformation steps
-    ############################################################
-
-    stress   = np.array(stress).T # diffraction stress
-    flow_dsa = FlowCurve(name='Diffraction Stress')
-    flow_dsa.get_6stress(stress)
-    flow_dsa.get_33strain(model_rs.dat_model.flow.epsilon)
-    flow_dsa.get_eqv()
-
-    sigma_wgt = flow_weight.sigma
-    return model_rs, flow_weight, flow_dsa
-
-
 def __model_fit_plot__(
         container,ifig,istp,nxphi=None,hkl=None,
         wgt=None,wgt_psi=None,full_Ei=None,
+        full_DEC = None,
+        DEC_interp=None,
         stress_wgt=None,ivo=None,fig=None,figs=None,fige=None,
         c1='r',c2='b',m1='--',m2='-',isf=[True,True],
         ileg=True,iwind=False,wdeg=2,
         ipsi_opt=0):
-
     """
     Plot container's analyzed data
     """
@@ -611,7 +521,7 @@ def __model_fit_plot__(
     ivf=True
     #vf   = container.dat_model.vf[istp]
     #ngr  = container.dat_model.ngr[istp]
-    if type(wgt)!=type(None): vf   = wgt[::]
+    if type(wgt)!=type(None): vf   = wgt.copy()
     else: vf =[np.nan]
 
     if np.all(np.isnan(vf)):
@@ -630,8 +540,9 @@ def __model_fit_plot__(
             left=0.15,right=0.25,nh=1,h0=0.2,h1=0,
             down=0.08,up=0.10,iarange=True)
     if figs==None: figs= wide_fig(
-            ifig+1,nw=nphi,w0=0.00,ws=0.5,w1=0.0,
-            uw=3.0,left=0.12,right=0.10)
+            ifig+1,nw=nphi,w0=0.00,ws=0.5,w1=0.0,uw=3.0,
+            left=0.15,right=0.25,nh=1,h0=0.2,h1=0,
+            down=0.08,up=0.10,iarange=True)
     if fige==None: fige= wide_fig(
             ifig+2,nw=nphi,w0=0.00,ws=0.5,w1=0.0,
             uw=3.0,left=0.12,right=0.10)
@@ -642,24 +553,24 @@ def __model_fit_plot__(
 
     for iphi in range(nphi):
         ax = fig.axes[iphi]; axs = figs.axes[iphi]
-        if ivf: axesv.append(axes[iphi].twinx())
         ax.set_title( r'$\phi=%3.1f^\circ$'%(phis[iphi]*180/pi))
         axs.set_title(r'$\phi=%3.1f^\circ$'%(phis[iphi]*180/pi))
         ax.locator_params(nbins=4); axs.locator_params(nbins=4)
-        if ivf: axesv[iphi].locator_params(nbins=4)
+        if ivf:
+            axesv.append(axes[iphi].twinx())
+            axesv[iphi].locator_params(nbins=4)
 
     for iphi in range(nphi):
         ax = axes[iphi]; ae = ax_er[iphi]
         if ivf: av = axesv[iphi];
         ## convert psi to user's convenience.
         if iphi==0:
-            if iEi: xEi = sin2psi_opt(wgt_psi[::],ipsi_opt)
-            x  = sin2psi_opt(psis[::],ipsi_opt)
-            if ivf: xv = sin2psi_opt(wgt_psi[::],ipsi_opt)
+            if iEi: xEi = sin2psi_opt(wgt_psi.copy(),ipsi_opt)
+            x  = sin2psi_opt(psis.copy(),ipsi_opt)
+            if ivf: xv = sin2psi_opt(wgt_psi.copy(),ipsi_opt)
             if iwind:
-                x = sin2psi_opt(psis[::],2)
-                if ivf: xv = sin2psi_opt(wgt_psi[::],2)
-
+                x = sin2psi_opt(psis.copy(),2)
+                if ivf: xv = sin2psi_opt(wgt_psi.copy(),2)
 
         ## E_{i}
         if ileg: label=r'Fit'
@@ -690,27 +601,20 @@ def __model_fit_plot__(
         elif hkl!=None and ileg: label='$E_{i} - \varepsilon^{\{%s\}}-\varepsilon^{\{%s\}}_0$'%(hkl,hkl)
         elif ileg!=True: label = None
 
-        # if np.all(np.isnan(vf[iphi])):
-        #     print 'All volume fractions are nan'
-        # else:
-        if ivf: av.plot(xv,vf[iphi],'r-')
+        if ivf: av.plot(xv,vf[iphi],'k--')
 
         ae.plot(x,Ei[iphi]*1e6-y,c2+m2,label=label)
         deco(ax=ax,iopt=0,hkl=hkl,ipsi_opt=ipsi_opt)
         deco(ax=ae,iopt=0,hkl=hkl,ipsi_opt=ipsi_opt)
-        if iphi==0 and ileg:
-            pass
-            # ax.legend(loc='upper right',fontsize=9,fancybox=True).\
-            #     get_frame().set_alpha(0.5)
-            # av.legend(loc='lower right',fontsize=9,fancybox=True).\
-            #     get_frame().set_alpha(0.5)
 
         ## all_stress_factor_hkl.pdf
         ax=axesf[iphi]
         if hkl==None and ileg:
-            lab1=r'$\mathbb{F}_{11}$'; lab2=r'$\mathbb{F}_{22}$'
+            lab1=r'$\mathbb{F}_{11}^{I}$ in use'
+            lab2=r'$\mathbb{F}_{22}^{I}$ in use'
         elif hkl!=None and ileg:
-            lab1=r'$\mathbb{F}^{\{%s\}}_{11}$'%hkl; lab2=r'$\mathbb{F}^{\{%s\}}_{22}$'%hkl
+            lab1=r'$\mathbb{F}^{\{%s\}}^{I}_{11}$ in use'%hkl
+            lab2=r'$\mathbb{F}^{\{%s\}}^{I}_{22}$ in use'%hkl
         elif ileg!=True:
             lab1=None; lab2=None
 
@@ -733,19 +637,49 @@ def __model_fit_plot__(
             if isf[i]:
                 # l, = ax.plot(
                 #     xv,sf[i][iphi]*1e6,st,label=lab)
+
+                _l1_=None
+                _l2_=None
+                if i==0 and iphi==nphi-1:
+                    _l1_=r'$\mathbb{F}_{11}$'
+                    _l2_=r'$\mathbb{F}^{\ I}_{11}$'
+                    ls='-'
+                if i==1 and iphi==nphi-1:
+                    _l1_=r'$\mathbb{F}_{22}$'
+                    _l2_=r'$\mathbb{F}^{\ I}_{22}$'
+                    ls='--'
+
+                if type(full_DEC)!=type(None):
+                    if (full_DEC[i][iphi]==0).any():
+                        raise IOError,'Found zero in full_DEC'
+                    ax.plot(xv,full_DEC[i][iphi]*1e6,'-',
+                            label=_l1_,color=c)
+                if type(DEC_interp)!=type(None):
+                    ax.plot(xv,DEC_interp[i][iphi]*1e6,'k--',
+                            label=_l2_,color=c)
+
                 for j in range(len(sf[i][iphi][:])):
                     if sf[i][iphi][j]!=0:
                         if j==0:
-                            ax.plot(x[j],sf[i][iphi][j]*1e6,ls='None',
-                                    color=c,marker=marker,
-                                    label=lab)
+                            ax.plot(
+                                x[j],sf[i][iphi][j]*1e6,
+                                ls='None',
+                                color=c,marker=marker,
+                                label=lab)
                         else:
-                            ax.plot(x[j],sf[i][iphi][j]*1e6,color=c,marker=marker)
+                            ax.plot(
+                                x[j],sf[i][iphi][j]*1e6,
+                                color=c,marker=marker)
+                ## legend
+                if iphi==nphi-1 and i==1 and istp==0:
+                    fancy_legend(ax,size=11,nscat=1,ncol=1,
+                                 bbox_to_anchor=(1.4,1))
 
         if ivf:
-            av.set_ylabel(r'Vol. $f(\phi,\psi)$',dict(fontsize=13))
-            av.tick_params(axis='y',colors='red')
-            av.yaxis.label.set_color('red')
+            av.set_ylabel(r'Vol. $f(\phi,\psi)$',
+                          dict(fontsize=13))
+            # av.tick_params(axis='y',colors='red')
+            # av.yaxis.label.set_color('red')
 
         deco(ax=ax,iopt=1,hkl=hkl,ipsi_opt=ipsi_opt)
         # if iphi==0:fancy_legend(ax,nscat=1)
@@ -769,15 +703,28 @@ def __model_fit_plot__(
             ax.plot(x,container.Ei[iphi]*1e6,'o',
                     mfc='None',mec='black',label=label)
             if iEi: ax.plot(xEi, full_Ei[iphi]*1e6,'k-',label=lab1)
-            if iphi==nphi-1: fancy_legend(
+
+            if iphi==nphi-1:
+                if ivf and istp==0: ax.plot(
+                        0,0,'k--',label='Vol.')## to trick the legend
+                fancy_legend(
                     ax,size=11,nscat=1,ncol=1,
                     bbox_to_anchor=(1.4,1))
 
+
+    for iax in range(len(axes)):
+        axes[iax].set_ylim(-1500,)
+
+    for iax in range(len(axes)):
+        axes[iax].set_ylim(-1500,)
+        if ivf:
+            axesv[iax].set_ylim(0,0.30)
 
     tune_x_lim(fig.axes,axis='x')
     tune_x_lim(axes,    axis='y')
     tune_xy_lim(ax_er           )
     if ivf: tune_x_lim(axesv,   axis='y')
+
     tune_x_lim(axesf,   axis='y')
 
     ## remove redundant axis labels
