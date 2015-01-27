@@ -797,11 +797,39 @@ def influence_of_nbin_scatter(
     return x, e
 
 
-
 #############################################
 ## Function influence_of_cnts_stats is the ##
 ## main function that rs_grid is using.    ##
 #############################################
+
+def wrap_func(
+    sigma,
+    dec_inv_frq,
+    dec_interp,
+    bounds,
+    nbins):
+    """
+    Wrap ex_consistency and return x, y
+    """
+    from RS.rs_ex import ex_consistency as func
+
+    myrs, flow_weight, flow_dsa = func(
+        sigma=sigma,
+        dec_inv_frq=dec_inv_frq,
+        sin2psimx=bounds[1],
+        psi_nbin=nbins,
+        dec_interp=dec_interp,
+
+        iscatter=True,
+        ig_sub=True,
+        iplot=False, # iplot=True
+        )
+
+    x = flow_weight.epsilon_vm
+    y = (flow_weight.sigma_vm - flow_dsa.sigma_vm)/flow_weight.sigma_vm
+
+    return x, y
+
 def influence_of_cnts_stats(
     ## characteristics of an ensemble for stress data
     sigmas=[1e-5, 2e-5, 5e-5, 1e-4],
@@ -812,6 +840,8 @@ def influence_of_cnts_stats(
     nsample=4,
     intp_opt=0,
     iplot=False,
+
+
     DEC_freq_sym=True,
     NCPU=0):
     """
@@ -836,6 +866,8 @@ def influence_of_cnts_stats(
     DEC_freq_sym
     NCPU
     """
+    from RS.rs_ex import ex_consistency as func
+
     if iplot:
         import matplotlib.pyplot as plt
         from MP.lib import mpl_lib,axes_label
@@ -849,23 +881,22 @@ def influence_of_cnts_stats(
     print '\n\n****************'
     print 'test run started'
     print '****************\n\n'
-    x,y = influence_of_nbin_scatter(
-        sigma=sigmas[0],
-        ss=ss,
-        bounds=bounds,
-        nbins=[nbins],
+    myrs,flow1,flow2 =func(
+        sin2psimx=bounds[1],
         iscatter=True,
-        nsample=1,
-        iwgt=iwgt,
-        intp_opt=intp_opt,
-        iplot=False,
-        )
+        sigma=sigmas[0],
+        psi_nbin=nbins,
+        ig_sub=True,
+        iplot=False, # iplot=True
+        dec_inv_frq=ss,
+        dec_interp=intp_opt)
+
     print '\n\n**************'
     print 'test completed'
     print '**************\n\n'
-    ## raw_input()
+    # return ## debugging
 
-    Y_all = np.zeros((len(sigmas), nsample, len(x)))
+    Y_all = np.zeros((len(sigmas), nsample, flow1.nstp))
     M = []
     ls=['-+','-s','-o','-d','-t']
     import multiprocessing
@@ -873,24 +904,22 @@ def influence_of_cnts_stats(
     if NCPU==0: NCPU = multiprocessing.cpu_count()
     print 'NCPU: %i'%NCPU
     pool = Pool(processes = NCPU)
-    func = influence_of_nbin_scatter
+    ## function is now wrap_func
     results = []
     for i in range(len(sigmas)):
         results.append([])
         for j in range(nsample):
             results[i].append(
                 pool.apply_async(
-                    func,
+                    wrap_func,
                     args=(
                         sigmas[i],
                         ss,
-                        bounds,
-                        [nbins],
-                        True,
-                        1,
-                        False,
                         intp_opt,
-                        False,),))
+                        bounds,
+                        nbins
+                        )
+                    ,))
     ## close and join
     pool.close()
     pool.join()
