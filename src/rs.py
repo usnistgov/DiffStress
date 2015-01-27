@@ -1484,8 +1484,13 @@ class ResidualStress:
                     # once ivo is given, optimization runs only
                     # for the given ivo components
                     if ivo==None or (ivo!=None and k in ivo):
-                        self.Ei[iphi,ipsi] = self.Ei[iphi,ipsi] \
-                            + self.cffs[k,iphi,ipsi] * self.sigma[k]
+                        if not(np.isnan(
+                                self.cffs[k,iphi,ipsi])):
+                            self.Ei[iphi,ipsi] \
+                                = self.Ei[iphi,ipsi] \
+                                + self.cffs[k,iphi,ipsi] \
+                                * self.sigma[k]
+
 
     def calc_Di(self,d0c=None,d0=None):
         """
