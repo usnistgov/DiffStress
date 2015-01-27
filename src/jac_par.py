@@ -225,7 +225,7 @@ def tabular_figs01():
     fig.clf()
 
 
-def DEC_intp(ss=[1,2,4],intps=[0,3,4],inds=[79,90,95,120]):
+def DEC_intp(ss=[1,2,4],intps=[0,3,4],inds=[79,90,120]):
     """
     DEC interpolation comparison
 
@@ -287,10 +287,14 @@ def DEC_intp(ss=[1,2,4],intps=[0,3,4],inds=[79,90,95,120]):
                 if k==0:
                     lab1=r'Reference $\mathbb{F}_{ij}$'
                     lab2=r'Interpolated $\mathbb{F}^{\ I}_{ij}$'
-                ax.plot(evm, DEC_raw[:,0,0,ind]*1e6,'k-',
+                y_raw = DEC_raw[:,0,0,ind]*1e6
+                ax.plot(evm, y_raw,'k-',
                         label=lab1)
-                ax.plot(evm, DEC_intp[:,0,0,ind]*1e12,'k-.',
+                y_intp =  DEC_intp[:,0,0,ind]*1e12
+                ax.plot(evm,y_intp,'k--',
                         label=lab2)
+                ax.fill_between(evm,y_raw,y_intp,
+                                facecolor='gray',alpha=0.5)
                 ax.plot(
                     evm[::ss[i]],
                     DEC_raw[:,0,0,ind][::ss[i]]*1e6,
@@ -334,4 +338,5 @@ def DEC_intp(ss=[1,2,4],intps=[0,3,4],inds=[79,90,95,120]):
     fancy_legend(axes[0][0],size=10,nscat=1,ncol=1,
                  bbox_to_anchor=(-0.1,1))
     fig.savefig('dec_intp.pdf')
+    fig.savefig('dec_intp.png')
     return model_rs
