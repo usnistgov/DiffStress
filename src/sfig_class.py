@@ -154,12 +154,15 @@ class SF:
             for ipsi in range(self.npsi):
                 for k in range(self.nij):
                     y = self.sf_old[:,iphi,ipsi,k]
-                    self.sf_new[:,iphi,ipsi,k] \
-                        = rs.interpolate(
+                    try:
+                        self.sf_new[:,iphi,ipsi,k] \
+                            = rs.interpolate(
                             xs=epsilon_vm,
                             xp=self.flow.epsilon_vm,
                             fp=y,
                             iopt=iopt)
+                    except:
+                        self.sf_new[:,iphi,ipsi,k]=np.nan
 
         self.sf = self.sf_new
         # Overwrite the flow? self.nstp also needs change
