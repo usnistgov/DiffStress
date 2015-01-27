@@ -80,7 +80,6 @@ def ex_consistency(
     hkl       : hkl of plane, for the sake of labels.
     path      : place holder for strain path
 
-
     ----------------------------------------
     ## Data process parameters
     #1. Main options
@@ -110,7 +109,7 @@ def ex_consistency(
     ## misc. options
     iplot (True) : flag whether or not MPL plot is performed
     ipsi_opt 0: sin2psi
-             1: sing(psi) * sin2psi
+             1: sign(psi) * sin2psi
              2: psi
     istep     : If other than None, analysis is carried out
                 only for the given istep
@@ -351,6 +350,11 @@ def ex_consistency(
         strain (nstp, 6)
         vf     (nstp, nphi, npsi)
         """
+
+        if iplot==False and istep!=None:
+            nstp=1
+            istp = istep
+
         print 'processing: %2.2i/%2.2i'%(istp,nstp)
         #model_rs.sf = model_sfs[istp].copy()
 
@@ -399,9 +403,16 @@ def ex_consistency(
                         = full_Ei[iphi,ipsi]+\
                         raw_sfs[istp,k,iphi,ipsi]*dsa_sigma[k]
 
+        if istep!=None and iplot==False:
+            return model_rs, s11,s22, dsa_sigma[0],dsa_sigma[1],\
+                raw_psis.copy(),\
+                raw_vfs[istp].copy(),raw_sfs[istp].copy(),\
+                full_Ei.copy(),\
+                DEC_interp[istp].copy()
+
         #-----------------------------------#
         if istp==0: ileg=True
-        else:       ileg=False
+        else:       ileg=True #False
 
         if (istep!=None and istp==istep) or\
            (istep==None and istp==nstp-1)\
@@ -594,7 +605,8 @@ def __model_fit_plot__(
         elif hkl!=None and ileg: label='$E_{i} - \varepsilon^{\{%s\}}-\varepsilon^{\{%s\}}_0$'%(hkl,hkl)
         elif ileg!=True: label = None
 
-        if ivf: av.plot(xv,vf[iphi],'k--')
+        if ivf: av.plot(xv,vf[iphi],'k-',lw=2,
+                        alpha=0.4)
 
         ae.plot(x,Ei[iphi]*1e6-y,c2+m2,label=label)
         deco(ax=ax,iopt=0,hkl=hkl,ipsi_opt=ipsi_opt)
@@ -682,7 +694,7 @@ def __model_fit_plot__(
         container.calc_Ei(ivo=ivo)
 
         if ileg:
-            label = r'$\mathbb{F}^{\ \ G, I}_{ij} \langle\sigma^c\rangle_{ij}$'
+            label = r'$\mathbb{F}^{\ I}_{ij} \langle\sigma^c\rangle_{ij}$'
             lab1 = r'$\mathbb{F}_{ij}\ \hat{\sigma}^{RS}_{ij}$'
         else:
             label=None
@@ -698,8 +710,9 @@ def __model_fit_plot__(
             if iEi: ax.plot(xEi, full_Ei[iphi]*1e6,'k-',label=lab1)
 
             if iphi==nphi-1:
-                if ivf and istp==0: ax.plot(
-                        0,0,'k--',label='Vol.')## to trick the legend
+                if ivf: ax.plot(
+                        0,0,'k-',lw=2,alpha=0.4,
+                        label='Vol.')## to trick the legend
                 fancy_legend(
                     ax,size=11,nscat=1,ncol=1,
                     bbox_to_anchor=(1.4,1))
