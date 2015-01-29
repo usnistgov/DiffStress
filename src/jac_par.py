@@ -318,6 +318,7 @@ def DEC_intp(ss=[1,2,4],intps=[0,3,4],inds=[79,90,120]):
         if j==0: s = 'Piecewise linear'
         if j==1: s = 'Quadratic interpation'
         if j==2: s = 'Linear fit'
+        if j==3: s = 'Power law fit'
 
         axes[0][j].annotate(
             s=s, horizontalalignment='center',
