@@ -88,19 +88,14 @@ def ex_consistency(
     vf_ext    : Overwrite grain volume fraction (nstp,nphi,npsi)
     iscatter (False) : introducing a random scattering of 'ehkl'
 
-    #1. tilting angle restriction/treatments
+    #2. tilting angle restriction/treatments
     sin2psimx : limiting the maximum sin2psi values, with which
                 stress-fitting is carried out
     psimx     : limiting the maximum psi value
     psi_nbin  : If other than 1, limit the number of data
 
-    #2. IG strain-specific
+    #3. IG strain-specific
     ig_sub    : flag whether or not subtract the IG strain
-
-    #3. Weight treatments
-    iwgt      : Whether or not accounting for 'weight'
-    pmargin   : portional margin of volume that should exceed to
-                contribute to the ehkl/SF/IG in model_rs
 
     #4. DEC related
     dec_inv_frq   : Inverse Frequency of DEC measures along EVM (nstp)
