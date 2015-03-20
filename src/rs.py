@@ -1070,17 +1070,20 @@ class ResidualStress:
         sfm = t[3] # [istp,k,phi,psi] {fhkl} Stress Factor
 
         self.sfm = np.zeros((sfm.shape[0],6,\
-                             sfm.shape[2],sfm.shape[3]))
+                                 sfm.shape[2],sfm.shape[3]))
         for istp in range(len(sfm)):
             for k in range(len(sfm[istp])):
                 for iphi in range(len(sfm[istp,k])):
                     self.sfm[istp,k,iphi,:] \
                         = sfm[istp,k,iphi,:].copy()
 
+        ## Substitue the upper off-diagonals to the lowers.
         dum_psi = t[8,0,0,0]
         dum = self.sfm[:,3,:,:] # SF_23
         self.sfm[:,3,:,:] = self.sfm[:,5,:,:]
         self.sfm[:,5,:,:] = dum[:,:,:]
+
+
         for istp in range(len(self.sfm)):
             for k in range(len(self.sfm[istp])):
                 for iphi in range(len(self.sfm[istp,k])):

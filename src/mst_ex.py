@@ -178,6 +178,9 @@ def return_vf():
     Return volume fraction and grains
     in diffraction from 'int_els_ph1.out'
 
+    Results are sorted along 'psi' axis
+    in the ascending order
+
     vdat: (nstp,nphi,npsis)
     ngrd: (nstp,nphi,npsis)
     """
@@ -417,8 +420,8 @@ def use_intp_sfig(ss=2,iopt=0,iplot=False,
                   i_ip=1)
 
     ## assign nan for sf==0
-    _SF_   = RS_model.dat_model.sf[::]
-    _IG_   = RS_model.dat_model.ig[::]
+    _SF_   = RS_model.dat_model.sf[::].copy()
+    _IG_   = RS_model.dat_model.ig[::].copy()
 
     if iwgt:
         _SF_[_SF_==0]=np.nan
@@ -432,24 +435,24 @@ def use_intp_sfig(ss=2,iopt=0,iplot=False,
     ## 2. Create a set of SF/IG/Flow interpolated
     #     at several plastic increments
 
-    ##   2-1. Reduce the SF/IG/FLow nstp
-    # Half of the original plastic increments
+    ##   2-1. Reduce the SF/IG/FLow nstp accroding to ss
 
     if type(ss).__name__=='int':
-        SF = _SF_[::ss]; IG = _IG_[::ss]
+        SF = _SF_[::ss].copy(); IG = _IG_[::ss].copy()
         Flow.epsilon = Flow.epsilon.swapaxes(
-            0,-1)[::ss].swapaxes(0,-1)
+            0,-1)[::ss].swapaxes(0,-1).copy()
         Flow.sigma   = Flow.sigma.swapaxes(
-            0,-1)[::ss].swapaxes(0,-1)
-        Flow.nstp    = Flow.nstp / ss
+            0,-1)[::ss].swapaxes(0,-1).copy()
+        Flow.nstp    = Flow.epsilon.shape[-1]
         Flow.get_eqv()
     elif type(ss).__name__=='list':
-        SF = _SF_[ss]; IG = _IG_[ss]
-        Flow.epsilon = Flow.epsilon[:,:,ss]
-        Flow.sigma   = Flow.sigma[:,:,ss]
+        SF = _SF_[ss].copy(); IG = _IG_[ss].copy()
+        Flow.epsilon = Flow.epsilon[:,:,ss].copy()
+        Flow.sigma   = Flow.sigma[:,:,ss].copy()
         Flow.nstp    = len(ss)
         Flow.get_eqv()
     else: raise IOError, 'Unexpected type for ss'
+
 
     ##   2-2. Create the SF object
     import sfig_class

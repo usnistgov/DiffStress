@@ -16,7 +16,7 @@ sin2psi_opt = lib.sin2psi_opt
 
 ##
 sigmas=[5e-5,1e-4,2e-4] # best to worst
-nbins=[21,11,5] # best to worst
+nbins=[29,15,11,7] # best to worst
 
 gs=gridspec.GridSpec(
     len(sigmas),len(nbins),
@@ -75,24 +75,24 @@ def tabular_figs02():
             s = '%i'%nbins[j]
         axes[0][j].annotate(
             s=s,horizontalalignment='center',
-            size=10,xy=(0.5,1.2),
+            size=14,xy=(0.5,1.2),
             xycoords='axes fraction')
 
     for i in range(len(sigmas)):
         if i==0:
-            s=r'$\varepsilon^\mathrm{CSE}$=%5.1f'%(
+            s=r'$s^\mathrm{CSE}$=%i'%(
                 sigmas[i]*(10**6))
         elif i==len(sigmas)-1:
-              s=r'%5.1f $\mu$ strain'%(
+              s=r'%i $\mu$ strain'%(
                   sigmas[i]*(10**6))
-        else: s='%5.1f'%(sigmas[i]*(10**6))
+        else: s='%i'%(sigmas[i]*(10**6))
 
         axes[i][-1].annotate(
             s=s,
             verticalalignment='center',
             horizontalalignment='center',
             rotation=270,
-            size=10,xy=(1.20,0.5),
+            size=14,xy=(1.20,0.5),
             xycoords='axes fraction')
 
     fancy_legend(
@@ -145,7 +145,7 @@ def tabular_figs01():
             ax.plot(
                 x, model_rs.Ei[0]*1e6,'kx',
                 label=\
-                r'$\mathbb{F}_{ij} \hat{\sigma}^\mathrm{RS}_{ij}$')
+                r'$\mathbb{F}_{ij} \sigma^\mathrm{RS}_{ij}$')
 
             x = sin2psi_opt(raw_psis, 1)
             # ax.plot(x, full_Ei[0]*1e6,'k-') ## continuous Ei
@@ -176,24 +176,24 @@ def tabular_figs01():
             s = '%i'%nbins[j]
         axes[0][j].annotate(
             s=s,horizontalalignment='center',
-            size=10,xy=(0.5,1.2),
+            size=14,xy=(0.5,1.2),
             xycoords='axes fraction')
 
     for i in range(len(sigmas)):
         if i==0:
-            s=r'$\varepsilon^\mathrm{CSE}$=%5.1f'%(
+            s=r'$s^\mathrm{CSE}$=%i'%(
                 sigmas[i]*(10**6))
         elif i==len(sigmas)-1:
-              s=r'%5.1f $\mu$ strain'%(
+              s=r'%i $\mu$ strain'%(
                   sigmas[i]*(10**6))
-        else: s='%5.1f'%(sigmas[i]*(10**6))
+        else: s='%i'%(sigmas[i]*(10**6))
 
         axes[i][-1].annotate(
             s=s,
             verticalalignment='center',
             horizontalalignment='center',
             rotation=270,
-            size=10,xy=(1.20,0.5),
+            size=14,xy=(1.20,0.5),
             xycoords='axes fraction')
 
     for iax in range(len(fig.axes)):
@@ -270,10 +270,15 @@ def DEC_intp(ss=[1,2,4],intps=[0,3,4],inds=[79,90,120]):
         axes.append([])
         for j in range(len(intps)):
             ## interpolated DECs
+            print i,j
+            print ss[i],intps[j]
+            # if i==1 and j==0:
+            #     raise IOError
             _sf_, _ig_ = use_intp_sfig(
                 ss[i],iopt=intps[j],
                 iplot=False,iwgt=False)
-            DEC_intp = _sf_.sf.swapaxes(-1,-2).swapaxes(-2,-3)
+            dum = _sf_.sf.swapaxes(-1,-2).swapaxes(-2,-3)
+            DEC_intp = dum.copy()
 
             ax = fig.add_subplot(gs[i,j])
             ax.locator_params(nbins=4)
@@ -285,7 +290,7 @@ def DEC_intp(ss=[1,2,4],intps=[0,3,4],inds=[79,90,120]):
                 val_psi     = psi[ind] * 180./np.pi
                 lab1, lab2 = None, None
                 if k==0:
-                    lab1=r'Reference $\mathbb{F}_{ij}$'
+                    lab1=r'Actual $\mathbb{F}_{ij}$'
                     lab2=r'Interpolated $\mathbb{F}^{\ I}_{ij}$'
                 y_raw = DEC_raw[:,0,0,ind]*1e6
                 ax.plot(evm, y_raw,'k-',
@@ -315,8 +320,8 @@ def DEC_intp(ss=[1,2,4],intps=[0,3,4],inds=[79,90,120]):
 
     ## annotations
     for j in range(len(intps)):
-        if j==0: s = 'Piecewise linear'
-        if j==1: s = 'Quadratic interpation'
+        if j==0: s = 'Piecewise'
+        if j==1: s = 'Quadratic'
         if j==2: s = 'Linear fit'
         if j==3: s = 'Power law fit'
 
@@ -326,7 +331,7 @@ def DEC_intp(ss=[1,2,4],intps=[0,3,4],inds=[79,90,120]):
             xycoords='axes fraction')
 
     for i in range(len(ss)):
-        s = r'$f^{\ \mathbb{F}}=^1/_%i$'%ss[i]
+        s = r'$f^{\ \mathbb{F}}=^1/_{%i}$'%ss[i]
         axes[i][-1].annotate(
             s=s,
             verticalalignment='center',

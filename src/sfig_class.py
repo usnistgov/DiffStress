@@ -145,26 +145,70 @@ class SF:
             =8: zero
             =9: slinear
         """
+        import warnings
+
         self.sf_old = self.sf.copy()
         # self.flow.get_vm_strain()
         # self.flow.epsilon_vm #
         self.sf_new = np.zeros(
             (len(epsilon_vm),self.nphi,self.npsi,self.nij))
+        xp = self.flow.epsilon_vm.copy()
         for iphi in range(self.nphi):
             for ipsi in range(self.npsi):
                 for k in range(self.nij):
-                    y = self.sf_old[:,iphi,ipsi,k]
-                    try:
-                        self.sf_new[:,iphi,ipsi,k] \
-                            = rs.interpolate(
-                            xs=epsilon_vm,
-                            xp=self.flow.epsilon_vm,
-                            fp=y,
-                            iopt=iopt)
-                    except:
-                        self.sf_new[:,iphi,ipsi,k]=np.nan
+                    _y_  = self.sf_old[:,iphi,ipsi,k].copy()
+                    ## find non zero not (nan) values
+                    inds = []
+                    if (_y_==0).all():
+                        _y_ = _y_.copy()
+                        _xp_ = xp.copy()
+                        n_avail_dat = 0
+                    else:
+                        for m in range(len(_y_)):
+                            if _y_[m]!=0 and not(np.isnan(_y_[m])):
+                                inds.append(m)
+                        n_avail_dat = len(inds)
+                        pass
 
-        self.sf = self.sf_new
+                    if n_avail_dat==0 or n_avail_dat==1:
+                        if k<2:
+                            print 'interpolation is not ',
+                            print 'feasible due to insufficient',
+                            print 'number of data'
+
+                        self.sf_new[:,iphi,ipsi,k] = np.nan
+
+                    elif n_avail_dat>=2:
+                        _y_  = _y_[inds].copy()
+                        _xp_ = xp[inds].copy()
+                        try:
+                            self.sf_new[:,iphi,ipsi,k] \
+                                = rs.interpolate(
+                                xs=epsilon_vm.copy(),
+                                xp=_xp_,
+                                fp=_y_,
+                                iopt=iopt)
+                        except:
+                            print 'failed, thus using NN interp'
+                            try:
+                                self.sf_new[:,iphi,ipsi,k] \
+                                    = rs.interpolate(
+                                    xs=epsilon_vm.copy(),
+                                    xp=_xp_,
+                                    fp=_y_,
+                                    iopt=1) ## if fail, try assign nearest data
+                            except:
+                                nans = np.zeros(len(epsilon_vm))
+                                nans = np.nan * nans
+                                self.sf_new[:,iphi,ipsi] = nans
+
+                    else: raise IOError, 'Unexpected case'
+
+        if self.sf_new.shape!=(len(epsilon_vm),self.nphi,self.npsi,self.nij):
+            raise IOError, 'something wrong'
+
+
+        self.sf = self.sf_new.copy()
         # Overwrite the flow? self.nstp also needs change
         self.flow = fc()
         self.flow.epsilon_vm = np.array(epsilon_vm)
@@ -460,15 +504,55 @@ class IG:
         self.flow.epsilon_vm #
         self.ig_new = np.zeros(
             (len(epsilon_vm),self.nphi,self.npsi))
+        xp = self.flow.epsilon_vm.copy()
         for iphi in range(self.nphi):
             for ipsi in range(self.npsi):
-                y = self.ig_old[:,iphi,ipsi]
-                self.ig_new[:,iphi,ipsi]\
-                    = rs.interpolate(
-                        xs=epsilon_vm,
-                        xp=self.flow.epsilon_vm,
-                        fp=y,
-                        iopt=iopt)
+                _y_  = self.ig_old[:,iphi,ipsi].copy()
+
+                ## find non zero not (nan) values
+                inds = []
+                if (_y_==0).all():
+                    _y_  = _y_.copy()
+                    _xp_ = xp.copy()
+
+                else:
+                    for m in range(len(_y_)):
+                        if _y_[m]!=0 and not(np.isnan(_y_[m])):
+                            inds.append(m)
+
+                    n_avail_dat = len(inds)
+                    pass
+
+                if n_avail_dat==0 or n_avail_dat==1:
+                    # print 'interpolation is not ',
+                    # print 'feasible due to insufficient',
+                    # print 'number of data'
+                    self.ig_new[:,iphi,ipsi] = np.nan
+                elif n_avail_dat>=2:
+                    _y_  = _y_[inds].copy()
+                    _xp_ = xp[inds].copy()
+                    try:
+                        self.ig_new[:,iphi,ipsi]\
+                            = rs.interpolate(
+                            xs=epsilon_vm.copy(),
+                            xp=_xp_,
+                            fp=_y_,
+                            iopt=iopt)
+                    except:
+                        print 'failed in ig interpolation'
+                        try:
+                            self.ig_new[:,iphi,ipsi]\
+                                = rs.interpolate(
+                                xs=epsilon_vm.copy(),
+                                xp=_xp_,
+                                fp=_y_,
+                                iopt=1) ## if fail, try assign nearest data
+                        except:
+                            nans = np.zeros(len(epsilon_vm))
+                            nans = np.nan * nans
+                            self.ig_new[:,iphi,ipsi] = nans
+
+                else: raise IOError, 'Unexpected case'
 
         self.ig = self.ig_new
         # Overwrite the flow? self.nstp also needs change
