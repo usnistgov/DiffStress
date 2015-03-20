@@ -813,6 +813,8 @@ def wrap_func(
     nbins):
     """
     Wrap ex_consistency and return x, y
+
+    y = weight sigma - dsa sigma
     """
     from RS.rs_ex import ex_consistency as func
 
