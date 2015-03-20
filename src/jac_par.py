@@ -241,7 +241,6 @@ def DEC_intp(ss=[1,2,4],intps=[0,3,4],inds=[79,90,120]):
          =9: slinear
     inds=[70,40]
     """
-
     from MP.mat import mech # mech is a module
     FlowCurve = mech.FlowCurve
     from mst_ex import use_intp_sfig, return_vf
@@ -341,3 +340,105 @@ def DEC_intp(ss=[1,2,4],intps=[0,3,4],inds=[79,90,120]):
     fig.savefig('dec_intp.pdf')
     fig.savefig('dec_intp.png')
     return model_rs
+
+
+def DEC_evol():
+    """
+    Draw evolution of DECs with respect to plastic deformation
+    """
+    from MP.mat import mech # mech is a module
+    FlowCurve = mech.FlowCurve
+    from mst_ex import use_intp_sfig, return_vf
+    from rs import ResidualStress, filter_psi3
+    model_rs = ResidualStress(
+        mod_ext=None,fnmod_ig='igstrain_fbulk_ph1.out',
+        fnmod_sf='igstrain_fbulk_ph1.out',i_ip=1)
+    fc = FlowCurve(name='Weighted Average')
+    fc.get_model(fn='STR_STR.OUT')
+    fc.get_eqv()
+
+    phi = model_rs.dat_model.phi
+    nphi = model_rs.dat_model.nphi
+    psi = model_rs.dat_model.psi
+    sin2psi = sin2psi_opt(psi,1)
+    DEC_raw = model_rs.dat_model.sf.copy()
+    vf_raw, dum = return_vf()
+    DEC_raw, psi, sin2psi, vf_raw = filter_psi3(
+        sin2psi.copy(), [-0.5,0.5],
+        DEC_raw, psi.copy(), sin2psi.copy(), vf_raw.copy())
+
+    ## filter DEC_raw
+    DEC_raw[DEC_raw==0]=np.nan
+    evm = fc.epsilon_vm.copy()
+    nstp = fc.nstp
+    fig = plt.figure()
+    steps = [0,3,5,9]
+    nstp = len(steps)
+    gs=gridspec.GridSpec(
+        nstp,nphi,
+        wspace=0,hspace=0,left=0.25,right=0.8,top=0.8)
+
+    axes=[]; axev=[]; axs=[]; axv=[]
+    for i in range(len(steps)):
+        axes.append([])
+        axev.append([])
+        for j in range(nphi):
+            ax = fig.add_subplot(gs[i,j])
+            av = ax.twinx()
+
+            axs.append(ax);axes[i].append(ax); axv.append(av); axev[i].append(av)
+            ax.locator_params(nbins=4)
+            lab1 = r'$\mathbb{F}_{11}$'; lab2 = r'$\mathbb{F}_{22}$'
+            ax.plot(sin2psi, DEC_raw[steps[i],0,j,:]*1e6,'k-',label=lab1)
+            ax.plot(sin2psi, DEC_raw[steps[i],1,j,:]*1e6,'-',color='gray',label=lab2)
+            av.plot(sin2psi, vf_raw[steps[i],j,:],color='gray',linewidth=3,alpha=0.7)
+            ax.plot(0,0,'-',color='gray',linewidth=3,alpha=0.7,label='Vol. F')
+
+            if i==len(steps)-1 and j==0: pass
+            else:
+                mpl_lib.rm_lab(ax,axis='x')
+                mpl_lib.rm_lab(ax,axis='y')
+
+            if i==len(steps)-1 and j==nphi-1: pass
+            else:
+                mpl_lib.rm_lab(av,axis='x')
+                mpl_lib.rm_lab(av,axis='y')
+
+    tune_xy_lim(axs)
+    tune_x_lim(axs,axis='y')
+    tune_xy_lim(axv)
+    tune_x_lim(axv,axis='y')
+
+    for i in range(len(steps)):#range(nstp):
+        if i ==0: s = r'$\bar{E}^{VM}=%.2f$'%fc.epsilon_vm[steps[i]]
+        else:    s = r'$%.2f$'%fc.epsilon_vm[steps[i]]
+        axes[i][-1].annotate(
+            s=s,
+            verticalalignment='center',
+            horizontalalignment='center',
+            rotation=270,
+            size=10,xy=(1.60,0.5),
+            xycoords='axes fraction')
+
+    for j in range(nphi):
+        s = r'$\phi=%.1f^\circ{}$'%(phi[j]*180./np.pi)
+        axes[0][j].annotate(
+            s=s,
+            horizontalalignment='center',
+            size=10,xy=(0.5,1.2),
+            xycoords='axes fraction')
+
+
+
+    fancy_legend(axes[0][0],size=10,nscat=1,ncol=1,
+                 bbox_to_anchor=(-0.1,1))
+    deco(ax=axes[-1][0],ft=10,iopt=1,hkl='211',ipsi_opt=1)
+    deco(ax=axev[-1][-1],ft=10,iopt=7,hkl='211',ipsi_opt=1)
+    axev[-1][-1].grid('off');
+
+    for i in range(len(axv)):
+        axv[i].set_ylim(0.,0.3)
+        axv[i].locator_params(nbins=4)
+
+    fig.savefig("dec_evol.pdf")
+    fig.savefig("dec_evol.png")
