@@ -14,15 +14,18 @@ Structure factor (*.sff) plotting scripts.
 #print __doc__
 
 import numpy as np
-def readpsi(fn='debug.sff'):
+from matplotlib.ticker import MaxNLocator
+def readpsi(fn='debug.sff',lb='\r'):
     """
     Argument
     ========
     fn = 'debug.sff'
+    lb = '\r'  line breaker?
 
     return based on psi
     """
-    datl = open(fn,'r').readlines()
+    #datl = open(fn,'r').readlines()
+    datl = open(fn,'r').read().split(lb)
     header = datl[:5]
     npsi = int(header[3].split()[-1])
     dat = np.loadtxt(fn,skiprows=6).T
@@ -31,7 +34,7 @@ def readpsi(fn='debug.sff'):
     print len(rst)
     return rst
 
-def readeps(fn='debug.sff'):
+def readeps(fn='debug.sff',lb='\r'):
     """
     Argument
     ========
@@ -39,16 +42,17 @@ def readeps(fn='debug.sff'):
 
     return based on eps
     """
-    datl = open(fn,'r').readlines()
+    # datl = open(fn,'r').readlines()
+    datl = open(fn,'r').read().split(lb)
     header = datl[:5]
     neps = int(header[1].split()[-1])
-    dat = np.loadtxt(fn,skiprows=4,dtype='str')
-    rst = map(float,dat[0][1:])
+    rst = map(float, header[4].split()[1:])
     return rst
 
-def readphi(fn='debug.sff'):
-    datl = open(fn,'r').readlines()
+def readphi(fn='debug.sff',lb='\r'):
+    datl = open(fn,'r').read().split(lb)
     header = datl[:5]
+    print header[2]
     nphi = int(header[2].split()[-1])
     print 'nphi:', nphi
     phis = np.loadtxt(fn,skiprows=6,dtype='str').T[0]
@@ -57,7 +61,7 @@ def readphi(fn='debug.sff'):
     phis = np.unique(np.array(phis,dtype='float'))
     return phis[:nphi:]
 
-def reader(fn='debug.sff'):
+def reader(fn='debug.sff',lb='\r'):
     """
     Arguments
     =========
@@ -67,7 +71,7 @@ def reader(fn='debug.sff'):
     phis=np.unique(dat[0])
     datl = open(fn,'r').readlines()
     if len(datl)==1:
-        datl = datl[0].split('\r')
+        datl = datl[0].split(lb)
     # header
     header = datl[:5]
     nstr = int(header[1].split()[-1])
@@ -117,18 +121,29 @@ def f1122(fn='debug.sff',ifig=1,iphi=0,i=1,j=1,ilab=True,
     """
     import matplotlib.pyplot as plt
 
-    fig01  = plt.figure(ifig,figsize=(6.,5.5))
+
+    try:
+        readpsi(fn,lb='\n')
+        readeps(fn,lb='\n')
+        readphi(fn,lb='\n')
+    except:
+        lb='\r'
+    else:
+        lb='\n'
+
+    fig01  = plt.figure(ifig,figsize=(4.,3))
     #fig02  = plt.figure(ifig+1,figsize=(6.,5.5))
-    fig03  = plt.figure(ifig+2,figsize=(6.,5.5))
+    fig03  = plt.figure(ifig+2,figsize=(4.,3))
+    fig01.clf();fig03.clf()
     ax01   = fig01.add_subplot(111)
     #ax02   = fig02.add_subplot(111)
     ax03   = fig03.add_subplot(111)
     fij,e0,dum1,dum2,dum3 = reader(fn) # nstr, nphi, npsi, 6
     axes   = [ax01,ax03]
     nstr, nphi, npsi, dum = fij.shape
-    psi    = readpsi(fn)
-    eps    = readeps(fn)#[::2]
-    phi    = readphi(fn)
+    psi    = readpsi(fn,lb=lb)
+    eps    = readeps(fn,lb=lb)#[::2]
+    phi    = readphi(fn,lb=lb)
 
     color = ['r','g','b','k','m','r','g',
              'b','k','m','r','g','b','k',
@@ -153,13 +168,13 @@ def f1122(fn='debug.sff',ifig=1,iphi=0,i=1,j=1,ilab=True,
                 if i==1: ilab=False
 
                 if istr==0 and i==0:
-                    ax01.text(0.2,0.36,r'Bold lines: $F_{11}$',
+                    ax01.text(0.2,0.1,r'Bold lines: $F_{11}$',
                               transform=ax01.transAxes)
-                    ax01.text(0.2,0.31,r'Broken lines : $F_{22}$',
+                    ax01.text(0.2,0.2,r'Broken lines : $F_{22}$',
                               transform=ax01.transAxes)
 
                 if ilab:
-                    label=r'$\bar{E}^{\mathrm{eff}} = %4.2f$'%(eps[istr]*2.)
+                    label=r'$\bar{E} = %4.2f$'%(eps[istr])
                     ax01.plot(np.sin(psi*np.pi/180.)**2,y,#markers[istr0],
                               label=label,color=color[istr0],alpha=0.7)
                     # ax02.plot(psi,y,markers[istr0],label=label,color='k',
@@ -176,12 +191,19 @@ def f1122(fn='debug.sff',ifig=1,iphi=0,i=1,j=1,ilab=True,
                     ax03.plot(np.sin(psi*np.pi/180.)**2,y,markers[istr0],
                               ms=8,color=color[istr0], alpha=0.5)
 
-    ax01.set_ylabel(r'$F_{11}$ and $ F_{22}$ $[TPa^{-1}]$',dict(fontsize=22))
-    ax01.set_xlabel(r'$\sin^2{\psi}$',dict(fontsize=28))
-    # ax02.set_ylabel(r'$F_{%i%i}$ [TPa$^{-1}$]'%(i,j),dict(fontsize=28))
-    # ax02.set_xlabel(r'$\psi$',dict(fontsize=28))
-    ax03.set_ylabel(r'$\varepsilon^{IG}$ [$\mu\varepsilon$]',dict(fontsize=28))
-    ax03.set_xlabel(r'$\sin^2{\psi}$',dict(fontsize=28))
+
+    for ax in axes:
+        ax.tick_params(axis='both', which='major',
+                       labelsize=8)
+        ax.xaxis.set_major_locator(MaxNLocator(nbins=3))
+        ax.yaxis.set_major_locator(MaxNLocator(nbins=3))
+        ax.minorticks_on()
+
+    ft = 15
+    ax01.set_ylabel(r'$\mathrm{F}_{11}$, $ \mathrm{F}_{22}$ $[TPa^{-1}]$',dict(fontsize=ft))
+    ax01.set_xlabel(r'$\sin^2{\psi}$',dict(fontsize=ft))
+    ax03.set_ylabel(r'$\varepsilon^\mathrm{IG}$ [$\mu\varepsilon$]',dict(fontsize=ft))
+    ax03.set_xlabel(r'$\sin^2{\psi}$',dict(fontsize=ft))
 
     for i in range(len(axes)):
         ax = axes[i]
@@ -189,7 +211,7 @@ def f1122(fn='debug.sff',ifig=1,iphi=0,i=1,j=1,ilab=True,
         ax.legend(loc='best',fancybox=True).\
             get_frame().set_alpha(0.5)
         if i==0: ax.set_title(r'%s at $\phi=%3.0f^\circ$'%(
-                title,phi[iphi]),dict(fontsize=20))
+                title,phi[iphi]),dict(fontsize=ft*1.2))
         if i==0: ax.set_ylim(-2.0,2.0)
 
     fig01.tight_layout()#pad=4)
