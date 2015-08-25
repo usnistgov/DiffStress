@@ -145,6 +145,8 @@ class SF:
             =8: zero
             =9: slinear
         """
+        print 'epsilon_vm:'
+        print epsilon_vm
         import warnings
 
         self.sf_old = self.sf.copy()
@@ -153,6 +155,8 @@ class SF:
         self.sf_new = np.zeros(
             (len(epsilon_vm),self.nphi,self.npsi,self.nij))
         xp = self.flow.epsilon_vm.copy()
+        print 'Strain reference at which sf was measured:'
+        print xp
         for iphi in range(self.nphi):
             for ipsi in range(self.npsi):
                 for k in range(self.nij):
@@ -319,22 +323,31 @@ class SF:
 
     def plot(self,nbin_sin2psi=2,iopt=0,ylim=None,
              mxnphi=None,hkl='211'):
-        """   """
+        """
+        Arguments
+        =========
+        nbin_sin2psi = 2
+        iopt         = iopt
+        ylim         = None
+        mxnphi       = None
+        hkl          = '211'
+        """
         from MP.lib import axes_label
         from MP.lib import mpl_lib
         import matplotlib as mpl
         import matplotlib.cm as cm
+        import matplotlib.pyplot as plt
         if hasattr(self, 'vf'):
-            nh = 2
-        else: nh = 1
+            nh = 3
+        else: nh = 2
 
         if mxnphi==None: mxnphi = self.nphi
         figs = wide_fig(nw=mxnphi,nh=nh,w0=0,w1=0,
                         left=0.2,right=0.15)
-        # mx = max(self.flow.epsilon_vm)
-        # mn = min(self.flow.epsilon_vm)
-        mx = 1.
-        mn = 0.
+        mx = max(self.flow.epsilon_vm)
+        mn = min(self.flow.epsilon_vm)
+        #mx = 1.
+        #mn = 0.
 
         norm = mpl.colors.Normalize(vmin=mn, vmax=mx)
         cmap, c = mpl_lib.norm_cmap(mx=mx,mn=mn)
@@ -346,52 +359,53 @@ class SF:
                 cl = c.to_rgba(eps)
                 if i==0: colors.append(cl)
 
-                y = self.sf[j,i,:,0] * 1e12
+                y = self.sf[j,i,:,0].copy() * 1e12
                 l, = figs.axes[i].plot(
                     np.sign(self.psi)*sin(self.psi*np.pi/180.)**2,
-                    y,'x',color=cl)
-                y = self.sf[j,i,:,1] * 1e12
-                figs.axes[i].plot(
+                    y,'-x',color=cl)
+                y = self.sf[j,i,:,1].copy() * 1e12
+                figs.axes[i+mxnphi].plot(
                     np.sign(self.psi)*sin(self.psi*np.pi/180.)**2,
-                    y,'+',color=cl)
+                    y,'-+',color=cl)
 
                 if j==0:
                     figs.axes[i].set_title(
                         r'$\phi: %3.1f^\circ{}$'%self.phi[i])
 
-        if nh==2:
+        if nh==3:
             for i in range(mxnphi):
                 for j in range(self.flow.nstp):
                     eps = self.flow.epsilon_vm[j]
                     cl = c.to_rgba(eps)
                     y = self.vf[j,i,:]
-                    figs.axes[i+mxnphi].plot(
+                    figs.axes[i+mxnphi*2].plot(
                         np.sign(self.psi)*sin(self.psi*np.pi/180.)**2,
                         y,'-',color=cl)
 
         deco = axes_label.__deco__
         rm_inner =mpl_lib.rm_inner
         ticks_bin_u = mpl_lib.ticks_bins_ax_u
-        rm_inner(figs.axes[:mxnphi])
-        if nh==2: rm_inner(figs.axes[mxnphi:mxnphi*2])
+        rm_inner(figs.axes[:mxnphi*2])
+        if nh==3: rm_inner(figs.axes[mxnphi*2:mxnphi*3])
         deco(figs.axes[0],iopt=1,ipsi_opt=1,hkl=hkl)
-        if nh==2: deco(figs.axes[mxnphi],iopt=7,ipsi_opt=1,hkl=hkl)
-        mpl_lib.tune_xy_lim(figs.axes[:mxnphi])
+        if nh==3: deco(figs.axes[mxnphi*2],iopt=7,ipsi_opt=1,hkl=hkl)
+        mpl_lib.tune_xy_lim(figs.axes[:mxnphi*2])
         if ylim!=None:
-            for i in range(len(figs.axes[:mxnphi])):
+            for i in range(len(figs.axes[:mxnphi*2])):
                 figs.axes[i].set_ylim(ylim)
-        if nh==2: mpl_lib.tune_xy_lim(figs.axes[mxnphi:mxnphi*2])
-        ticks_bin_u(figs.axes[:mxnphi],n=4)
-        if nh==2: ticks_bin_u(figs.axes[mxnphi:mxnphi*2],n=4)
+        if nh==3: mpl_lib.tune_xy_lim(figs.axes[mxnphi*2:mxnphi*3])
+        ticks_bin_u(figs.axes[:mxnphi*2],n=4)
+        if nh==3: ticks_bin_u(figs.axes[mxnphi*2:mxnphi*3],n=4)
 
         # color bar
         b = figs.axes[-1].get_position()
         axcb = figs.add_axes([0.88,b.y0,0.03,b.y1-b.y0])
         mpl_lib.add_cb(ax=axcb,filled=False,norm=norm,
                        levels=self.flow.epsilon_vm,
+                       format='%5.3f',
                        colors=colors,ylab='Equivalent strain')
 
-        if nh==1: return
+        if nh==1 or nh==2: return
 
         """   SF(phi,psi) vs plastic strain   """
         ## binning sin2psi
@@ -404,7 +418,6 @@ class SF:
                 print '%4i'%indx[i][j],
                 print '%4.2f'%(self.sin2psi[indx[i][j]]),
             print
-
 
         if mxnphi!=None: mxnphi=self.nphi
         figs_p = wide_fig(nw=mxnphi,nh=nbin,
@@ -419,14 +432,11 @@ class SF:
                 idx = indx[j]
                 for k in range(len(idx)):
                     y = self.sf[:,i,[idx[k]],0][::]
-                    # for n in range(len(y)):
-                    #     if np.isnan(y[n])==True:
-                    #         raise IOError
                     ax.plot(eps,y,'x')
 
         for i in range(nbin):
             axes=[]
-            for j in range(mxnphi):
+            for j in range(mxnphi*2):
                 axes.append(figs_p.axes[j+mxnphi*i])
             #mpl_lib.tune_xy_lim(axes)
             if i==0 and j==0:  rm_inner(axes[1:])
@@ -442,13 +452,13 @@ class SF:
             for i in range(len(figs_p.axes)):
                 figs_p.axes[i].set_ylim(ylim)
 
-
         if iopt==1:
             for i in range(len(figs.axes)):
                 figs.axes[i].set_xlim(0.0,0.5)
             for i in range(3):
                 figs.axes[i].set_ylim(-2,2)
                 figs.axes[3+i].set_ylim(0.,0.1)
+        plt.draw();plt.show()
 
 
     def __binning__(self,nbin,mx):

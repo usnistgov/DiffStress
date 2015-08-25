@@ -347,7 +347,7 @@ def DEC_intp(ss=[1,2,4],intps=[0,3,4],inds=[79,90,120]):
     return model_rs
 
 
-def DEC_evol():
+def DEC_evol(steps = [0,6,9,19]):
     """
     Draw evolution of DECs with respect to plastic deformation
     """
@@ -377,7 +377,7 @@ def DEC_evol():
     evm = fc.epsilon_vm.copy()
     nstp = fc.nstp
     fig = plt.figure()
-    steps = [0,3,5,9]
+    # steps = [0,3,5,9]
     nstp = len(steps)
     gs=gridspec.GridSpec(
         nstp,nphi,

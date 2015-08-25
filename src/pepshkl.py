@@ -242,7 +242,7 @@ def reader2(fn='igstrain_fbulk_ph1.out',iopt=1,isort=True):
                         tdat[6,i,j,k,l] = sij        #Sij
                         tdat[7,i,j,k,l] = phi        #Phi
                         tdat[8,i,j,k,l] = psi        #Psi
-                        tdat[9,i,j,k,l] = rsq        #Psi
+                        tdat[9,i,j,k,l] = rsq        #rsq (goodness of the 'linear' fit)
 
                     elif iopt==2:
                         #return ablock

@@ -51,12 +51,18 @@ def read_main(path='../dat/23JUL12',fref='Bsteel_BB_00.txt',
               icheck=False,isym=False):
     """
     Make ProtoExp, SF, IG and return them.
+
+    Arguments
+    =========
+    path: path should be the one that contains all proto
+          X-ray files
+    fref and fn_sf should be given as a fully pathed file name
     """
     import read_proto, os
     ExpProto = read_proto.ProtoExp(path,fref,isym)
     if icheck:check(ExpProto)
     if path==None: path='.'
-    SF, IG = read_IGSF(fn='%s%s%s'%(path,os.sep,fn_sf),
+    SF, IG = read_IGSF(fn=fn_sf, #'%s%s%s'%(path,os.sep,fn_sf),
                        fc=fc,fn_str=fn_str)
     return ExpProto, SF, IG
 

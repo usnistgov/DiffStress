@@ -1,5 +1,6 @@
 ##
 import numpy as np
+import os
 from os import sep
 from RS import rs_exp
 from MP.lib import mpl_lib
@@ -30,7 +31,15 @@ def main_reader(path='../dat/23JUL12', fref='Bsteel_BB_00.txt',
         print '---------------------------------------------\n'
         raw_input('press enter to proceed>>')
 
-        dat = open('%s%s%s'%(path,sep,fn_sf)).read()
+        # # dat = open('%s%s%s'%(path,sep,fn_sf)).read()
+        # fn = os.path.join(path,fn_sf)
+        # if os.path.isfile(fn):
+        #     dat = open(fn).read()
+        if os.path.isfile(fn_sf):
+            dat = open(fn_sf).read()
+        else:
+            print 'Could not find fn_sf: '+fn_sf
+            raise IOError, 'tip: use the fully pathed file name'
 
         ## Find proper line-breaker
         lbs=['\r','\n']; lns = []
@@ -107,6 +116,9 @@ class StressAnalysis:
                  fref='Bsteel_BB_00.txt',
                  fn_sf='YJ_Bsteel_BB.sff',isym=False,
                  fc_sf=None,fn_str=None):
+        """
+        fc_sf
+        """
         import copy
         self.EXP,self.SF,self.IG,self.SF_orig,self.IG_orig\
             = main_reader(path=path,
@@ -294,7 +306,8 @@ class StressAnalysis:
             wgt = np.zeros((self.EXP.nphi,self.EXP.npsi))
             for iphi in range(self.EXP.nphi):
                 for ipsi in range(self.EXP.npsi):
-                    wgt[iphi,ipsi]=self.EXP.P_scan[istp].protophi[iphi].ppscans[ipsi].ints
+                    wgt[iphi,ipsi]=self.EXP.P_scan[
+                        istp].protophi[iphi].ppscans[ipsi].ints
 
         if ifix_d0:
             dat = fmin(self.f_least_Ei_fixed_d0,
@@ -375,7 +388,7 @@ def main(path='../dat/BB/',
     RS_graphs = PdfPages('RS_Graphs.pdf')
     mystress = StressAnalysis(path=path,fref=fref,
                               fn_sf=fn_sf,isym=psi_sym,
-                              fc_sf=None,fn_str=fn_str)
+                              fc_sf=fc,fn_str=fn_str)
 
     if psi_offset!=0: mystress.put_psi_offset(psi_offset)
     if psi_sym:
@@ -392,15 +405,14 @@ def main(path='../dat/BB/',
     # calc stress
     eps_vm = mystress.EXP.flow.epsilon_vm
     dknot = []
-    s11 = []; s22 = []
+    s11 = []; s22 = [];# s12 = []
     Eis = []; eps = []; igs = []
 
     d_ehkl = np.zeros((mystress.EXP.nphi))
     for istp in range(mystress.nstp):
         stress, d0 = mystress.find_sigma(
             ivo=[0,1],istp=istp,iplot=False,iwgt=iwgt,
-            ifix_d0=ifix_d0,d0=d0_ref
-        )
+            ifix_d0=ifix_d0,d0=d0_ref)
 
         dknot.append(d0)
         s11.append(stress[0])
@@ -432,7 +444,16 @@ def main(path='../dat/BB/',
     mystress.flow.get_stress(s11,0,0)
     mystress.flow.get_stress(s22,1,1)
     mystress.flow.set_zero_sigma_ij(i=2,j=2)
-    mystress.flow.set_zero_shear_stress()
+    # mystress.flow.get_stress(s12,0,1)
+    # mystress.flow.get_stress(s12,1,0)
+
+
+    mystress.flow.set_zero_sigma_ij(i=0,j=1)
+    mystress.flow.set_zero_sigma_ij(i=1,j=0)
+    mystress.flow.set_zero_sigma_ij(i=2,j=1)
+    mystress.flow.set_zero_sigma_ij(i=1,j=2)
+    mystress.flow.set_zero_sigma_ij(i=0,j=2)
+    mystress.flow.set_zero_sigma_ij(i=2,j=0)
     mystress.flow.get_vm_stress()
 
 #------------------------------------------------------------#

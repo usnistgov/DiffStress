@@ -3,6 +3,7 @@ import numpy as np
 from glob import glob
 from MP import ssort
 ind_swap = ssort.ind_swap
+import os
 from os import sep
 from MP.mat import mech
 
@@ -61,7 +62,7 @@ DDMMMYY_????    0.020  0.020
 """
 Records of the procedure 0: referece image.
 stress filename  images   remakrs
-13JUL12_0016      8,9    
+13JUL12_0016      8,9
 13JUL12_0017      74,75
 DDMMMYY_iiii      i,i
 """
@@ -80,7 +81,7 @@ class ProtoExp:
                3) List of the XRAY file names and
                   corresponding E_xx and E_yy
         isym: symmetry (?)
-        fref2: reference file format 2 containing 
+        fref2: reference file format 2 containing
                1) XRAY file names and its corresponding DIC indices
         """
         if fref==None and fref2==None:
@@ -107,8 +108,12 @@ class ProtoExp:
             raise IOError, "Only one of fref"+\
                 " and fref2 shouldn't be 'None'"
         elif fref!=None:
-            if path==None: path = '.'
-            fref = '%s%s%s'%(path,sep,fref)
+            # if path==None: path = '.'
+            # fref = '%s%s%s'%(path,sep,fref)
+            if not(os.path.isfile(fref)):
+                print 'Could not find the file'
+                raise IOError, 'Use the fully pathed file name'
+
 
             #print fref
 
@@ -137,7 +142,8 @@ class ProtoExp:
 
             for i in range(self.nscan):
                 fn_check = glob('%s%s%sData*.txt'%(path,sep,flab[i]))[0]
-                igain=open(fn_check,'r').readlines()[58].split(':')[1].split('\n')[0]
+                #igain=open(fn_check,'r').readlines()[58].split(':')[1].split('\n')[0]
+                igain=open(fn_check,'r').readlines()[38].split(':')[1].split('\n')[0]
                 if igain[1:4]!='P/G':
                     print "Warning: check gain flag in the triaxial file '%s'"%fn_check
                     print open(fn_check,'r').readlines()[58]
@@ -150,7 +156,7 @@ class ProtoExp:
                 for iphi in range(nphi):
                     self.P_scan[i].add_phi(ProtoPhi(
                         fn=fs[iphi],isym=isym))
-                        
+
                 self.P_scan[i].get_dspc_avg()
                 self.P_scan[i].get_epshkl_davg()
 
@@ -242,6 +248,9 @@ class ProtoExp:
         self.ehkl=ehkl
 
     def plot_all(self):
+        """
+        Plot dhkl against psi
+        """
         from MP.lib import mpl_lib
         wide_fig = mpl_lib.wide_fig
         tune_xy_lim = mpl_lib.tune_xy_lim
@@ -252,21 +261,19 @@ class ProtoExp:
         rm_inner =mpl_lib.rm_inner
         ticks_bin_u = mpl_lib.ticks_bins_ax_u
 
-        figs = wide_fig(nw=self.nphi,w0=0,w1=0,
+        figs = wide_fig(nw=self.nphi,nh=2,w0=0,w1=0,
                         left=0.2,right=0.15,
                         useOffset=False)
 
         mx = max(self.flow.epsilon_vm)
         mn = min(self.flow.epsilon_vm)
         norm = mpl.colors.Normalize(vmin=mn, vmax=mx)
-        cmap, c = mpl_lib.norm_cmap(
-            mx = mx, mn=mn)
+        cmap, c = mpl_lib.norm_cmap(mx = mx, mn=mn)
 
         for i in range(self.flow.nstp):
             eps = self.flow.epsilon_vm[i]
             cl = c.to_rgba(eps)
             for j in range(self.nphi):
-                #X = np.sin(self.psi*np.pi/180.)**2
                 X = self.psi
                 Y = []
                 for ipsi in range(self.npsi):
@@ -274,14 +281,18 @@ class ProtoExp:
                         ppscans[ipsi].dspc
                     Y.append(y)
                 figs.axes[j].plot(X,Y,'-x',color=cl)
+                _Y_=np.array(Y).copy()
+                _Y_ = (_Y_+_Y_[::-1])/2.
+                # _Y_ = _Y_[:len(_Y_)/2+1]
+                figs.axes[j+self.nphi].plot(X,_Y_,'-x',color=cl)
                 if i==0:
                     figs.axes[j].set_title(
                         r'$\phi: %3.1f^\circ{}$'%self.phi[j])
-
-
+                    figs.axes[j+self.nphi].set_title(
+                        r'$\phi: %3.1f^\circ{}$'%self.phi[j])
 
         ticks_bin_u(figs.axes,n=4)
-        deco(figs.axes[0],iopt=4)
+        deco(figs.axes[0+self.nphi],iopt=4)
         tune_xy_lim(figs.axes)
         rm_inner(figs.axes)
 
@@ -290,16 +301,13 @@ class ProtoExp:
 
         mpl_lib.add_cb(axcb,cmap=cmap,filled=True,
                        ylab='Equivalent Strain',
-                       norm=norm
-        )
-
+                       norm=norm,format='%5.3f')
 
     def plot(self,istps=[-1]):
         ps = []
         nstps = len(istps)
         for istp in range(len(istps)):
             ps.append(self.P_scan[istp])
-
 
         import matplotlib.pyplot as plt
         import MP
@@ -447,7 +455,7 @@ class ProtoPhi:
         self.psis, idx = ssort.shellSort(self.psis)
         self.ppscans = ind_swap(self.ppscans,idx)
         self.npsi = len(self.psis)
-            
+
 class Det:
     """
     read a block of data lines belonging to a detector
