@@ -1,0 +1,547 @@
+C
+C *****************************************************************************
+      FUNCTION DET(A)
+
+      IMPLICIT DOUBLE PRECISION(A-H,O-Z)
+      DIMENSION A(3,3)
+
+      DET=A(1,1)*A(2,2)*A(3,3)
+     #   +A(1,2)*A(2,3)*A(3,1)
+     #   +A(1,3)*A(2,1)*A(3,2)
+     #   -A(1,3)*A(2,2)*A(3,1)
+     #   -A(2,3)*A(3,2)*A(1,1)
+     #   -A(1,2)*A(2,1)*A(3,3)
+      RETURN
+      END
+
+C *****************************************************************************
+C
+      SUBROUTINE GAULEG(X1,X2,X,W,N)
+
+      IMPLICIT DOUBLE PRECISION(A-H,O-Z)
+C     IMPLICIT REAL*8(A-H,P-Z)
+      DIMENSION X(N),W(N)
+C      PARAMETER(EPS=3.D-14)
+C
+C     CHANGED BY R.L. -  8/2/97
+C
+      PARAMETER(EPS=1.E-07)
+      PI=4.D0*DATAN(1.D0)
+      M=(N+1)/2
+      XM=0.5D0*(X1+X2)
+      XL=0.5D0*(X2-X1)
+      XN=N
+      DO 12 I=1,M
+      XI=I
+      Z=DCOS(PI*(XI-.25D0)/(XN+0.5D0))
+C
+      ITER=0
+1     CONTINUE
+      ITER=ITER+1
+C
+C     R.L. 8/2/97
+C
+      IF(ITER.GT.10000) THEN
+      WRITE(*,*)'GAULEG WARNING: TOL 1.E-07 NEVER REACHED - ERR = ',
+     #           ABS(Z-Z1)
+      RETURN
+      ENDIF
+C
+      P1=1.D0
+      P2=0.D0
+      DO 11 J=1,N
+      XJ=J
+      P3=P2
+      P2=P1
+      P1=((2.D0*J-1.D0)*Z*P2-(XJ-1.D0)*P3)/XJ
+11    CONTINUE
+      PP=N*(Z*P1-P2)/(Z*Z-1.D0)
+      Z1=Z
+      Z=Z1-P1/PP
+
+      IF(ABS(Z-Z1).GT.EPS) GO TO 1
+      X(I)=XM-XL*Z
+      X(N+1-I)=XM+XL*Z
+      W(I)=2.D0*XL/((1.D0-Z*Z)*PP*PP)
+      W(N+1-I)=W(I)
+12    CONTINUE
+      RETURN
+      END
+C
+C *****************************************************************************
+C
+CFEE
+
+C *************************************************************************
+
+      SUBROUTINE LU_INVERSE (A,N)
+
+C *** INVERTS A MATRIX USING LU DECOMPOSITION
+
+      IMPLICIT DOUBLE PRECISION(A-H,O-Z)
+      DIMENSION A(N,N),Y(N,N),INDX(N)      ! MAY CHOKE SOME COMPILERS
+C     DIMENSION A(5,5),Y(5,5),INDX(5)
+
+
+C     WRITE(*,*) 'A(I,J) MATRIX INSIDE LU_INVERSE'
+C     WRITE(*,'(5E12.3)') ((A(I,J),J=1,N),I=1,N)
+C     PAUSE
+
+C **************************************************************
+C *** BLOCK ADDED 03/DEC/05 TO AVOID NUMERICALLY SINGULAR MATRIX
+      AMAX=0.D0
+      DO I=1,N
+      DO J=1,N
+        DUM=ABS(A(I,J))
+        IF(DUM .GT. AMAX) AMAX=DUM
+      ENDDO
+      ENDDO
+      DO I=1,N
+      DO J=1,N
+        A(I,J)=A(I,J)/AMAX      ! NORMALIZE THE MATRIX
+      ENDDO
+      ENDDO
+C **************************************************************
+
+      DO I=1,N
+        DO J=1,N
+          Y(I,J)=0.
+        ENDDO
+        Y(I,I)=1.
+      ENDDO
+
+      CALL LUDCMP(A,N,N,INDX,D,ISINGULAR)
+      IF(ISINGULAR.EQ.1) THEN
+        WRITE(*,*) ' *** SINGULAR MATRIX IN LU_INVERSE !!'
+        write(*,*) A
+        read(*,*)
+        STOP
+      ENDIF
+
+      DO J=1,N
+        CALL LUBKSB(A,N,N,INDX,Y(1,J))
+      ENDDO
+
+      DO I=1,N
+      DO J=1,N
+        A(I,J)=Y(I,J) /AMAX      ! RENORMALIZE THE INVERSE
+      ENDDO
+      ENDDO
+
+      RETURN
+      END
+
+C *************************************************************************
+
+      SUBROUTINE LU_EQSYSTEM(A,B,N,ISINGULAR)
+
+C *** SOLVES A*X=B USING LU DECOMPOSITION
+
+      IMPLICIT DOUBLE PRECISION(A-H,O-Z)
+      DIMENSION A(N,N),B(N),INDX(N)      ! MAY CHOKE SOME COMPILERS
+C     DIMENSION A(5,5),B(5),INDX(5)
+
+      CALL LUDCMP(A,N,N,INDX,D,ISINGULAR)
+
+      IF(ISINGULAR.EQ.1) RETURN
+
+      CALL LUBKSB(A,N,N,INDX,B)
+
+      RETURN
+      END
+C
+C ***********************************************************
+      SUBROUTINE LU_EQSYS25(A,B,N,ISINGULAR)
+
+C *** SOLVES A*X=B USING LU DECOMPOSITION
+
+C      DIMENSION A(N,N),B(N),INDX(N)      ! MAY CHOKE SOME COMPILERS
+      IMPLICIT DOUBLE PRECISION(A-H,O-Z)
+      DIMENSION A(25,25),B(25),INDX(25)
+
+      CALL LUDCMP(A,N,N,INDX,D,ISINGULAR)
+C
+      DO J=1,25
+      D=D*A(J,J)
+      ENDDO
+
+C      WRITE(*,*) 'DET25=',D
+C      PAUSE
+
+      IF(ISINGULAR.EQ.1) RETURN
+
+      CALL LUBKSB(A,N,N,INDX,B)
+
+      RETURN
+      END
+
+
+      FUNCTION RAN2(IDUM)
+
+      IMPLICIT DOUBLE PRECISION(A-H,O-Z)
+C      INTEGER IDUM,IM1,IM2,IMM1,IA1,IA2,IQ1,IQ2,IR1,IR2,NTAB,NDIV
+C      REAL RAN2,AM,EPS,RNMX
+      PARAMETER (IM1=2147483563,IM2=2147483399,AM=1./IM1,IMM1=IM1-1,
+     *IA1=40014,IA2=40692,IQ1=53668,IQ2=52774,IR1=12211,IR2=3791,
+     *NTAB=32,NDIV=1+IMM1/NTAB,EPS=1.2E-7,RNMX=1.-EPS)
+      DIMENSION IV(NTAB)
+      SAVE IV,IY,IDUM2
+      DATA IDUM2/123456789/, IV/NTAB*0/, IY/0/
+      IF (IDUM.LE.0) THEN
+        IDUM=MAX(-IDUM,1)
+        IDUM2=IDUM
+        DO 11 J=NTAB+8,1,-1
+          K=IDUM/IQ1
+          IDUM=IA1*(IDUM-K*IQ1)-K*IR1
+          IF (IDUM.LT.0) IDUM=IDUM+IM1
+          IF (J.LE.NTAB) IV(J)=IDUM
+11      CONTINUE
+        IY=IV(1)
+      ENDIF
+      K=IDUM/IQ1
+      IDUM=IA1*(IDUM-K*IQ1)-K*IR1
+      IF (IDUM.LT.0) IDUM=IDUM+IM1
+      K=IDUM2/IQ2
+      IDUM2=IA2*(IDUM2-K*IQ2)-K*IR2
+      IF (IDUM2.LT.0) IDUM2=IDUM2+IM2
+      J=1+IY/NDIV
+      IY=IV(J)-IDUM2
+      IV(J)=IDUM
+      IF(IY.LT.1)IY=IY+IMM1
+      RAN2=MIN(AM*IY,RNMX)
+      RETURN
+      END
+C  (C) COPR. 1986-92 NUMERICAL RECIPES SOFTWARE #>,13.
+C
+C *****************************************************************************
+C
+      SUBROUTINE LUDCMP(A,N,NP,INDX,D,ISINGULAR)
+
+      IMPLICIT DOUBLE PRECISION(A-H,O-Z)
+      DIMENSION INDX(N)
+      DIMENSION A(NP,NP)
+      PARAMETER (NMAX=500,TINY=1.0E-20)
+C      INTEGER I,IMAX,J,K,ISINGULAR
+      DIMENSION VV(NMAX)
+      D=1.
+      DO 12 I=1,N
+        AAMAX=0.
+        DO 11 J=1,N
+          IF (ABS(A(I,J)).GT.AAMAX) AAMAX=ABS(A(I,J))
+11      CONTINUE
+C
+C        IF (AAMAX.EQ.0.) PAUSE 'SINGULAR MATRIX IN LUDCMP'
+C
+        IF(AAMAX.EQ.0.) THEN
+        ISINGULAR=1
+        RETURN
+        ENDIF
+C
+        VV(I)=1./AAMAX
+12    CONTINUE
+      DO 19 J=1,N
+        DO 14 I=1,J-1
+          SUM=A(I,J)
+          DO 13 K=1,I-1
+            SUM=SUM-A(I,K)*A(K,J)
+13        CONTINUE
+          A(I,J)=SUM
+14      CONTINUE
+        AAMAX=0.
+
+        DO 16 I=J,N
+          SUM=A(I,J)
+          DO 15 K=1,J-1
+            SUM=SUM-A(I,K)*A(K,J)
+15        CONTINUE
+          A(I,J)=SUM
+          DUM=VV(I)*ABS(SUM)
+          IF (DUM.GE.AAMAX) THEN
+            IMAX=I
+            AAMAX=DUM
+          ENDIF
+16      CONTINUE
+        IF (J.NE.IMAX)THEN
+          DO 17 K=1,N
+            DUM=A(IMAX,K)
+            A(IMAX,K)=A(J,K)
+            A(J,K)=DUM
+17        CONTINUE
+          D=-D
+          VV(IMAX)=VV(J)
+        ENDIF
+        INDX(J)=IMAX
+C
+C        IF(A(J,J).EQ.0.) A(J,J)=TINY
+C
+        IF(A(J,J).EQ.0.) THEN
+        ISINGULAR=1
+        RETURN
+        ENDIF
+C
+        IF(J.NE.N)THEN
+          DUM=1./A(J,J)
+          DO 18 I=J+1,N
+            A(I,J)=A(I,J)*DUM
+18        CONTINUE
+        ENDIF
+19    CONTINUE
+C
+      ISINGULAR=0
+C
+      RETURN
+      END
+C
+C *****************************************************************************
+C
+      SUBROUTINE LUBKSB(A,N,NP,INDX,B)
+
+      IMPLICIT DOUBLE PRECISION(A-H,O-Z)
+      DIMENSION INDX(N)
+      DIMENSION A(NP,NP),B(N)
+C      INTEGER I,II,J,LL
+C      REAL SUM
+      II=0
+      DO 12 I=1,N
+        LL=INDX(I)
+        SUM=B(LL)
+        B(LL)=B(I)
+        IF (II.NE.0)THEN
+          DO 11 J=II,I-1
+            SUM=SUM-A(I,J)*B(J)
+11        CONTINUE
+        ELSE IF (SUM.NE.0.) THEN
+          II=I
+        ENDIF
+        B(I)=SUM
+12    CONTINUE
+      DO 14 I=N,1,-1
+        SUM=B(I)
+        DO 13 J=I+1,N
+          SUM=SUM-A(I,J)*B(J)
+13      CONTINUE
+        B(I)=SUM/A(I,I)
+14    CONTINUE
+      RETURN
+      END
+C
+C *****************************************************************************
+C
+      SUBROUTINE JACOBI(A,N,NP,D,V,NROT,IER)
+
+      IMPLICIT DOUBLE PRECISION(A-H,O-Z)
+C      INTEGER N,NP,NROT,NMAX
+      DIMENSION A(NP,NP),D(NP),V(NP,NP)
+      PARAMETER (NMAX=500)
+C      INTEGER I,IP,IQ,J
+      DIMENSION B(NMAX),Z(NMAX)
+      DO 12 IP=1,N
+        DO 11 IQ=1,N
+          V(IP,IQ)=0.
+11      CONTINUE
+        V(IP,IP)=1.
+12    CONTINUE
+      DO 13 IP=1,N
+        B(IP)=A(IP,IP)
+        D(IP)=B(IP)
+        Z(IP)=0.
+13    CONTINUE
+      NROT=0
+      DO 24 I=1,50
+        SM=0.
+        DO 15 IP=1,N-1
+          DO 14 IQ=IP+1,N
+            SM=SM+ABS(A(IP,IQ))
+
+14        CONTINUE
+15      CONTINUE
+C
+        IF(SM.EQ.0.)THEN
+        IER=0
+        RETURN
+        ENDIF
+C
+        IF(I.LT.4)THEN
+          TRESH=0.2*SM/N**2
+        ELSE
+          TRESH=0.
+        ENDIF
+        DO 22 IP=1,N-1
+          DO 21 IQ=IP+1,N
+            G=100.*ABS(A(IP,IQ))
+            IF((I.GT.4).AND.(ABS(D(IP))+
+     *G.EQ.ABS(D(IP))).AND.(ABS(D(IQ))+G.EQ.ABS(D(IQ))))THEN
+              A(IP,IQ)=0.
+            ELSE IF(ABS(A(IP,IQ)).GT.TRESH)THEN
+              H=D(IQ)-D(IP)
+              IF(ABS(H)+G.EQ.ABS(H))THEN
+                T=A(IP,IQ)/H
+
+              ELSE
+                THETA=0.5*H/A(IP,IQ)
+                T=1./(ABS(THETA)+SQRT(1.+THETA**2))
+                IF(THETA.LT.0.)T=-T
+              ENDIF
+              C=1./SQRT(1+T**2)
+              S=T*C
+              TAU=S/(1.+C)
+              H=T*A(IP,IQ)
+              Z(IP)=Z(IP)-H
+              Z(IQ)=Z(IQ)+H
+              D(IP)=D(IP)-H
+              D(IQ)=D(IQ)+H
+              A(IP,IQ)=0.
+              DO 16 J=1,IP-1
+                G=A(J,IP)
+                H=A(J,IQ)
+
+                A(J,IP)=G-S*(H+G*TAU)
+                A(J,IQ)=H+S*(G-H*TAU)
+16            CONTINUE
+              DO 17 J=IP+1,IQ-1
+                G=A(IP,J)
+                H=A(J,IQ)
+                A(IP,J)=G-S*(H+G*TAU)
+                A(J,IQ)=H+S*(G-H*TAU)
+17            CONTINUE
+              DO 18 J=IQ+1,N
+                G=A(IP,J)
+                H=A(IQ,J)
+                A(IP,J)=G-S*(H+G*TAU)
+                A(IQ,J)=H+S*(G-H*TAU)
+18            CONTINUE
+              DO 19 J=1,N
+                G=V(J,IP)
+                H=V(J,IQ)
+
+                V(J,IP)=G-S*(H+G*TAU)
+                V(J,IQ)=H+S*(G-H*TAU)
+19            CONTINUE
+              NROT=NROT+1
+            ENDIF
+21        CONTINUE
+22      CONTINUE
+        DO 23 IP=1,N
+          B(IP)=B(IP)+Z(IP)
+          D(IP)=B(IP)
+          Z(IP)=0.
+23      CONTINUE
+24    CONTINUE
+C      PAUSE 'TOO MANY ITERATIONS IN JACOBI'
+C
+      IER=1
+C
+      RETURN
+      END
+C
+C *****************************************************************************
+C
+      SUBROUTINE EIGSRT(D,V,N,NP)
+
+      IMPLICIT DOUBLE PRECISION(A-H,O-Z)
+C      INTEGER N,NP
+      DIMENSION D(NP),V(NP,NP)
+C      INTEGER I,J,K
+C      REAL P
+      DO 13 I=1,N-1
+        K=I
+        P=D(I)
+        DO 11 J=I+1,N
+          IF(D(J).GE.P)THEN
+            K=J
+            P=D(J)
+          ENDIF
+11      CONTINUE
+        IF(K.NE.I)THEN
+          D(K)=D(I)
+          D(I)=P
+          DO 12 J=1,N
+            P=V(J,I)
+            V(J,I)=V(J,K)
+            V(J,K)=P
+12        CONTINUE
+        ENDIF
+13    CONTINUE
+      RETURN
+      END
+CFEE
+
+C ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+C
+C     FUNCTION TMISMATCH   ---->   VERSION OF 27/DEC/98
+C
+C     CALCULATES RELATIVE DIFFERENCE BETWEEN TWO NROWSXNCOLS MATRICES
+C     THE DIFFERENCE IS RELATIVE TO THE NORM OF THE ARITHMETIC AVERAGE
+C     OF BOTH DATA.
+C ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+
+      FUNCTION TMISMATCH (V1,V2,NR,NC)
+
+      IMPLICIT DOUBLE PRECISION(A-H,O-Z)
+      DIMENSION V1(36),V2(36)
+      DIMENSION V_DIF(36),V_AVE(36)
+        DO I=1,NR*NC
+          V_DIF(I)=V1(I)-V2(I)
+          V_AVE(I)=0.5*(V1(I)+V2(I))
+        ENDDO
+        TMISMATCH =TNORM (V_DIF,NR,NC)/TNORM (V_AVE,NR,NC)
+      RETURN
+      END
+
+C ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+C     FUNCTION TNORM   ---->   VERSION OF 27/DEC/98
+C
+C     CALCULATES THE NORM OF A NROWSXNCOLS-MATRIX (NROWS,NCOLS =< 6)
+C ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+
+      FUNCTION TNORM (V,NR,NC)
+
+      IMPLICIT DOUBLE PRECISION(A-H,O-Z)
+      DIMENSION V(NR*NC)
+        TNORM =0.
+        DO I=1,NR*NC
+          TNORM =TNORM +V(I)*V(I)
+        ENDDO
+        TNORM =SQRT(TNORM)
+      RETURN
+      END
+
+C ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+C     FUNCTION TMISMATCH5   ---->   VERSION OF 02/JAN/03
+C
+C     CALCULATES RELATIVE DIFFERENCE BETWEEN TWO NROWSXNCOLS MATRICES
+C     THE DIFFERENCE IS RELATIVE TO THE NORM OF THE ARITHMETIC AVERAGE
+C     OF BOTH DATA.
+C ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+
+      FUNCTION TMISMATCH5(V1,V2,NR,NC)
+
+      IMPLICIT DOUBLE PRECISION(A-H,O-Z)
+      DIMENSION V1(25),V2(25)
+      DIMENSION V_DIF(25),V_AVE(25)
+        DO I=1,NR*NC
+          V_DIF(I)=V1(I)-V2(I)
+          V_AVE(I)=0.5*(V1(I)+V2(I))
+        ENDDO
+        TMISMATCH5=TNORM5(V_DIF,NR,NC)/TNORM5(V_AVE,NR,NC)
+      RETURN
+      END
+
+C ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+C     FUNCTION TNORM5   ---->   VERSION OF 02/JAN/03
+C
+C     CALCULATES THE NORM OF A NROWSXNCOLS-MATRIX (NROWS,NCOLS =< 5)
+C ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+
+      FUNCTION TNORM5(V,NR,NC)
+
+      IMPLICIT DOUBLE PRECISION(A-H,O-Z)
+      DIMENSION V(25)
+        TNORM5=0.
+        DO I=1,NR*NC
+          TNORM5=TNORM5+V(I)*V(I)
+        ENDDO
+        TNORM5=SQRT(TNORM5)
+      RETURN
+      END
+
