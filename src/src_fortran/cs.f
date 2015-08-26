@@ -1,5 +1,5 @@
-c
-c  put "! -*- f90 -*-" as the first liner  (e.g. when using f2py)
+c----------------------------------------------------------------------c
+c     put "! -*- f90 -*-" as the first liner  (e.g. when using f2py)
 c----------------------------------------------------------------------c
 c     Crystal Symmetry Library
 c     written by Youngung Jeong (June 28, 2012)
@@ -28,682 +28,682 @@ c----------------------------------------------------------------------c
 c     pn_dirc takes plane normal and directions and returns only uniq
 c     combinations of the two.
 
-      subroutine uniqpnset(n, b, isym, uniqset, inb, verbose)
-      implicit none
-      real*8 n(3), b(3), nuniq(3,48), buniq(3,48), uniqset(3,2,48),
-     $     dum01(3), dum02(3), dum03(3,48), dum04(3,48), dum
-      integer in, ib, i, j, isym, nnuniq, nbuniq, inb, inbc
-      logical verbose, isperpen
-cf2py intent(in) n, b, isym, verbose
-cf2py intent(out) uniqset, inb
-c     Given the plane normal direction and the direction on the plane,
-c     Find the all possible crystallographically equivalent sets.
-
-c     Find all equivalent, but unique planes.
-c     Find all equivalent, but unique directions.
-
-      if (verbose) write(*,*) 'Plane normal and direction'
-      if (verbose) write(*,'(3f7.3, 2x, 3f7.3)') n, b
-      if (isym.eq.1) then       ! cubic
-c- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - c
-c        Given the vector v, finds crystallographically equivalent
-c        vectors considering 'icen', the origin point symmetry flag.
-c                        v, vuniq, n     , icen   , prt
-         if (verbose) write(*,*) 'calling cubr. cubic_eqvect'
-         call cubic_eqvect(n, nuniq, nnuniq, .false., .false.) ! plane
-         if (verbose) then
-            write(*,*) 'nnuniq', nnuniq
-            do 8 in=1,nnuniq
-            do 8 i=1,3
-               write(*,'(3f7.3)') (nuniq(i,j),j=1,3)
- 8          continue
-         endif
-         call cubic_eqvect(b, buniq, nbuniq, .true. , .false.) ! direct
-         if (verbose) then
-            write(*,*) 'nbuniq', nbuniq
-            do 9 in=1, nbuniq
-            do 9 i=1,3
-               write(*,'(3f7.3)') (nuniq(i,j),j=1,3)
- 9          continue
-c            read(*,*)
-         endif
-c- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - c
-      else if(isym.eq.2) then   ! hexagonal
-         write(*,*) "Nothing's made other than cubic yet... "
-         stop
-      else if(isym.eq.3) then   ! trigonal
-         write(*,*) "Nothing's made other than cubic yet... "
-         stop
-      else if(isym.eq.4) then   ! tetragonal
-         write(*,*) "Nothing's made other than cubic yet... "
-         stop
-      else if(isym.eq.5) then   ! orthorhombic
-         write(*,*) "Nothing's made other than cubic yet... "
-         stop
-      else if(isym.eq.6) then   ! monoclinic
-         write(*,*) "Nothing's made other than cubic yet... "
-         stop
-      else if(isym.eq.7) then   ! triclinic
-         write(*,*) "Nothing's made other than cubic yet... "
-         stop
-      endif
-c     read(*,*)
-c     write(*,*)
-c' ' ' ' ' ' ' ' ' ' ' ' ' ' ' ' ' ' ' ' ' ' ' ' ' ' ' ' ' ' ' ' ' ' ' c
-c     print screen block
-      if (verbose) then
-         write(*,*) 'unique normals'
-         write(*,*) 'nnuniq:', nnuniq, 'nbuniq', nbuniq
-c         read(*,*)
-         do i=1, nnuniq
-            write(*,'(3f7.3)') (nuniq(j,i), j=1,3)
-         enddo
-         write(*,*) 'unique directions'
-         do i=1, nbuniq
-            write(*,'(3f7.3)') (buniq(j,i), j=1,3)
-         enddo
-c         read(*,*)
-      endif
-c' ' ' ' ' ' ' ' ' ' ' ' ' ' ' ' ' ' ' ' ' ' ' ' ' ' ' ' ' ' ' ' ' ' ' c
-c     End of finding crystallographically equivalent vectors based on
-c     the indiviudal structure's rotation symmtry groups.
-c- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - c
-c     Finds possible sets of plane-normal and its characteristics
-c     direction. Note that the normality of suitable sets of them is
-c     based by logical function isnorm.
-      inb = 0
-      do 1000 in=1, nnuniq    ! plane normal ends at the line # 1000
-         do 10 i=1,3
-            dum01(i) = nuniq(i,in)
- 10      continue
-
-      inbc = 0
-      do 500 ib=1, nbuniq    ! direction
-         do 20 i=1,3
-            dum02(i) = buniq(i,ib) ! current direction
- 20      continue
-         if (verbose) write(*, '(3f7.3, 3x, 3f7.3)') (dum01(i), i=1,3),
-     $        (dum02(i), i=1,3)
-         dum = 0.d0
-         do i=1,3
-            dum = dum + dum01(i) * dum02(i)
-         enddo
-         write(*,*) 'dum = ', dum
-         write(*,*) 'inbc= ', inbc
-         if (isperpen(dum01, dum02, 3)) then
-            inbc = inbc + 1     ! number of direction for this particular
-c                                 plane (in) increases.
-            do 30 i=1,3
-c              Save those turned out to be on the plane dum01 to dum03.
-c              For latter use.
-               dum03(i,inbc) = dum02(i)
- 30         continue
-         endif
- 500  continue ! over ib. It is not the end of loop over plane in.
-
-c     if (verbose) write(*,*) 'inbc after putting things into dum03: ',
-c$     inbc
-c     if (verbose) read(*,*)
-c- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - c
-c     Among the directions that turned out to be on the plane,
-c     we want to remove the duplicated lines that are parallel (a=-b)
-c         dum01(i) ! plane
-c         dum03(i, ib)  ! the matched plane for
-c                         the given current plane dum01
-      if (inbc.eq.0) then
-         write(*,*) 'inbc is wrong! at 153'
-         stop
-      endif
-c
-c     directions that found to be on the plane are in dum03 array.
-c                         a -> , b    , n0  , n1, icen   , verbose
-      call finduniquevect(dum03, dum04, inbc, ib, .false., .false.)
-c     only unique directions are returned as dum04. and the number of
-c     unique arrays are ib.
-c' ' ' ' ' ' ' ' ' ' ' ' ' ' ' ' ' ' ' ' ' ' ' ' ' ' ' ' ' ' ' ' ' ' ' c
-c     print screen block
-      if (verbose) then
-          write(*,*) 'before the removal of parallel vectors'
-          do i=1,inbc
-             write(*,'(3f7.3)') (dum03(j,i),j=1,3)
-          enddo
-          write(*,*) 'after'
-          do i=1,ib
-             write(*,'(3f7.3)') (dum04(j,i),j=1,3)
-          enddo
-          write(*,*) 'inbc: ', inbc
-c          read(*,*)
-       endif
-c' ' ' ' ' ' ' ' ' ' ' ' ' ' ' ' ' ' ' ' ' ' ' ' ' ' ' ' ' ' ' ' ' ' ' c
-
-      do 600 j=1,ib ! direction
-         inb = inb + 1
-      do 600 i=1,3
-         uniqset(i,1,inb) = dum01(i)
-         uniqset(i,2,inb) = dum04(i,j)
- 600  continue                  ! over ib again.
- 1000 continue                  ! loop over n & b set.
-c- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - c
-      if (verbose) then
-         write(*,*) 'inb:', inb
-         do in=1,inb
-            write(*,'(3f8.3, 2x, 3f8.3)') (uniqset(i,1,in),i=1,3),
-     $           (uniqset(i,2,in),i=1,3)
-         enddo
-      endif
-      return
-      end subroutine uniqpnset
+c$$$      subroutine uniqpnset(n, b, isym, uniqset, inb, verbose)
+c$$$      implicit none
+c$$$      real*8 n(3), b(3), nuniq(3,48), buniq(3,48), uniqset(3,2,48),
+c$$$     $     dum01(3), dum02(3), dum03(3,48), dum04(3,48), dum
+c$$$      integer in, ib, i, j, isym, nnuniq, nbuniq, inb, inbc
+c$$$      logical verbose, isperpen
+c$$$cf2py intent(in) n, b, isym, verbose
+c$$$cf2py intent(out) uniqset, inb
+c$$$c     Given the plane normal direction and the direction on the plane,
+c$$$c     Find the all possible crystallographically equivalent sets.
+c$$$
+c$$$c     Find all equivalent, but unique planes.
+c$$$c     Find all equivalent, but unique directions.
+c$$$
+c$$$      if (verbose) write(*,*) 'Plane normal and direction'
+c$$$      if (verbose) write(*,'(3f7.3, 2x, 3f7.3)') n, b
+c$$$      if (isym.eq.1) then       ! cubic
+c$$$c- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - c
+c$$$c        Given the vector v, finds crystallographically equivalent
+c$$$c        vectors considering 'icen', the origin point symmetry flag.
+c$$$c                        v, vuniq, n     , icen   , prt
+c$$$         if (verbose) write(*,*) 'calling cubr. cubic_eqvect'
+c$$$         call cubic_eqvect(n, nuniq, nnuniq, .false., .false.) ! plane
+c$$$         if (verbose) then
+c$$$            write(*,*) 'nnuniq', nnuniq
+c$$$            do 8 in=1,nnuniq
+c$$$            do 8 i=1,3
+c$$$               write(*,'(3f7.3)') (nuniq(i,j),j=1,3)
+c$$$ 8          continue
+c$$$         endif
+c$$$         call cubic_eqvect(b, buniq, nbuniq, .true. , .false.) ! direct
+c$$$         if (verbose) then
+c$$$            write(*,*) 'nbuniq', nbuniq
+c$$$            do 9 in=1, nbuniq
+c$$$            do 9 i=1,3
+c$$$               write(*,'(3f7.3)') (nuniq(i,j),j=1,3)
+c$$$ 9          continue
+c$$$c            read(*,*)
+c$$$         endif
+c$$$c- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - c
+c$$$      else if(isym.eq.2) then   ! hexagonal
+c$$$         write(*,*) "Nothing's made other than cubic yet... "
+c$$$         stop
+c$$$      else if(isym.eq.3) then   ! trigonal
+c$$$         write(*,*) "Nothing's made other than cubic yet... "
+c$$$         stop
+c$$$      else if(isym.eq.4) then   ! tetragonal
+c$$$         write(*,*) "Nothing's made other than cubic yet... "
+c$$$         stop
+c$$$      else if(isym.eq.5) then   ! orthorhombic
+c$$$         write(*,*) "Nothing's made other than cubic yet... "
+c$$$         stop
+c$$$      else if(isym.eq.6) then   ! monoclinic
+c$$$         write(*,*) "Nothing's made other than cubic yet... "
+c$$$         stop
+c$$$      else if(isym.eq.7) then   ! triclinic
+c$$$         write(*,*) "Nothing's made other than cubic yet... "
+c$$$         stop
+c$$$      endif
+c$$$c     read(*,*)
+c$$$c     write(*,*)
+c$$$c' ' ' ' ' ' ' ' ' ' ' ' ' ' ' ' ' ' ' ' ' ' ' ' ' ' ' ' ' ' ' ' ' ' ' c
+c$$$c     print screen block
+c$$$      if (verbose) then
+c$$$         write(*,*) 'unique normals'
+c$$$         write(*,*) 'nnuniq:', nnuniq, 'nbuniq', nbuniq
+c$$$c         read(*,*)
+c$$$         do i=1, nnuniq
+c$$$            write(*,'(3f7.3)') (nuniq(j,i), j=1,3)
+c$$$         enddo
+c$$$         write(*,*) 'unique directions'
+c$$$         do i=1, nbuniq
+c$$$            write(*,'(3f7.3)') (buniq(j,i), j=1,3)
+c$$$         enddo
+c$$$c         read(*,*)
+c$$$      endif
+c$$$c' ' ' ' ' ' ' ' ' ' ' ' ' ' ' ' ' ' ' ' ' ' ' ' ' ' ' ' ' ' ' ' ' ' ' c
+c$$$c     End of finding crystallographically equivalent vectors based on
+c$$$c     the indiviudal structure's rotation symmtry groups.
+c$$$c- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - c
+c$$$c     Finds possible sets of plane-normal and its characteristics
+c$$$c     direction. Note that the normality of suitable sets of them is
+c$$$c     based by logical function isnorm.
+c$$$      inb = 0
+c$$$      do 1000 in=1, nnuniq    ! plane normal ends at the line # 1000
+c$$$         do 10 i=1,3
+c$$$            dum01(i) = nuniq(i,in)
+c$$$ 10      continue
+c$$$
+c$$$      inbc = 0
+c$$$      do 500 ib=1, nbuniq    ! direction
+c$$$         do 20 i=1,3
+c$$$            dum02(i) = buniq(i,ib) ! current direction
+c$$$ 20      continue
+c$$$         if (verbose) write(*, '(3f7.3, 3x, 3f7.3)') (dum01(i), i=1,3),
+c$$$     $        (dum02(i), i=1,3)
+c$$$         dum = 0.d0
+c$$$         do i=1,3
+c$$$            dum = dum + dum01(i) * dum02(i)
+c$$$         enddo
+c$$$         write(*,*) 'dum = ', dum
+c$$$         write(*,*) 'inbc= ', inbc
+c$$$         if (isperpen(dum01, dum02, 3)) then
+c$$$            inbc = inbc + 1     ! number of direction for this particular
+c$$$c                                 plane (in) increases.
+c$$$            do 30 i=1,3
+c$$$c              Save those turned out to be on the plane dum01 to dum03.
+c$$$c              For latter use.
+c$$$               dum03(i,inbc) = dum02(i)
+c$$$ 30         continue
+c$$$         endif
+c$$$ 500  continue ! over ib. It is not the end of loop over plane in.
+c$$$
+c$$$c     if (verbose) write(*,*) 'inbc after putting things into dum03: ',
+c$$$c$     inbc
+c$$$c     if (verbose) read(*,*)
+c$$$c- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - c
+c$$$c     Among the directions that turned out to be on the plane,
+c$$$c     we want to remove the duplicated lines that are parallel (a=-b)
+c$$$c         dum01(i) ! plane
+c$$$c         dum03(i, ib)  ! the matched plane for
+c$$$c                         the given current plane dum01
+c$$$      if (inbc.eq.0) then
+c$$$         write(*,*) 'inbc is wrong! at 153'
+c$$$         stop
+c$$$      endif
+c$$$c
+c$$$c     directions that found to be on the plane are in dum03 array.
+c$$$c                         a -> , b    , n0  , n1, icen   , verbose
+c$$$      call finduniquevect(dum03, dum04, inbc, ib, .false., .false.)
+c$$$c     only unique directions are returned as dum04. and the number of
+c$$$c     unique arrays are ib.
+c$$$c' ' ' ' ' ' ' ' ' ' ' ' ' ' ' ' ' ' ' ' ' ' ' ' ' ' ' ' ' ' ' ' ' ' ' c
+c$$$c     print screen block
+c$$$      if (verbose) then
+c$$$          write(*,*) 'before the removal of parallel vectors'
+c$$$          do i=1,inbc
+c$$$             write(*,'(3f7.3)') (dum03(j,i),j=1,3)
+c$$$          enddo
+c$$$          write(*,*) 'after'
+c$$$          do i=1,ib
+c$$$             write(*,'(3f7.3)') (dum04(j,i),j=1,3)
+c$$$          enddo
+c$$$          write(*,*) 'inbc: ', inbc
+c$$$c          read(*,*)
+c$$$       endif
+c$$$c' ' ' ' ' ' ' ' ' ' ' ' ' ' ' ' ' ' ' ' ' ' ' ' ' ' ' ' ' ' ' ' ' ' ' c
+c$$$
+c$$$      do 600 j=1,ib ! direction
+c$$$         inb = inb + 1
+c$$$      do 600 i=1,3
+c$$$         uniqset(i,1,inb) = dum01(i)
+c$$$         uniqset(i,2,inb) = dum04(i,j)
+c$$$ 600  continue                  ! over ib again.
+c$$$ 1000 continue                  ! loop over n & b set.
+c$$$c- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - c
+c$$$      if (verbose) then
+c$$$         write(*,*) 'inb:', inb
+c$$$         do in=1,inb
+c$$$            write(*,'(3f8.3, 2x, 3f8.3)') (uniqset(i,1,in),i=1,3),
+c$$$     $           (uniqset(i,2,in),i=1,3)
+c$$$         enddo
+c$$$      endif
+c$$$      return
+c$$$      end subroutine uniqpnset
 c----------------------------------------------------------------------c
 c     crystal rotation symmetry operator calculation programs
 c     the calculation of each element of operators are rigorously
 c     implemented for facilitating general applications.
 c----------------------------------------------------------------------c
-      subroutine orthorhombic_rot_sym(h, n, icen)
-c     Returns the rotation symmetry operators: h.
-c     h_[ij] transforms a vector to another albeit crystallographically
-c     equivalent one in ca for orthorhombic structure.
-c     n returns the kinds of the transformation matrix h.
-c     Symmetry operations:
-c     1. 2-fold symmetry about [001]
-c     2. Mirror by yz and xz planes, respectively.
-c     3. Centro-symmetry by (0,0,0)
-      implicit none
-      real*8 h0(3,3), h(3,3,48), dum(3,3), hmiryz(3,3), hmirxz(3,3),
-     $     hz180(3,3), hc(3,3), z(3), rz(3,3)
-      integer i,j,n,in,iin
-      logical icen
-cf2py intent(in) icen
-cf2py intent(out) h, n
-      write(*,*) 'Not tested yet for orthorhombic_rot_sym'
-      stop
-      call imat(h0)
-      do 10 i=1,3
-      do 10 j=1,3
-         h(i,j,1) = h0(i,j)
- 10   continue
-      call zmat(h0)
-      call zvec(z)
-      z(3) = 1.d0
-      call vector_ang(z, 180.d0, hz180)
-      call reflect(hmirxz, 0.d0) ! xz-plane reflection.
-      call vector_ang(z, 90.d0, rz) ! rotation to convert xzR -> yzR
-      call matrot(rz, hmirxz, hmiryz) ! rotate hmirxz into hmiryz
-      n = 1
-      iin = 0
-      do 20 in = 1, n
-         call take33mat(h0, 48, in, h)
-         call matply(h0, hz180, dum)
-         iin = iin + 1
-         call add33mat(dum, 48, n + iin, h)
- 20   continue
-      n = n + iin
-
-      iin = 0
-      do 30 in = 1, n
-         call take33mat(h0, 48, in, h)
-         call matply(h0, hmirxz, dum)
-         iin = iin + 1
-         call add33mat(dum, 48, n + iin, h)
- 30   continue
-      n = n + iin
-
-      iin = 0
-      do 40 in = 1, n
-         call take33mat(h0, 48, in, h)
-         call matply(h0, hmiryz, dum)
-         iin = iin + 1
-         call add33mat(dum, 48, n+iin, h)
- 40   continue
-      n = n + iin
-c- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - c
-c     centro-symmetry
-      if (icen) then
-         call central(hc)       ! centro-sym op.
-         iin = 0
-         do 50 in = 1, n
-            call take33mat(h0, 48, in, h)
-            call matply(h0, hc, dum)
-            iin = iin + 1
-            call add33mat(dum, 48, n+iin, h)
- 50      continue
-         n = n + iin
-      endif
-c- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - c
-      return
-      end subroutine orthorhombic_rot_sym
+c$$$      subroutine orthorhombic_rot_sym(h, n, icen)
+c$$$c     Returns the rotation symmetry operators: h.
+c$$$c     h_[ij] transforms a vector to another albeit crystallographically
+c$$$c     equivalent one in ca for orthorhombic structure.
+c$$$c     n returns the kinds of the transformation matrix h.
+c$$$c     Symmetry operations:
+c$$$c     1. 2-fold symmetry about [001]
+c$$$c     2. Mirror by yz and xz planes, respectively.
+c$$$c     3. Centro-symmetry by (0,0,0)
+c$$$      implicit none
+c$$$      real*8 h0(3,3), h(3,3,48), dum(3,3), hmiryz(3,3), hmirxz(3,3),
+c$$$     $     hz180(3,3), hc(3,3), z(3), rz(3,3)
+c$$$      integer i,j,n,in,iin
+c$$$      logical icen
+c$$$cf2py intent(in) icen
+c$$$cf2py intent(out) h, n
+c$$$      write(*,*) 'Not tested yet for orthorhombic_rot_sym'
+c$$$      stop
+c$$$      call imat(h0)
+c$$$      do 10 i=1,3
+c$$$      do 10 j=1,3
+c$$$         h(i,j,1) = h0(i,j)
+c$$$ 10   continue
+c$$$      call zmat(h0)
+c$$$      call zvec(z)
+c$$$      z(3) = 1.d0
+c$$$      call vector_ang(z, 180.d0, hz180)
+c$$$      call reflect(hmirxz, 0.d0) ! xz-plane reflection.
+c$$$      call vector_ang(z, 90.d0, rz) ! rotation to convert xzR -> yzR
+c$$$      call matrot(rz, hmirxz, hmiryz) ! rotate hmirxz into hmiryz
+c$$$      n = 1
+c$$$      iin = 0
+c$$$      do 20 in = 1, n
+c$$$         call take33mat(h0, 48, in, h)
+c$$$         call matply(h0, hz180, dum)
+c$$$         iin = iin + 1
+c$$$         call add33mat(dum, 48, n + iin, h)
+c$$$ 20   continue
+c$$$      n = n + iin
+c$$$
+c$$$      iin = 0
+c$$$      do 30 in = 1, n
+c$$$         call take33mat(h0, 48, in, h)
+c$$$         call matply(h0, hmirxz, dum)
+c$$$         iin = iin + 1
+c$$$         call add33mat(dum, 48, n + iin, h)
+c$$$ 30   continue
+c$$$      n = n + iin
+c$$$
+c$$$      iin = 0
+c$$$      do 40 in = 1, n
+c$$$         call take33mat(h0, 48, in, h)
+c$$$         call matply(h0, hmiryz, dum)
+c$$$         iin = iin + 1
+c$$$         call add33mat(dum, 48, n+iin, h)
+c$$$ 40   continue
+c$$$      n = n + iin
+c$$$c- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - c
+c$$$c     centro-symmetry
+c$$$      if (icen) then
+c$$$         call central(hc)       ! centro-sym op.
+c$$$         iin = 0
+c$$$         do 50 in = 1, n
+c$$$            call take33mat(h0, 48, in, h)
+c$$$            call matply(h0, hc, dum)
+c$$$            iin = iin + 1
+c$$$            call add33mat(dum, 48, n+iin, h)
+c$$$ 50      continue
+c$$$         n = n + iin
+c$$$      endif
+c$$$c- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - c
+c$$$      return
+c$$$      end subroutine orthorhombic_rot_sym
+c$$$c----------------------------------------------------------------------c
+c$$$      subroutine monoclinic_rot_sym(h,n,icen)
+c$$$c     Returns the rotation symmetry operators: h.
+c$$$c     h_[ij] transforms a vector to another albeit crystallographically
+c$$$c     equivalent one in ca for monoclinic structure.
+c$$$c     n returns the kinds of the transformation matrix h.
+c$$$c     Symmetry operations:
+c$$$c     1. 2-fold symmetry about [001]
+c$$$c     2. Centro-symmetry (optional)
+c$$$      implicit none
+c$$$      real*8 h0(3,3), h(3,3,48), dum(3,3), hz180(3,3), hc(3,3), z(3)
+c$$$      integer i,j,in,iin,n
+c$$$      logical icen
+c$$$cf2py intent(in) icen
+c$$$cf2py intent(out) h,n
+c$$$      write(*,*) 'Not tested yet for monoclinic_rot_sym'
+c$$$      stop
+c$$$      call imat(h0)
+c$$$      do 10 i=1,3
+c$$$      do 10 j=1,3
+c$$$         h(i,j,1) = h0(i,j)
+c$$$ 10   continue
+c$$$      call zmat(h0)
+c$$$
+c$$$c      write(*,*) 'not completed!'
+c$$$c      stop
+c$$$
+c$$$      call zvec(z)
+c$$$      z(3) = 1.d0
+c$$$      call vector_ang(z, 180.d0, hz180)
+c$$$
+c$$$      n = 1
+c$$$      iin = 0
+c$$$      do 20 in=1,n
+c$$$         call take33mat(h0, 48, in, h)
+c$$$         call matply(h0, hz180, dum)
+c$$$         iin = iin + 1
+c$$$         call add33mat(dum, 48, n+iin, h)
+c$$$ 20   continue
+c$$$      n = n + iin
+c$$$
+c$$$c- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - c
+c$$$      if (icen) then
+c$$$         call central(hc)       ! centro-sym op.
+c$$$         iin = 0
+c$$$         do 30 in = 1, n
+c$$$            call take33mat(h0, 48, in, h)
+c$$$            call matply(h0, hc, dum)
+c$$$            iin = iin + 1
+c$$$            call add33mat(dum, 48, n+iin, h)
+c$$$ 30      continue
+c$$$         n = n + iin
+c$$$      endif
+c$$$c- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - c
+c$$$      return
+c$$$      end subroutine monoclinic_rot_sym
 c----------------------------------------------------------------------c
-      subroutine monoclinic_rot_sym(h,n,icen)
-c     Returns the rotation symmetry operators: h.
-c     h_[ij] transforms a vector to another albeit crystallographically
-c     equivalent one in ca for monoclinic structure.
-c     n returns the kinds of the transformation matrix h.
-c     Symmetry operations:
-c     1. 2-fold symmetry about [001]
-c     2. Centro-symmetry (optional)
-      implicit none
-      real*8 h0(3,3), h(3,3,48), dum(3,3), hz180(3,3), hc(3,3), z(3)
-      integer i,j,in,iin,n
-      logical icen
-cf2py intent(in) icen
-cf2py intent(out) h,n
-      write(*,*) 'Not tested yet for monoclinic_rot_sym'
-      stop
-      call imat(h0)
-      do 10 i=1,3
-      do 10 j=1,3
-         h(i,j,1) = h0(i,j)
- 10   continue
-      call zmat(h0)
-
-c      write(*,*) 'not completed!'
-c      stop
-
-      call zvec(z)
-      z(3) = 1.d0
-      call vector_ang(z, 180.d0, hz180)
-
-      n = 1
-      iin = 0
-      do 20 in=1,n
-         call take33mat(h0, 48, in, h)
-         call matply(h0, hz180, dum)
-         iin = iin + 1
-         call add33mat(dum, 48, n+iin, h)
- 20   continue
-      n = n + iin
-
-c- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - c
-      if (icen) then
-         call central(hc)       ! centro-sym op.
-         iin = 0
-         do 30 in = 1, n
-            call take33mat(h0, 48, in, h)
-            call matply(h0, hc, dum)
-            iin = iin + 1
-            call add33mat(dum, 48, n+iin, h)
- 30      continue
-         n = n + iin
-      endif
-c- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - c
-      return
-      end subroutine monoclinic_rot_sym
+c$$$      subroutine triclinic_rot_sym(h,n,icen)
+c$$$c     Returns the rotation symmetry operators: h.
+c$$$c     h_[ij] transforms a vector to another albeit crystallographically
+c$$$c     equivalent one in ca for triclinic structure.
+c$$$c     n returns the kinds of the transformation matrix h.
+c$$$      implicit none
+c$$$      real*8 h(3,3,48), hc(3,3), dum(3,3), h0(3,3)
+c$$$      integer i,j,in,iin,n
+c$$$      logical icen
+c$$$cf2py intent(in) icen
+c$$$cf2py intent(out) h,n
+c$$$      write(*,*) 'Not tested yet for triclinic_rot_sym'
+c$$$      stop
+c$$$      call imat(h0)
+c$$$      do 10 i=1,3
+c$$$      do 10 j=1,3
+c$$$         h(i,j,1) = h0(i,j)
+c$$$ 10   continue
+c$$$      call zmat(h0)
+c$$$      n = 1
+c$$$c- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - c
+c$$$      if (icen) then
+c$$$         call central(hc)       ! centro-sym op.
+c$$$         iin = 0
+c$$$         do in = 1, n
+c$$$            call take33mat(h0, 48, in, h)
+c$$$            call matply(h0, hc, dum)
+c$$$            iin = iin + 1
+c$$$            call add33mat(dum, 48, n+iin, h)
+c$$$         enddo
+c$$$         n = n + iin
+c$$$      endif
+c$$$c- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - c
+c$$$      return
+c$$$      end subroutine triclinic_rot_sym
 c----------------------------------------------------------------------c
-      subroutine triclinic_rot_sym(h,n,icen)
-c     Returns the rotation symmetry operators: h.
-c     h_[ij] transforms a vector to another albeit crystallographically
-c     equivalent one in ca for triclinic structure.
-c     n returns the kinds of the transformation matrix h.
-      implicit none
-      real*8 h(3,3,48), hc(3,3), dum(3,3), h0(3,3)
-      integer i,j,in,iin,n
-      logical icen
-cf2py intent(in) icen
-cf2py intent(out) h,n
-      write(*,*) 'Not tested yet for triclinic_rot_sym'
-      stop
-      call imat(h0)
-      do 10 i=1,3
-      do 10 j=1,3
-         h(i,j,1) = h0(i,j)
- 10   continue
-      call zmat(h0)
-      n = 1
-c- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - c
-      if (icen) then
-         call central(hc)       ! centro-sym op.
-         iin = 0
-         do in = 1, n
-            call take33mat(h0, 48, in, h)
-            call matply(h0, hc, dum)
-            iin = iin + 1
-            call add33mat(dum, 48, n+iin, h)
-         enddo
-         n = n + iin
-      endif
-c- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - c
-      return
-      end subroutine triclinic_rot_sym
+c$$$      subroutine hexagonal_rot_sym(h,n,icen)
+c$$$c     Returns the rotation symmetry operators: h.
+c$$$c     h_[ij] transforms a vector to another albeit crystallographically
+c$$$c     equivalent one in ca for orthorhombic structure.
+c$$$c     n returns the kinds of the transformation matrix h.
+c$$$c     Symmetry operations:
+c$$$c     1. Mirror plane at 30 degree with respect to x1
+c$$$c     2. 6-fold symmetry about [001]
+c$$$      implicit none
+c$$$      real*8 h(3,3,48), z(3), h0(3,3), r(3,3,6), r0(3,3), dum(3,3),
+c$$$     $     hc(3,3), x(3), rxz(3,3), rz(3,3), hmirr(3,3)
+c$$$      integer i,j,in,iin,n
+c$$$      logical icen
+c$$$cf2py intent(in) icen
+c$$$cf2py intent(out) h, n
+c$$$      write(*,*) 'Not tested yet for hexagonal_rot_sym'
+c$$$      stop
+c$$$      call imat(h0)
+c$$$      do 10 i=1,3
+c$$$      do 10 j=1,3
+c$$$         h(i,j,1) = h0(i,j)
+c$$$ 10   continue
+c$$$      call zmat(h0)
+c$$$
+c$$$c     x and z unit vectors
+c$$$      call zvec(x)
+c$$$      call zvec(z)
+c$$$      x(1) = 1.d0
+c$$$      z(3) = 1.d0
+c$$$
+c$$$c      write(*,*) 'not completed!'
+c$$$c      stop
+c$$$
+c$$$c- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - c
+c$$$c     hmirr reflects by the plane at 30 deg with respect to x1
+c$$$      call reflect(rxz, 0.d0)
+c$$$c     rotate rxz by 180./6. degree about z
+c$$$      call vector_ang(z, -30.d0, rz)
+c$$$      call matrot(rz, rxz, hmirr)
+c$$$      n = 1
+c$$$      iin = 0
+c$$$      do 20 in=1,n
+c$$$         call take33mat(h0, 48, in, h)
+c$$$         call matply(h0, hmirr, dum)
+c$$$         iin = iin + 1
+c$$$         call add33mat(dum, 48, n + iin, h)
+c$$$ 20   continue
+c$$$      n = n + iin
+c$$$c- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - c
+c$$$c     Add 6-fold symmetry
+c$$$      do 30 i=1,6
+c$$$         call vector_ang(z, 360.d0/6. * i, dum)
+c$$$         call add33mat(dum, 6, i, r)
+c$$$ 30   continue
+c$$$      iin = 0
+c$$$      do 40 in=1,n
+c$$$         call take33mat(h0, 48, in, h)
+c$$$      do 40 i=1,6
+c$$$         call take33mat(r0, 6, i, r)
+c$$$         call matply(h0, r0, dum)
+c$$$         iin = iin + 1
+c$$$         call add33mat(dum, 48, n+iin, h)
+c$$$ 40   continue
+c$$$      n = n + iin
+c$$$c- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - c
+c$$$c     centro-symmetry
+c$$$      if (icen) then
+c$$$         call central(hc)       ! centro-sym op.
+c$$$         iin = 0
+c$$$         do 50 in = 1, n
+c$$$            call take33mat(h0, 48, in, h)
+c$$$            call matply(h0, hc, dum)
+c$$$            iin = iin + 1
+c$$$            call add33mat(dum, 48, n+iin, h)
+c$$$ 50      continue
+c$$$         n = n + iin
+c$$$      endif
+c$$$c- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - c
+c$$$      return
+c$$$      end subroutine hexagonal_rot_sym
 c----------------------------------------------------------------------c
-      subroutine hexagonal_rot_sym(h,n,icen)
-c     Returns the rotation symmetry operators: h.
-c     h_[ij] transforms a vector to another albeit crystallographically
-c     equivalent one in ca for orthorhombic structure.
-c     n returns the kinds of the transformation matrix h.
-c     Symmetry operations:
-c     1. Mirror plane at 30 degree with respect to x1
-c     2. 6-fold symmetry about [001]
-      implicit none
-      real*8 h(3,3,48), z(3), h0(3,3), r(3,3,6), r0(3,3), dum(3,3),
-     $     hc(3,3), x(3), rxz(3,3), rz(3,3), hmirr(3,3)
-      integer i,j,in,iin,n
-      logical icen
-cf2py intent(in) icen
-cf2py intent(out) h, n
-      write(*,*) 'Not tested yet for hexagonal_rot_sym'
-      stop
-      call imat(h0)
-      do 10 i=1,3
-      do 10 j=1,3
-         h(i,j,1) = h0(i,j)
- 10   continue
-      call zmat(h0)
-
-c     x and z unit vectors
-      call zvec(x)
-      call zvec(z)
-      x(1) = 1.d0
-      z(3) = 1.d0
-
-c      write(*,*) 'not completed!'
-c      stop
-
-c- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - c
-c     hmirr reflects by the plane at 30 deg with respect to x1
-      call reflect(rxz, 0.d0)
-c     rotate rxz by 180./6. degree about z
-      call vector_ang(z, -30.d0, rz)
-      call matrot(rz, rxz, hmirr)
-      n = 1
-      iin = 0
-      do 20 in=1,n
-         call take33mat(h0, 48, in, h)
-         call matply(h0, hmirr, dum)
-         iin = iin + 1
-         call add33mat(dum, 48, n + iin, h)
- 20   continue
-      n = n + iin
-c- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - c
-c     Add 6-fold symmetry
-      do 30 i=1,6
-         call vector_ang(z, 360.d0/6. * i, dum)
-         call add33mat(dum, 6, i, r)
- 30   continue
-      iin = 0
-      do 40 in=1,n
-         call take33mat(h0, 48, in, h)
-      do 40 i=1,6
-         call take33mat(r0, 6, i, r)
-         call matply(h0, r0, dum)
-         iin = iin + 1
-         call add33mat(dum, 48, n+iin, h)
- 40   continue
-      n = n + iin
-c- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - c
-c     centro-symmetry
-      if (icen) then
-         call central(hc)       ! centro-sym op.
-         iin = 0
-         do 50 in = 1, n
-            call take33mat(h0, 48, in, h)
-            call matply(h0, hc, dum)
-            iin = iin + 1
-            call add33mat(dum, 48, n+iin, h)
- 50      continue
-         n = n + iin
-      endif
-c- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - c
-      return
-      end subroutine hexagonal_rot_sym
+c$$$      subroutine tetragonal_rot_sym(h,n,icen)
+c$$$      implicit none
+c$$$      real*8 h0(3,3), h(3,3,48), dum(3,3), x(3), z(3), hc(3,3),
+c$$$     $     rxz(3,3), hmirr(3,3), rz(3,3), r(3,3,4), r0(3,3)
+c$$$      integer i,j,in,iin,n
+c$$$      logical icen
+c$$$cf2py intent(in) icen
+c$$$cf2py intent(out) h, n
+c$$$c- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - c
+c$$$c     identity tensor
+c$$$      write(*,*) 'Not tested yet for tetragonal_rot_sym'
+c$$$      stop
+c$$$      call imat(h0)
+c$$$      do 10 i=1,3
+c$$$      do 10 j=1,3
+c$$$            h(i,j,1) = h0(i,j)
+c$$$ 10   continue
+c$$$      call zmat(h0)
+c$$$
+c$$$c     x and z unit vectors
+c$$$      call zvec(x)
+c$$$      call zvec(z)
+c$$$      x(1) = 1.d0
+c$$$      z(3) = 1.d0
+c$$$
+c$$$c- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - c
+c$$$c     hmirr reflects by the plane at 45 deg with respect to x1
+c$$$      call reflect(rxz, 0.d0)
+c$$$c     rotate rxz by 180./6. degree about z
+c$$$      call vector_ang(z, -45.d0, rz)
+c$$$      call matrot(rz, rxz, hmirr)
+c$$$
+c$$$      n = 1
+c$$$      iin = 0
+c$$$      do 20 in = 1,n
+c$$$         call take33mat(h0, 48, in, h)
+c$$$         call matply(h0, hmirr, dum)
+c$$$         iin = iin + 1
+c$$$         call add33mat(dum, 48, n + iin, h)
+c$$$ 20   continue
+c$$$      n = n + iin
+c$$$
+c$$$c- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - c
+c$$$c     Add 4-fold symmetry
+c$$$      do 30 i=1,4
+c$$$         call vector_ang(z, 360.d0/4. * i, dum)
+c$$$         call add33mat(dum, 4, i, r)
+c$$$ 30   continue
+c$$$
+c$$$      iin = 0
+c$$$      do 40 in=1,n
+c$$$         call take33mat(h0, 48, in, h)
+c$$$      do 40 i=1,4
+c$$$         call take33mat(r0, 4, i, r)
+c$$$         call matply(h0, r0, dum)
+c$$$         iin = iin + 1
+c$$$         call add33mat(dum, 48, n+iin, h)
+c$$$ 40   continue
+c$$$      n = n + iin
+c$$$c- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - c
+c$$$c     centro-symmetry
+c$$$      if (icen) then
+c$$$         call central(hc)       ! centro-sym op.
+c$$$         iin = 0
+c$$$         do 50 in = 1, n
+c$$$            call take33mat(h0, 48, in, h)
+c$$$            call matply(h0, hc, dum)
+c$$$            iin = iin + 1
+c$$$            call add33mat(dum, 48, n+iin, h)
+c$$$ 50      continue
+c$$$         n = n + iin
+c$$$      endif
+c$$$c- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - c
+c$$$      return
+c$$$      end subroutine tetragonal_rot_sym
+c$$$c----------------------------------------------------------------------c
+c$$$      subroutine trigonal_rot_sym(h,n,icen)
+c$$$      implicit none
+c$$$      real*8 h0(3,3), h(3,3,48), dum(3,3), x(3), z(3), hc(3,3),
+c$$$     $     rxz(3,3), hmirr(3,3), rz(3,3), r(3,3,3), r0(3,3)
+c$$$      integer i,j,in,iin,n
+c$$$      logical icen
+c$$$cf2py intent(in) icen
+c$$$cf2py intent(out) h, n
+c$$$      write(*,*) 'Not tested yet for trigonal_rot_sym'
+c$$$      stop
+c$$$c- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - c
+c$$$c     identity tensor
+c$$$      call imat(h0)
+c$$$      do 10 i=1,3
+c$$$      do 10 j=1,3
+c$$$            h(i,j,1) = h0(i,j)
+c$$$ 10   continue
+c$$$      call zmat(h0)
+c$$$
+c$$$c     x and z unit vectors
+c$$$      call zvec(x)
+c$$$      call zvec(z)
+c$$$      x(1) = 1.d0
+c$$$      z(3) = 1.d0
+c$$$
+c$$$c- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - c
+c$$$c     hmirr reflects by the plane at 45 deg with respect to x1
+c$$$      call reflect(rxz, 0.d0)
+c$$$c     rotate rxz by 180./6. degree about z
+c$$$      call vector_ang(z, -60.d0, rz)
+c$$$      call matrot(rz, rxz, hmirr)
+c$$$      n = 1
+c$$$      iin = 0
+c$$$      do 20 in = 1,n
+c$$$         call take33mat(h0, 48, in, h)
+c$$$         call matply(h0, hmirr, dum)
+c$$$         iin = iin + 1
+c$$$         call add33mat(dum, 48, n + iin, h)
+c$$$ 20   continue
+c$$$      n = n + iin
+c$$$
+c$$$c- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - c
+c$$$c     Add 3-fold symmetry
+c$$$      do 30 i=1,3
+c$$$         call vector_ang(z, 360.d0/4. * i, dum)
+c$$$         call add33mat(dum, 3, i, r)
+c$$$ 30   continue
+c$$$
+c$$$      iin = 0
+c$$$      do 40 in=1,n
+c$$$         call take33mat(h0, 48, in, h)
+c$$$      do 40 i=1,3
+c$$$         call take33mat(r0, 3, i, r)
+c$$$         call matply(h0, r0, dum)
+c$$$         iin = iin + 1
+c$$$         call add33mat(dum, 48, n+iin, h)
+c$$$ 40   continue
+c$$$      n = n + iin
+c$$$c- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - c
+c$$$c     centro-symmetry
+c$$$      if (icen) then
+c$$$         call central(hc)       ! centro-sym op.
+c$$$         iin = 0
+c$$$         do 50 in = 1, n
+c$$$            call take33mat(h0, 48, in, h)
+c$$$            call matply(h0, hc, dum)
+c$$$            iin = iin + 1
+c$$$            call add33mat(dum, 48, n+iin, h)
+c$$$ 50      continue
+c$$$         n = n + iin
+c$$$      endif
+c$$$      return
+c$$$      end subroutine trigonal_rot_sym
 c----------------------------------------------------------------------c
-      subroutine tetragonal_rot_sym(h,n,icen)
-      implicit none
-      real*8 h0(3,3), h(3,3,48), dum(3,3), x(3), z(3), hc(3,3),
-     $     rxz(3,3), hmirr(3,3), rz(3,3), r(3,3,4), r0(3,3)
-      integer i,j,in,iin,n
-      logical icen
-cf2py intent(in) icen
-cf2py intent(out) h, n
-c- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - c
-c     identity tensor
-      write(*,*) 'Not tested yet for tetragonal_rot_sym'
-      stop
-      call imat(h0)
-      do 10 i=1,3
-      do 10 j=1,3
-            h(i,j,1) = h0(i,j)
- 10   continue
-      call zmat(h0)
-
-c     x and z unit vectors
-      call zvec(x)
-      call zvec(z)
-      x(1) = 1.d0
-      z(3) = 1.d0
-
-c- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - c
-c     hmirr reflects by the plane at 45 deg with respect to x1
-      call reflect(rxz, 0.d0)
-c     rotate rxz by 180./6. degree about z
-      call vector_ang(z, -45.d0, rz)
-      call matrot(rz, rxz, hmirr)
-
-      n = 1
-      iin = 0
-      do 20 in = 1,n
-         call take33mat(h0, 48, in, h)
-         call matply(h0, hmirr, dum)
-         iin = iin + 1
-         call add33mat(dum, 48, n + iin, h)
- 20   continue
-      n = n + iin
-
-c- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - c
-c     Add 4-fold symmetry
-      do 30 i=1,4
-         call vector_ang(z, 360.d0/4. * i, dum)
-         call add33mat(dum, 4, i, r)
- 30   continue
-
-      iin = 0
-      do 40 in=1,n
-         call take33mat(h0, 48, in, h)
-      do 40 i=1,4
-         call take33mat(r0, 4, i, r)
-         call matply(h0, r0, dum)
-         iin = iin + 1
-         call add33mat(dum, 48, n+iin, h)
- 40   continue
-      n = n + iin
-c- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - c
-c     centro-symmetry
-      if (icen) then
-         call central(hc)       ! centro-sym op.
-         iin = 0
-         do 50 in = 1, n
-            call take33mat(h0, 48, in, h)
-            call matply(h0, hc, dum)
-            iin = iin + 1
-            call add33mat(dum, 48, n+iin, h)
- 50      continue
-         n = n + iin
-      endif
-c- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - c
-      return
-      end subroutine tetragonal_rot_sym
-c----------------------------------------------------------------------c
-      subroutine trigonal_rot_sym(h,n,icen)
-      implicit none
-      real*8 h0(3,3), h(3,3,48), dum(3,3), x(3), z(3), hc(3,3),
-     $     rxz(3,3), hmirr(3,3), rz(3,3), r(3,3,3), r0(3,3)
-      integer i,j,in,iin,n
-      logical icen
-cf2py intent(in) icen
-cf2py intent(out) h, n
-      write(*,*) 'Not tested yet for trigonal_rot_sym'
-      stop
-c- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - c
-c     identity tensor
-      call imat(h0)
-      do 10 i=1,3
-      do 10 j=1,3
-            h(i,j,1) = h0(i,j)
- 10   continue
-      call zmat(h0)
-
-c     x and z unit vectors
-      call zvec(x)
-      call zvec(z)
-      x(1) = 1.d0
-      z(3) = 1.d0
-
-c- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - c
-c     hmirr reflects by the plane at 45 deg with respect to x1
-      call reflect(rxz, 0.d0)
-c     rotate rxz by 180./6. degree about z
-      call vector_ang(z, -60.d0, rz)
-      call matrot(rz, rxz, hmirr)
-      n = 1
-      iin = 0
-      do 20 in = 1,n
-         call take33mat(h0, 48, in, h)
-         call matply(h0, hmirr, dum)
-         iin = iin + 1
-         call add33mat(dum, 48, n + iin, h)
- 20   continue
-      n = n + iin
-
-c- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - c
-c     Add 3-fold symmetry
-      do 30 i=1,3
-         call vector_ang(z, 360.d0/4. * i, dum)
-         call add33mat(dum, 3, i, r)
- 30   continue
-
-      iin = 0
-      do 40 in=1,n
-         call take33mat(h0, 48, in, h)
-      do 40 i=1,3
-         call take33mat(r0, 3, i, r)
-         call matply(h0, r0, dum)
-         iin = iin + 1
-         call add33mat(dum, 48, n+iin, h)
- 40   continue
-      n = n + iin
-c- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - c
-c     centro-symmetry
-      if (icen) then
-         call central(hc)       ! centro-sym op.
-         iin = 0
-         do 50 in = 1, n
-            call take33mat(h0, 48, in, h)
-            call matply(h0, hc, dum)
-            iin = iin + 1
-            call add33mat(dum, 48, n+iin, h)
- 50      continue
-         n = n + iin
-      endif
-      return
-      end subroutine trigonal_rot_sym
-c----------------------------------------------------------------------c
-      subroutine cubic_orthrotmat(h, nvar)
-      implicit none
-      real*8 h0(3,3,48), h(3,3,48), aux1(3), aux2(3), aux3(3), aux4(3),
-     $     aux5(3), aux6(3), aux33(3,3)
-      integer i, j, ivar, n0, n, nvar
-      logical isrotmat, tag(48)
-c     Returns only orthogonal rotation matrices
-      call cubic_rot_sym(h0, n0, .true.) ! Full 48 rotation operators.
-      call finduniquemat(h0, h, n0, n, tag, .false., 0)
-
-      call zvec(aux1)
-      call zvec(aux2)
-      call zvec(aux3)
-      call zvec(aux4)
-      call zvec(aux5)
-
-      aux1(1) = 1.d0
-      aux2(2) = 1.d0
-      aux3(3) = 1.d0
-
-      nvar = 0
-      do ivar = 1, n
-         call zvec(aux4)
-         call zvec(aux5)
-         call zvec(aux6)
-
-         do 100 i=1,3
-         do 100 j=1,3
-            aux4(i) = aux4(i) + h(i,j,ivar) * aux1(j)
-            aux5(i) = aux5(i) + h(i,j,ivar) * aux2(j)
-            aux6(i) = aux6(i) + h(i,j,ivar) * aux3(j)
- 100     continue
-
-         call vnorm(aux4, 3)
-         call vnorm(aux5, 3)
-         call vnorm(aux6, 3)
-
-         do i=1,3
-            aux33(i,1) = aux4(i)
-            aux33(i,2) = aux5(i)
-            aux33(i,3) = aux6(i)
-         enddo
-
-         write(*,*) ivar
-         if (isrotmat(aux33,3)) then
-            nvar = nvar + 1
-            do 200 i=1,3
-            do 200j=1,3
-               h(i,j,nvar) = aux33(i,j)
- 200        continue
-         endif
-      enddo
-      return
-      end subroutine cubic_orthrotmat
-c----------------------------------------------------------------------c
-      subroutine hexagon_orthrotmat(h,nvar)
-      implicit none
-      real*8 h0(3,3,48), h(3,3,48), aux1(3), aux2(3), aux3(3), aux4(3),
-     $     aux5(3), aux6(3), aux33(3,3)
-      integer i, j, ivar, n0, n, nvar
-      logical isrotmat, tag(48)
-      call hexagon_rot_sym(h0,n0)
-      call finduniquemat(h0,h,n0,n,tag,.false.,0)
-      call zvec(aux1)
-      call zvec(aux2)
-      call zvec(aux3)
-      call zvec(aux4)
-      call zvec(aux5)
-
-      aux1(1) = 1.d0
-      aux1(2) = 1.d0
-      aux1(3) = 1.d0
-
-      nvar = 0
-      do ivar = 1, n
-         call zvec(aux4)
-         call zvec(aux5)
-         call zvec(aux6)
-
-         do 100 i=1,3
-         do 100 j=1,3
-            aux4(i) = aux4(i) + h(i,j,ivar) * aux1(j)
-            aux5(i) = aux5(i) + h(i,j,ivar) * aux2(j)
-            aux6(i) = aux6(i) + h(i,j,ivar) * aux3(j)
- 100     continue
-
-         call vnorm(aux4, 3)
-         call vnorm(aux5, 3)
-         call vnorm(aux6, 3)
-
-         do i=1,3
-            aux33(i,1) = aux4(i)
-            aux33(i,2) = aux5(i)
-            aux33(i,3) = aux6(i)
-         enddo
-
-         write(*,*) ivar
-         if (isrotmat(aux33,3)) then
-            nvar = nvar + 1
-            do 200 i=1,3
-            do 200j=1,3
-               h(i,j,nvar) = aux33(i,j)
- 200        continue
-         endif
-      enddo
-
-      return
-      end subroutine hexagon_orthrotmat
-c----------------------------------------------------------------------c
+c$$$      subroutine cubic_orthrotmat(h, nvar)
+c$$$      implicit none
+c$$$      real*8 h0(3,3,48), h(3,3,48), aux1(3), aux2(3), aux3(3), aux4(3),
+c$$$     $     aux5(3), aux6(3), aux33(3,3)
+c$$$      integer i, j, ivar, n0, n, nvar
+c$$$      logical isrotmat, tag(48)
+c$$$c     Returns only orthogonal rotation matrices
+c$$$      call cubic_rot_sym(h0, n0, .true.) ! Full 48 rotation operators.
+c$$$      call finduniquemat(h0, h, n0, n, tag, .false., 0)
+c$$$
+c$$$      call zvec(aux1)
+c$$$      call zvec(aux2)
+c$$$      call zvec(aux3)
+c$$$      call zvec(aux4)
+c$$$      call zvec(aux5)
+c$$$
+c$$$      aux1(1) = 1.d0
+c$$$      aux2(2) = 1.d0
+c$$$      aux3(3) = 1.d0
+c$$$
+c$$$      nvar = 0
+c$$$      do ivar = 1, n
+c$$$         call zvec(aux4)
+c$$$         call zvec(aux5)
+c$$$         call zvec(aux6)
+c$$$
+c$$$         do 100 i=1,3
+c$$$         do 100 j=1,3
+c$$$            aux4(i) = aux4(i) + h(i,j,ivar) * aux1(j)
+c$$$            aux5(i) = aux5(i) + h(i,j,ivar) * aux2(j)
+c$$$            aux6(i) = aux6(i) + h(i,j,ivar) * aux3(j)
+c$$$ 100     continue
+c$$$
+c$$$         call vnorm(aux4, 3)
+c$$$         call vnorm(aux5, 3)
+c$$$         call vnorm(aux6, 3)
+c$$$
+c$$$         do i=1,3
+c$$$            aux33(i,1) = aux4(i)
+c$$$            aux33(i,2) = aux5(i)
+c$$$            aux33(i,3) = aux6(i)
+c$$$         enddo
+c$$$
+c$$$         write(*,*) ivar
+c$$$         if (isrotmat(aux33,3)) then
+c$$$            nvar = nvar + 1
+c$$$            do 200 i=1,3
+c$$$            do 200j=1,3
+c$$$               h(i,j,nvar) = aux33(i,j)
+c$$$ 200        continue
+c$$$         endif
+c$$$      enddo
+c$$$      return
+c$$$      end subroutine cubic_orthrotmat
+c$$$c----------------------------------------------------------------------c
+c$$$      subroutine hexagon_orthrotmat(h,nvar)
+c$$$      implicit none
+c$$$      real*8 h0(3,3,48), h(3,3,48), aux1(3), aux2(3), aux3(3), aux4(3),
+c$$$     $     aux5(3), aux6(3), aux33(3,3)
+c$$$      integer i, j, ivar, n0, n, nvar
+c$$$      logical isrotmat, tag(48)
+c$$$      call hexagon_rot_sym(h0,n0)
+c$$$      call finduniquemat(h0,h,n0,n,tag,.false.,0)
+c$$$      call zvec(aux1)
+c$$$      call zvec(aux2)
+c$$$      call zvec(aux3)
+c$$$      call zvec(aux4)
+c$$$      call zvec(aux5)
+c$$$
+c$$$      aux1(1) = 1.d0
+c$$$      aux1(2) = 1.d0
+c$$$      aux1(3) = 1.d0
+c$$$
+c$$$      nvar = 0
+c$$$      do ivar = 1, n
+c$$$         call zvec(aux4)
+c$$$         call zvec(aux5)
+c$$$         call zvec(aux6)
+c$$$
+c$$$         do 100 i=1,3
+c$$$         do 100 j=1,3
+c$$$            aux4(i) = aux4(i) + h(i,j,ivar) * aux1(j)
+c$$$            aux5(i) = aux5(i) + h(i,j,ivar) * aux2(j)
+c$$$            aux6(i) = aux6(i) + h(i,j,ivar) * aux3(j)
+c$$$ 100     continue
+c$$$
+c$$$         call vnorm(aux4, 3)
+c$$$         call vnorm(aux5, 3)
+c$$$         call vnorm(aux6, 3)
+c$$$
+c$$$         do i=1,3
+c$$$            aux33(i,1) = aux4(i)
+c$$$            aux33(i,2) = aux5(i)
+c$$$            aux33(i,3) = aux6(i)
+c$$$         enddo
+c$$$
+c$$$         write(*,*) ivar
+c$$$         if (isrotmat(aux33,3)) then
+c$$$            nvar = nvar + 1
+c$$$            do 200 i=1,3
+c$$$            do 200j=1,3
+c$$$               h(i,j,nvar) = aux33(i,j)
+c$$$ 200        continue
+c$$$         endif
+c$$$      enddo
+c$$$
+c$$$      return
+c$$$      end subroutine hexagon_orthrotmat
+c$$$c----------------------------------------------------------------------c
       subroutine cubic_rot_sym(h, n, icen)
 c     Returns the rotation symmetry operators: h.
 c     h_[ij] transforms a vector to another albeit crystallographically
@@ -1041,13 +1041,13 @@ c     and b lies in the xy plane.
 
       end subroutine unitcv
 c----------------------------------------------------------------------c
-      subroutine cubic_eqvect(v, vuniq, n, icen, ipr)
+c     , icen, ipr)
+      subroutine cubic_eqvect(v, vuniq, n)
 c     Given one vector v, finds only unique vectors considering central
 c     symmetry flag (icen). Argument 'n' is supposed to be updated based
 c     the number of unique sets of vectors.
-
 cf2py intent(in) v
-cf2py inetnt(out) vuniq, n
+cf2py intent(out) vuniq, n
       implicit none
       real*8 h(3,3,48), v(3), vall(3,48), vuniq(3,48)
       integer i, j, n, ii, nuniq

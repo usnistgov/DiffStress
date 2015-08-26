@@ -23,43 +23,43 @@ cf2py intent(out) b
       return
       end subroutine matrot
 c----------------------------------------------------------------------c
-c     Rotate the coordinates of matrix a(6,6) by rotation matrix 'rot'
-c     and returns the rotated mat as b(6,6) when expressed following
-c     Voigt's notation.
-c
-c     Note that the matrices a and b are double-tensors in that each of
-c     the tensors are as below:
-c          a_(coordinate1,coordinate1) # ca
-c          b_(coordinate2,coordinate2) # sa
-c          rot_(coordinate2<-coordinate1) # sa<-ca
-      subroutine matrot66(a,rot,b)
-      implicit none
-      real*8 a(6,6),rot(3,3),b(6,6),b3333(3,3,3,3),aux33(3,3),aux6(6),
-     $     aux66(6,6),aux3333(3,3,3,3),dummy
-      integer i,j,k,l,i1,j1,k1,l1
-      call voigt(aux6, aux33, a, aux3333, 3)
-      b(:,:) = 0.d0
-      b3333(:,:,:,:) = 0.d0
-      do 100 i=1,3
-      do 100 j=1,3
-      do 100 k=1,3
-      do 100 l=1,3
-         dummy = 0.d0
-         do 20 i1=1,3
-         do 20 j1=1,3
-         do 20 k1=1,3
-         do 20 l1=1,3
-c     A[i,j,k,l] = r[i,i1] r[j,j1] A[i1,j1,k1,l1] r[k1,k]^t r[l1,l]^t
-c     A[i,j,k,l] = r[i,i1] r[j,j1] A[i1,j1,k1,l1] r[k,k1]   r[l,l1]
-            dummy = dummy + rot(i,i1) * rot(j,j1)
-     $           * rot(k,k1) * rot(l,l1) * aux3333(i1,j1,k1,l1)
- 20      continue
-         b3333(i,j,k,l) = dummy
- 100  continue
-      call voigt(aux6,aux33,b,b3333,4)
-      return
-      end subroutine matrot66
-c----------------------------------------------------------------------c
+c$$$c     Rotate the coordinates of matrix a(6,6) by rotation matrix 'rot'
+c$$$c     and returns the rotated mat as b(6,6) when expressed following
+c$$$c     Voigt's notation.
+c$$$c
+c$$$c     Note that the matrices a and b are double-tensors in that each of
+c$$$c     the tensors are as below:
+c$$$c          a_(coordinate1,coordinate1) # ca
+c$$$c          b_(coordinate2,coordinate2) # sa
+c$$$c          rot_(coordinate2<-coordinate1) # sa<-ca
+c$$$      subroutine matrot66(a,rot,b)
+c$$$      implicit none
+c$$$      real*8 a(6,6),rot(3,3),b(6,6),b3333(3,3,3,3),aux33(3,3),aux6(6),
+c$$$     $     aux66(6,6),aux3333(3,3,3,3),dummy
+c$$$      integer i,j,k,l,i1,j1,k1,l1
+c$$$      call voigt(aux6, aux33, a, aux3333, 3)
+c$$$      b(:,:) = 0.d0
+c$$$      b3333(:,:,:,:) = 0.d0
+c$$$      do 100 i=1,3
+c$$$      do 100 j=1,3
+c$$$      do 100 k=1,3
+c$$$      do 100 l=1,3
+c$$$         dummy = 0.d0
+c$$$         do 20 i1=1,3
+c$$$         do 20 j1=1,3
+c$$$         do 20 k1=1,3
+c$$$         do 20 l1=1,3
+c$$$c     A[i,j,k,l] = r[i,i1] r[j,j1] A[i1,j1,k1,l1] r[k1,k]^t r[l1,l]^t
+c$$$c     A[i,j,k,l] = r[i,i1] r[j,j1] A[i1,j1,k1,l1] r[k,k1]   r[l,l1]
+c$$$            dummy = dummy + rot(i,i1) * rot(j,j1)
+c$$$     $           * rot(k,k1) * rot(l,l1) * aux3333(i1,j1,k1,l1)
+c$$$ 20      continue
+c$$$         b3333(i,j,k,l) = dummy
+c$$$ 100  continue
+c$$$      call voigt(aux6,aux33,b,b3333,4)
+c$$$      return
+c$$$      end subroutine matrot66
+c$$$c----------------------------------------------------------------------c
 c     matrix multiplication: c_ij = a_ik * b_kj
       subroutine matply(a,b,c)
       implicit none
