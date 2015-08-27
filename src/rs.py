@@ -374,6 +374,37 @@ def u_epshkl(e,sigma=5e-5):
         a.append(d)
     return a
 
+def u_epshkl_geom_inten(e, sigma, psi, theta_b, mrd):
+    """
+    Perturb the elastic strain as a function of
+    1) counting statistics error (sigma)
+    2) tilting (psi) angle and bragg angle
+    3) mrd (multitudes of random distribution)
+
+    Arguments
+    ---------
+    e       : diffraction strain at a certain orientation
+    sigma   : level of counting stat error
+    psi     : tilting angle
+    theta_b : bragg angle
+    mrd     :
+    """
+    # if len(e)>1: raise IOError,'Accepts a single float number'
+
+    ## geometrical influence by (pis, theta_b)
+    geom_f = 1./ (1-np.tan(psi)/np.tan(theta_b))
+
+    if geom_f<0:
+        print 'psi:', psi*180/np.pi
+        print 'theta_b:', theta_b*180/np.pi
+        raise IOError, 'geom_f<0'
+
+    new_sigma = geom_f * np.sqrt(sigma**2/mrd)
+
+    np.random.seed()
+    perturbed_strain = u_gaussian(e,new_sigma)
+    return perturbed_strain
+
 def __torad__(*args):
     newarray = []
     for a in args:

@@ -66,7 +66,7 @@ def ex_consistency(
         hkl=None,iplot=True,iwind=False,wdeg=2,ipsi_opt=1,
         fn_sff=None,pmargin=None,path='',sf_ext=None,ig_ext=None,
         vf_ext=None,iwgt=False,verbose=False,ilog=False,
-        dec_inv_frq=1,dec_interp=1):
+        dec_inv_frq=1,dec_interp=1,theta_b=None,ird=1.):
     """
     Consistency check between 'weighted average' stress and
     the stress obtained following the stress analysis method
@@ -118,6 +118,11 @@ def ex_consistency(
     ## debugging options
     verbose   : False
     ilog      : False
+
+    ----------------------------------------
+    ## Diffraction condition parameters
+    theta_b   : None (Bragg's angle)
+    ird       : Intensity expected for random distribution
     """
     if ilog:
         fn = 'ex_consistency.log'
@@ -135,7 +140,7 @@ def ex_consistency(
         f.close()
         print 'log has been saved to ',fn
 
-    from rs import ResidualStress,u_epshkl,filter_psi,\
+    from rs import ResidualStress,u_epshkl,u_epshkl_geom_inten,filter_psi,\
         filter_psi3,psi_reso, psi_reso2, psi_reso3,psi_reso4
     from mst_ex import use_intp_sfig, return_vf
     from MP.mat import mech # mech is a module
@@ -296,13 +301,30 @@ def ex_consistency(
 
     # 4. Perturb ehkl (common)
     if iscatter:
-        nstp,nphi,npsi = model_ehkls.shape
+        nstp, nphi, npsi = model_ehkls.shape
         tdats = np.zeros((nstp,nphi,npsi))
         for istp in range(nstp):
             for iphi in range(nphi):
-                tdats[istp,iphi,:] = u_epshkl(
-                    model_tdats[istp,iphi],
-                    sigma=sigma)
+                # ## Previous perturbation rule
+                # tdats[istp,iphi,:] = u_epshkl(
+                #     model_tdats[istp,iphi],
+                #     sigma=sigma)
+
+                ## New perturbation rule
+                if type(theta_b).__name__== 'NoneType':
+                    raise IOError, 'theta_b should be given'
+                for ipsi in range(npsi):
+                    ## multitudes of random
+                    mrd = model_vfs[istp,iphi,ipsi]/ird
+                    tdats[istp,iphi,ipsi] = u_epshkl_geom_inten(
+                        e     = model_tdats[istp,iphi,ipsi],
+                        sigma = sigma,
+                        psi   = model_rs.psis[ipsi],
+
+                        ## need to calculate the below...
+                        theta_b = theta_b,
+                        mrd = mrd)
+
     else: tdats=model_tdats.copy()
 
     ## end of data process
@@ -339,7 +361,9 @@ def ex_consistency(
     ## *Serial* Loop over the deformation steps
     ref_psis = model_rs.psis.copy()
     nstp = model_rs.dat_model.nstp
+
     # nstp = 3 ## debugging
+
     for istp in range(nstp):
         """
         Dimensions of data arrays for:

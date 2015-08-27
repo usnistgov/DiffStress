@@ -1,4 +1,5 @@
 ## MS&T 2014 Fall meeting application
+## Used for stress uncertainty paper
 ## - plot flow stress along various paths
 
 from os import sep, popen
@@ -806,11 +807,13 @@ def influence_of_nbin_scatter(
 #############################################
 
 def wrap_func(
-    sigma,
-    dec_inv_frq,
-    dec_interp,
-    bounds,
-    nbins):
+        sigma,
+        dec_inv_frq,
+        dec_interp,
+        bounds,
+        nbins,
+        bragg,
+        ird):
     """
     Wrap ex_consistency and return x, y
 
@@ -824,31 +827,39 @@ def wrap_func(
         sin2psimx=bounds[1],
         psi_nbin=nbins,
         dec_interp=dec_interp,
+        theta_b=bragg,
+        ird=ird,
 
         iscatter=True,
         ig_sub=True,
         iplot=False, # iplot=True
-        )
+    )
 
+    ## My objects that quantify the propagated
+    ## error to stress.
     x = flow_weight.epsilon_vm
-    y = (flow_weight.sigma_vm - flow_dsa.sigma_vm)/flow_weight.sigma_vm
+    y = (flow_weight.sigma_vm - flow_dsa.sigma_vm)/\
+        flow_weight.sigma_vm
 
     return x, y
 
 def influence_of_cnts_stats(
-    ## characteristics of an ensemble for stress data
-    sigmas=[1e-5, 2e-5, 5e-5, 1e-4],
-    bounds=[0.,0.5],
-    ss=3,
-    nbins=10,
-    iwgt=False,
-    nsample=4,
-    intp_opt=0,
-    iplot=False,
+        ## characteristics of an ensemble for stress data
+        sigmas=[1e-5, 2e-5, 5e-5, 1e-4],
+        bounds=[0.,0.5],
+        ss=3,
+        nbins=10,
+        iwgt=False,
+        nsample=4,
+        intp_opt=0,
+        iplot=False,
 
-
-    DEC_freq_sym=True,
-    NCPU=0):
+        ## diffraction condition
+        bragg=78.2,    ## Fe {211} using Cr K-alpha
+        ird=0.182,     ## Intensity of random distribution
+                       ## for {211} using window of 10 degree.
+        DEC_freq_sym=True,
+        NCPU=0):
     """
     Influence of counting statistics uncertainty
 
@@ -856,20 +867,22 @@ def influence_of_cnts_stats(
     propagation of counting stat error on to the final
     diffraction stress by examining a number of
     statistical ensembles (nsample) characterized
-    by arguments given
+    by given arguments
 
     Arguments
     =========
-    sigmas
-    bounds
-    ss
-    nbins
-    iwgt
-    nsample
-    intp_opt
-    iplot
-    DEC_freq_sym
-    NCPU
+    sigmas      : Pure CSE
+    bounds      : Bounds of tilting range
+    ss          : Sampling frequency in DECs
+    nbins       : How many tilting angles in diffraction
+    iwgt        : Do we weight (E-e) by peak intensity?
+    nsample     : The number of ensembles.
+    intp_opt    : DEC interpolation method
+    iplot       : Flag for plotting
+    bragg       : Bragg's angle
+    ird         : Intensity of random distribution
+    DEC_freq_sym: Plotting option for where DECs are sampled.
+    NCPU        : The number of CPU cores allowed to run
     """
     from RS.rs_ex import ex_consistency as func
 
@@ -894,7 +907,8 @@ def influence_of_cnts_stats(
         ig_sub=True,
         iplot=False, # iplot=True
         dec_inv_frq=ss,
-        dec_interp=intp_opt)
+        dec_interp=intp_opt,
+    )
 
     print '\n\n**************'
     print 'test completed'
@@ -909,6 +923,7 @@ def influence_of_cnts_stats(
     if NCPU==0: NCPU = multiprocessing.cpu_count()
     print 'NCPU: %i'%NCPU
     pool = Pool(processes = NCPU)
+
     ## function is now wrap_func
     results = []
     for i in range(len(sigmas)):
@@ -925,9 +940,11 @@ def influence_of_cnts_stats(
                         nbins
                         )
                     ,))
-    ## close and join
+    ## close/join
     pool.close()
     pool.join()
+    ## terminate
+    pool.terminate()
 
     ## below is to post-process the results
     for i in range(len(sigmas)):
