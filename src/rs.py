@@ -389,9 +389,16 @@ def u_epshkl_geom_inten(e, sigma, psi, theta_b, mrd):
     theta_b : bragg angle
     mrd     :
     """
-    if len(e)>1: raise IOError,'Accepts a single float number'
+    # if len(e)>1: raise IOError,'Accepts a single float number'
+
     ## geometrical influence by (pis, theta_b)
     geom_f = 1./ (1-np.tan(psi)/np.tan(theta_b))
+
+    if geom_f<0:
+        print 'psi:', psi*180/np.pi
+        print 'theta_b:', theta_b*180/np.pi
+        raise IOError, 'geom_f<0'
+
     new_sigma = geom_f * np.sqrt(sigma**2/mrd)
 
     np.random.seed()

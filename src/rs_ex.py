@@ -140,7 +140,7 @@ def ex_consistency(
         f.close()
         print 'log has been saved to ',fn
 
-    from rs import ResidualStress,u_epshkl,filter_psi,\
+    from rs import ResidualStress,u_epshkl,u_epshkl_geom_inten,filter_psi,\
         filter_psi3,psi_reso, psi_reso2, psi_reso3,psi_reso4
     from mst_ex import use_intp_sfig, return_vf
     from MP.mat import mech # mech is a module
@@ -305,15 +305,17 @@ def ex_consistency(
         tdats = np.zeros((nstp,nphi,npsi))
         for istp in range(nstp):
             for iphi in range(nphi):
-                ## Previous perturbation rule
+                # ## Previous perturbation rule
                 # tdats[istp,iphi,:] = u_epshkl(
                 #     model_tdats[istp,iphi],
                 #     sigma=sigma)
 
                 ## New perturbation rule
+                if type(theta_b).__name__== 'NoneType':
+                    raise IOError, 'theta_b should be given'
                 for ipsi in range(npsi):
                     ## multitudes of random
-                    mrd = ird / model_vfs[istp,iphi,ipsi]
+                    mrd = model_vfs[istp,iphi,ipsi]/ird
                     tdats[istp,iphi,ipsi] = u_epshkl_geom_inten(
                         e     = model_tdats[istp,iphi,ipsi],
                         sigma = sigma,
@@ -359,7 +361,9 @@ def ex_consistency(
     ## *Serial* Loop over the deformation steps
     ref_psis = model_rs.psis.copy()
     nstp = model_rs.dat_model.nstp
+
     # nstp = 3 ## debugging
+
     for istp in range(nstp):
         """
         Dimensions of data arrays for:
