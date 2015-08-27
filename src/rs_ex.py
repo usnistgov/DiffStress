@@ -310,7 +310,6 @@ def ex_consistency(
                 #     model_tdats[istp,iphi],
                 #     sigma=sigma)
 
-
                 ## New perturbation rule
                 for ipsi in range(npsi):
                     ## multitudes of random
