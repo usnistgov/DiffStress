@@ -1,4 +1,5 @@
 ## MS&T 2014 Fall meeting application
+## Used for stress uncertainty paper
 ## - plot flow stress along various paths
 
 from os import sep, popen

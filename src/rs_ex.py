@@ -66,7 +66,7 @@ def ex_consistency(
         hkl=None,iplot=True,iwind=False,wdeg=2,ipsi_opt=1,
         fn_sff=None,pmargin=None,path='',sf_ext=None,ig_ext=None,
         vf_ext=None,iwgt=False,verbose=False,ilog=False,
-        dec_inv_frq=1,dec_interp=1):
+        dec_inv_frq=1,dec_interp=1,theta_b=None,ird=1.):
     """
     Consistency check between 'weighted average' stress and
     the stress obtained following the stress analysis method
@@ -118,6 +118,11 @@ def ex_consistency(
     ## debugging options
     verbose   : False
     ilog      : False
+
+    ----------------------------------------
+    ## Diffraction condition parameters
+    theta_b   : None (Bragg's angle)
+    ird       : Intensity expected for random distribution
     """
     if ilog:
         fn = 'ex_consistency.log'
@@ -296,13 +301,29 @@ def ex_consistency(
 
     # 4. Perturb ehkl (common)
     if iscatter:
-        nstp,nphi,npsi = model_ehkls.shape
+        nstp, nphi, npsi = model_ehkls.shape
         tdats = np.zeros((nstp,nphi,npsi))
         for istp in range(nstp):
             for iphi in range(nphi):
-                tdats[istp,iphi,:] = u_epshkl(
-                    model_tdats[istp,iphi],
-                    sigma=sigma)
+                ## Previous perturbation rule
+                # tdats[istp,iphi,:] = u_epshkl(
+                #     model_tdats[istp,iphi],
+                #     sigma=sigma)
+
+
+                ## New perturbation rule
+                for ipsi in range(npsi):
+                    ## multitudes of random
+                    mrd = ird / model_vfs[istp,iphi,ipsi]
+                    tdats[istp,iphi,ipsi] = u_epshkl_geom_inten(
+                        e     = model_tdats[istp,iphi,ipsi],
+                        sigma = sigma,
+                        psi   = model_rs.psis[ipsi],
+
+                        ## need to calculate the below...
+                        theta_b = theta_b,
+                        mrd = mrd)
+
     else: tdats=model_tdats.copy()
 
     ## end of data process
