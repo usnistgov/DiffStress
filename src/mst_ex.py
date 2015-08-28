@@ -855,7 +855,7 @@ def influence_of_cnts_stats(
         iplot=False,
 
         ## diffraction condition
-        bragg=78.2,    ## Fe {211} using Cr K-alpha
+        bragg=78.2*np.pi/180.,    ## Fe {211} using Cr K-alpha
         ird=0.182,     ## Intensity of random distribution
                        ## for {211} using window of 10 degree.
         DEC_freq_sym=True,
@@ -901,7 +901,7 @@ def influence_of_cnts_stats(
     print '****************\n\n'
     myrs,flow1,flow2 =func(
         sin2psimx=bounds[1],
-        iscatter=True,
+        iscatter=False,
         sigma=sigmas[0],
         psi_nbin=nbins,
         ig_sub=True,
@@ -937,9 +937,18 @@ def influence_of_cnts_stats(
                         ss,
                         intp_opt,
                         bounds,
-                        nbins
+                        nbins,
+                        bragg,
+                        ird
                         )
                     ,))
+
+
+
+    ## diffraction condition
+    #bragg=78.2,    ## Fe {211} using Cr K-alpha
+    #ird=0.182,     ## Intensity of random distribution
+
     ## close/join
     pool.close()
     pool.join()
