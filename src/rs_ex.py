@@ -140,8 +140,10 @@ def ex_consistency(
         f.close()
         print 'log has been saved to ',fn
 
-    from rs import ResidualStress,u_epshkl,u_epshkl_geom_inten,filter_psi,\
-        filter_psi3,psi_reso, psi_reso2, psi_reso3,psi_reso4
+    from rs import ResidualStress,u_epshkl,\
+        u_epshkl_geom_inten,filter_psi,filter_psi3,\
+        psi_reso,psi_reso2,psi_reso3,psi_reso4
+
     from mst_ex import use_intp_sfig, return_vf
     from MP.mat import mech # mech is a module
 
@@ -151,6 +153,7 @@ def ex_consistency(
         from matplotlib import pyplot as plt
         from matplotlib.backends.backend_pdf import PdfPages
         from MP.lib import mpl_lib,axes_label
+        plt.ioff()
         wide_fig     = mpl_lib.wide_fig
         fancy_legend = mpl_lib.fancy_legend
         ## Collection of figures at various plastic strains
@@ -179,9 +182,6 @@ def ex_consistency(
     if type(vf_ext)==type(None):ivf_ext=False
 
     """
-    if given, do not process
-    if yes, do process.
-
     ## final data should be saved to
     'model_sfs'
     'model_igs'
@@ -472,7 +472,6 @@ def ex_consistency(
     flow_dsa.get_6stress(stress)
     flow_dsa.get_33strain(model_rs.dat_model.flow.epsilon)
     flow_dsa.get_eqv()
-
 
     ## Various plots
     if iplot:
