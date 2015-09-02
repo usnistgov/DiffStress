@@ -15,7 +15,12 @@ fl = mpl_lib.fancy_legend
 
 def write_args(f,**kwargs):
     """
-    Write keyword arguements to the file
+    Write keyword arguements to the file <f>
+
+    Arguments
+    ---------
+    f
+    **kwargs
     """
     f.write('nhead including this line: %i\n'%(len(kwargs)+4))
     for i in range(80): f.write('-')
@@ -814,6 +819,7 @@ def wrap_func(
         nbins,
         bragg,
         ird):
+
     """
     Wrap ex_consistency and return x, y
 
@@ -907,8 +913,7 @@ def influence_of_cnts_stats(
         ig_sub=True,
         iplot=False, # iplot=True
         dec_inv_frq=ss,
-        dec_interp=intp_opt,
-    )
+        dec_interp=intp_opt)
 
     print '\n\n**************'
     print 'test completed'
