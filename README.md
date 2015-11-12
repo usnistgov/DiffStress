@@ -1,5 +1,5 @@
-rs
-==
+DiffStress
+==========
 
 Diffraction analysis tool that estimates stress present polycrystalline specimen.
 
