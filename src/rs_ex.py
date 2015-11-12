@@ -66,7 +66,7 @@ def ex_consistency(
         hkl=None,iplot=True,iwind=False,wdeg=2,ipsi_opt=1,
         fn_sff=None,pmargin=None,path='',sf_ext=None,ig_ext=None,
         vf_ext=None,iwgt=False,verbose=False,ilog=False,
-        dec_inv_frq=1,dec_interp=1,theta_b=None,ird=1.):
+        dec_inv_frq=1,dec_interp=1,theta_b=None,ird=1.,nfrq=None):
     """
     Consistency check between 'weighted average' stress and
     the stress obtained following the stress analysis method
@@ -98,7 +98,7 @@ def ex_consistency(
     ig_sub    : flag whether or not subtract the IG strain
 
     #4. DEC related
-    dec_inv_frq   : Inverse Frequency of DEC measures along EVM (nstp)
+    dec_inv_frq : Inverse Frequency of DEC measures along EVM (nstp)
     dec_interp: Interpolation method for the incomplete DEC
 
     #5. Misc.
@@ -121,9 +121,15 @@ def ex_consistency(
 
     ----------------------------------------
     ## Diffraction condition parameters
-    theta_b   : None (Bragg's angle)
+    theta_b   : None (Bragg's angle) (given in radian)
     ird       : Intensity expected for random distribution
+    nfrq        None
     """
+    import time
+    from MP import progress_bar
+    uet = progress_bar.update_elapsed_time
+
+    t0=time.time()
     if ilog:
         fn = 'ex_consistency.log'
         f = open(fn,'w')
@@ -162,6 +168,9 @@ def ex_consistency(
         f_er = PdfPages('all_Ei-ehkl-e0_%s_%s.pdf'%(hkl,path))
         fig1 = wide_fig(ifig,nw=2,nh=1,left=0.2,uw=3.5,
                         w0=0,w1=0.3,right=0,iarange=True)
+
+        fig_vm = plt.figure(figsize=(3.5,3.5))
+        ax_vm = fig_vm.add_subplot(111)
 
         ## ax1: Equivalent Stress/Strain
         ## ax2: Stress path in the plane stress space (RD/TD)
@@ -343,12 +352,13 @@ def ex_consistency(
     else:                             lc='k-'
 
     if iplot:
-        ax1.plot(
-            flow_weight.epsilon_vm,
-            flow_weight.sigma_vm,
-            lc,label=r'$\langle \sigma^c \rangle$',
-            alpha=1.0)
-        axes_label.__eqv__(ax1,ft=10)
+        for a in [ax1,ax_vm]:
+            a.plot(
+                flow_weight.epsilon_vm,
+                flow_weight.sigma_vm,
+                lc,label=r'$\langle \sigma^c \rangle$',
+                alpha=1.0)
+            axes_label.__eqv__(a,ft=10)
 
     ## plot all stress factors at individual
     ## deformation levels
@@ -374,9 +384,12 @@ def ex_consistency(
         strain (nstp, 6)
         vf     (nstp, nphi, npsi)
         """
+        if type(nfrq).__name__=='int':
+            if istp % nfrq !=0:
+                continue
 
         if iplot==False and istep!=None:
-            nstp=1
+            nstp = 1
             istp = istep
 
         print 'processing: %2.2i/%2.2i'%(istp,nstp)
@@ -470,19 +483,27 @@ def ex_consistency(
     stress   = np.array(stress).T # diffraction stress
     flow_dsa = FlowCurve(name='Diffraction Stress')
     flow_dsa.get_6stress(stress)
-    flow_dsa.get_33strain(model_rs.dat_model.flow.epsilon)
+
+    if type(nfrq).__name__=='NoneType':
+        flow_dsa.get_33strain(model_rs.dat_model.flow.epsilon)
+    elif type(nfrq).__name__=='int':
+        flow_dsa.get_33strain(model_rs.dat_model.flow.epsilon[:,:,::nfrq])
+
     flow_dsa.get_eqv()
 
     ## Various plots
     if iplot:
-        ax1.plot(flow_dsa.epsilon_vm,flow_dsa.sigma_vm,'k+',
-                 label=r'$\hat{\sigma}^{RS}$')
+        for a in [ax1, ax_vm]:
+            a.plot(flow_dsa.epsilon_vm,flow_dsa.sigma_vm,'k+',
+                   label=r'$\hat{\sigma}^\mathrm{RS}$')
         for i in range(len(exp_ref)):
             f = exp_ref[i]; lab = exp_lab[i]
             edat = np.loadtxt(f).T
             ax1.plot(edat[0],edat[1],'-',lw=2,label=lab)
             ## ax1.set_ylim(0.,800)
-        fancy_legend(ax1,size=10,nscat=2)
+
+        for a in [ax1,ax_vm]:
+            fancy_legend(a,size=10,nscat=1)
 
     sigma_wgt = flow_weight.sigma
 
@@ -494,13 +515,13 @@ def ex_consistency(
         npoints = len(sigma_wgt[0,0])
         wgtx = sigma_wgt[0,0];      wgty = sigma_wgt[1,1]
         dsax = flow_dsa.sigma[0,0]; dsay = flow_dsa.sigma[1,1]
-        for i in range(npoints):
-            ax2.plot([wgtx[i],dsax[i]],[wgty[i],dsay[i]],'k-',alpha=0.2)
+        # for i in range(npoints):
+        #     ax2.plot([wgtx[i],dsax[i]],[wgty[i],dsay[i]],'k-',alpha=0.2)
 
         ax2.set_ylim(-100,700); ax2.set_xlim(-100,700)
         ax2.set_aspect('equal')
-        ax2.set_xlabel(r'$\bar{\Sigma}_{11}$',dict(fontsize=15))
-        ax2.set_ylabel(r'$\bar{\Sigma}_{22}$',dict(fontsize=15))
+        ax2.set_xlabel(r'$\bar{\Sigma}_{11}$ [MPa]',dict(fontsize=15))
+        ax2.set_ylabel(r'$\bar{\Sigma}_{22}$ [MPa]',dict(fontsize=15))
         ax2.locator_params(nbins=3)
         ax2.set_xticks(np.linspace(300,700,3),dict(fontsize=4))
         ax2.set_yticks(np.linspace(300,700,3),dict(fontsize=4))
@@ -508,13 +529,23 @@ def ex_consistency(
 
         ## save figures
         fig1.savefig('flow_%s_%s.pdf'%(hkl,path))
+        fig_vm.savefig('all_flow_vm.pdf',  bbox_inches='tight')
+        fig_vm.savefig('all_flow_vm.ps',  bbox_inches='tight')
         ## fig2.savefig('ehkl_%s_fit_%s.pdf'%(hkl,path))
         ## fig3.savefig('sf_%s_%s.pdf'%(hkl,path))
         ## fig4.savefig('ehkl_fit_err_%s_%s.pdf'%(hkl,path))
         # close figures
-        plt.close(fig1); plt.close(fig2); plt.close(fig3); plt.close(fig4)
+        try:
+            figs=[fig1,fig2,fig3,fig4]
+            for f in figs:
+                try: plt.close(f)
+                except: pass
+        except: pass
+
+    uet(t0-time.time())
 
     return model_rs, flow_weight, flow_dsa
+
 
 def __model_fit_plot__(
         container,ifig,istp,nxphi=None,hkl=None,

@@ -861,7 +861,8 @@ def influence_of_cnts_stats(
         iplot=False,
 
         ## diffraction condition
-        bragg=78.2*np.pi/180.,    ## Fe {211} using Cr K-alpha
+        bragg=78.2*np.pi/180.,     ## Fe {211} using Cr K-alpha
+        #bragg=162.2*np.pi/180.,   ## Fe {310} using Cobalt Radiation.
         ird=0.182,     ## Intensity of random distribution
                        ## for {211} using window of 10 degree.
         DEC_freq_sym=True,
@@ -944,11 +945,7 @@ def influence_of_cnts_stats(
                         bounds,
                         nbins,
                         bragg,
-                        ird
-                        )
-                    ,))
-
-
+                        ird),))
 
     ## diffraction condition
     #bragg=78.2,    ## Fe {211} using Cr K-alpha
@@ -996,7 +993,7 @@ def influence_of_cnts_stats(
         elif type(ss).__name__=='list' and DEC_freq_sym:
             ax1.plot(x[ss],np.zeros((len(x[ss]),)),'o',mec='r',mfc='None',ms=8)
             ax2.plot(x[ss],np.zeros((len(x[ss]),)),'o',mec='r',mfc='None',ms=8)
-        ax1.set_ylim(0.,); ax1.set_xlim(0.,ax1.get_xlim()[1]*1.05)
+        # ax1.set_ylim(0.,); ax1.set_xlim(0.,ax1.get_xlim()[1]*1.05)
         deco(iopt=9,ft=15,ax=ax1)
         fancy_legend(ax=ax1, size=7,ncol=2,nscat=1)
         ax2.set_ylim(0.,); ax2.set_xlim(0.,ax2.get_xlim()[1]*1.05)

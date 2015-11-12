@@ -29,7 +29,7 @@ def main_reader(path='../dat/23JUL12', fref='Bsteel_BB_00.txt',
         print 'subsequent analysis is performed by assuming'
         print 'that the sample is in equibiaxial strain'
         print '---------------------------------------------\n'
-        raw_input('press enter to proceed>>')
+        # raw_input('press enter to proceed>>')
 
         # # dat = open('%s%s%s'%(path,sep,fn_sf)).read()
         # fn = os.path.join(path,fn_sf)

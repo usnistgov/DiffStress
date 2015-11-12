@@ -1141,6 +1141,7 @@ class ResidualStress:
         self.strainm=np.array(self.strainm)
         self.stressm=np.array(self.stressm)
 
+        ## Standard data structure both EVPSC data and EXP data:
         self.dat_model = DiffDat(
             phi=self.phism,psi=self.psism,
             sf=self.sfm,ig=self.eps0m,ehkl=datm[2],

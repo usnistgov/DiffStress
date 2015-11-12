@@ -148,8 +148,10 @@ if __name__=='__main__':
 
     ## additional diffraction conditions that are associated
     ## with the uncertainty is peak position (d-spacing)
-    bragg        = 78.2      ## Bragg angle
+    bragg        = 78.2      ## Bragg angle (theta, often 2thetas are also referred as the bragg angle)
     #              78.2  -      Fe {211} plane using Cr K-alpha
+    #              81.1  -      Fe {310} plane using Co
+
     ird          = 0.182     ## intensity of random distribution
     #              0.182        {211} using window of 10
     #              0.0457       {211} using window of  5
