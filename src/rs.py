@@ -400,12 +400,17 @@ def u_epshkl_geom_inten(e, sigma, psi, theta_b, mrd):
         raise IOError, 'geom_f<0'
 
     tiny = 1e-20
+    big  = 1e+10
     if np.isnan(mrd):
-        val=tiny
+        val=big
+    elif np.isinf(mrd) and np.sign(mrd)>0:
+        val=big
+    elif np.isinf(mrd) and np.sign(mrd)<0:
+        val=-big
     elif mrd!=0:
         val = sigma**2/mrd
     elif mrd==0:
-        val = tiny
+        val=big
 
     if val<0:
         print 'val:',val
