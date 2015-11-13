@@ -935,7 +935,7 @@ def influence_of_cnts_stats(
     print '\n\n****************'
     print 'test run started'
     print '****************\n\n'
-    myrs,flow1,flow2 =func(
+    myrs,flow_raw,flow2 =func(
         sin2psimx=bounds[1],
         iscatter=False,
         sigma=sigmas[0],
@@ -1028,7 +1028,7 @@ def influence_of_cnts_stats(
         ax2.set_ylim(0.,); ax2.set_xlim(0.,ax2.get_xlim()[1]*1.05)
         deco(iopt=9,ft=15,ax=ax2)
         fig.savefig('ee.pdf')
-    return x, M, S, H, BE
+    return x, M, S, H, BE, flow_raw
 
 def compare_exp_mod(ntot_psi=21):
     import numpy as np
