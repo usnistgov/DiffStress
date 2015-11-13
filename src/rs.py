@@ -387,7 +387,7 @@ def u_epshkl_geom_inten(e, sigma, psi, theta_b, mrd):
     sigma   : level of counting stat error
     psi     : tilting angle
     theta_b : bragg angle
-    mrd     :
+    mrd     : multitudes of random distribution
     """
     # if len(e)>1: raise IOError,'Accepts a single float number'
 
@@ -399,7 +399,18 @@ def u_epshkl_geom_inten(e, sigma, psi, theta_b, mrd):
         print 'theta_b:', theta_b*180/np.pi
         raise IOError, 'geom_f<0'
 
-    new_sigma = geom_f * np.sqrt(sigma**2/mrd)
+    tiny = 1e-20
+    if np.isnan(mrd):
+        val=tiny
+    elif mrd!=0:
+        val = sigma**2/mrd
+    elif mrd==0:
+        val = tiny
+
+    if val<0:
+        print 'val:',val
+        raise IOError, 'negative value'
+    new_sigma = geom_f * np.sqrt(val)
 
     np.random.seed()
     perturbed_strain = u_gaussian(e,new_sigma)

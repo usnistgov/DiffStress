@@ -818,7 +818,8 @@ def wrap_func(
         bounds,
         nbins,
         bragg,
-        ird):
+        ird,
+        nfrq):
 
     """
     Wrap ex_consistency and return x, y
@@ -835,18 +836,34 @@ def wrap_func(
         dec_interp=dec_interp,
         theta_b=bragg,
         ird=ird,
+        nfrq=nfrq,
 
         iscatter=True,
         ig_sub=True,
+        ilog=True,
         iplot=False, # iplot=True
     )
 
     ## My objects that quantify the propagated
     ## error to stress.
-    x = flow_weight.epsilon_vm
-    y = (flow_weight.sigma_vm - flow_dsa.sigma_vm)/\
-        flow_weight.sigma_vm
 
+    if type(nfrq).__name__=='NoneType':
+        epsilon_vm = flow_weight.epsilon_vm[::]
+        sigma_vm   = flow_weight.sigma_vm[::]
+    elif type(nfrq).__name__=='int':
+        epsilon_vm = flow_weight.epsilon_vm[::nfrq]
+        sigma_vm   = flow_weight.sigma_vm[::nfrq]
+
+    if len(epsilon_vm) != len(sigma_vm):
+        raise IOError, 'epsilon_vm and '+\
+            'sigma_vm should have the same dimension'
+    if len(epsilon_vm) != len(flow_dsa.sigma_vm):
+        raise IOError, 'epsilon_vm and '+\
+            'flow_dsa.sigma_vm should have the same dimension'
+
+    x = epsilon_vm
+    y = (sigma_vm - flow_dsa.sigma_vm)/\
+        sigma_vm
     return x, y
 
 def influence_of_cnts_stats(
@@ -865,6 +882,8 @@ def influence_of_cnts_stats(
         #bragg=162.2*np.pi/180.,   ## Fe {310} using Cobalt Radiation.
         ird=0.182,     ## Intensity of random distribution
                        ## for {211} using window of 10 degree.
+        ## sample a portion of data.
+        nfrq=None,
         DEC_freq_sym=True,
         NCPU=0):
     """
@@ -888,6 +907,16 @@ def influence_of_cnts_stats(
     iplot       : Flag for plotting
     bragg       : Bragg's angle
     ird         : Intensity of random distribution
+    nfrq        : if not (None) but an integer,
+              use it as denominator to 'continue' to skip
+
+              --------------------------
+              if istp % nfrq != 0 :
+                  continue ! skip
+              else:
+                  run stress analysis
+              --------------------------
+
     DEC_freq_sym: Plotting option for where DECs are sampled.
     NCPU        : The number of CPU cores allowed to run
     """
@@ -914,14 +943,14 @@ def influence_of_cnts_stats(
         ig_sub=True,
         iplot=False, # iplot=True
         dec_inv_frq=ss,
-        dec_interp=intp_opt)
+        dec_interp=intp_opt,
+        nfrq=nfrq)
 
     print '\n\n**************'
     print 'test completed'
     print '**************\n\n'
-    # return ## debugging
 
-    Y_all = np.zeros((len(sigmas), nsample, flow1.nstp))
+    Y_all = np.zeros((len(sigmas), nsample, flow2.nstp))
     M = []
     ls=['-+','-s','-o','-d','-t']
     import multiprocessing
@@ -945,7 +974,7 @@ def influence_of_cnts_stats(
                         bounds,
                         nbins,
                         bragg,
-                        ird),))
+                        ird,nfrq),))
 
     ## diffraction condition
     #bragg=78.2,    ## Fe {211} using Cr K-alpha

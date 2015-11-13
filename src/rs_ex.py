@@ -65,7 +65,7 @@ def ex_consistency(
         sigma=5e-5,psimx=None,psi_nbin=1,ig_sub=True,istep=None,
         hkl=None,iplot=True,iwind=False,wdeg=2,ipsi_opt=1,
         fn_sff=None,pmargin=None,path='',sf_ext=None,ig_ext=None,
-        vf_ext=None,iwgt=False,verbose=False,ilog=False,
+        vf_ext=None,iwgt=False,verbose=False,ilog=True,
         dec_inv_frq=1,dec_interp=1,theta_b=None,ird=1.,nfrq=None):
     """
     Consistency check between 'weighted average' stress and
@@ -142,7 +142,8 @@ def ex_consistency(
             wdeg=wdeg,ipsi_opt=ipsi_opt,fn_sff=fn_sff,
             pmargin=pmargin,path=path,sf_ext=sf_ext,
             ig_ext=ig_ext,vf_ext=vf_ext,iwgt=iwgt,
-            verbose=verbose,ilog=ilog)
+            verbose=verbose,ilog=ilog,nfrq=nfrq,
+            ird=ird,theta_b=theta_b)
         f.close()
         print 'log has been saved to ',fn
 
@@ -392,7 +393,7 @@ def ex_consistency(
             nstp = 1
             istp = istep
 
-        print 'processing: %2.2i/%2.2i'%(istp,nstp)
+        print 'processing: %2.2i/%2.2i'%(istp,nstp),
         #model_rs.sf = model_sfs[istp].copy()
 
         ## filter signals where any data is nan
@@ -542,7 +543,8 @@ def ex_consistency(
                 except: pass
         except: pass
 
-    uet(t0-time.time())
+    uet(time.time()-t0)
+    print
 
     return model_rs, flow_weight, flow_dsa
 
