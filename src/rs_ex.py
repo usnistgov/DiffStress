@@ -1,5 +1,9 @@
 """
 A collection of scripts that make use of residual stress module
+
+Func ex_consistency is the core of this module
+which will be used for Monte Carlo experiments to estimate
+the uncertainty in the stress measurements
 """
 
 import numpy as np

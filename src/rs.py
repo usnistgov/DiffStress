@@ -1,13 +1,13 @@
-### residual stress calculation
+### stress calculation from elastic lattice strain (d-spacing)
 import matplotlib.pyplot as plt
-
 import numpy as np
-cos = np.cos; sin = np.sin; pi  = np.pi
 from MP.mat import mech
-FlowCurve = mech.FlowCurve
 from MP import read_blocks
-rb = read_blocks.main
 from lib import write_args
+
+cos = np.cos; sin = np.sin; pi  = np.pi
+FlowCurve = mech.FlowCurve
+rb = read_blocks.main
 
 def reader(fn='igstrain_load_ph1.out',isort=False,icheck=False):
     """
@@ -31,7 +31,7 @@ def reader(fn='igstrain_load_ph1.out',isort=False,icheck=False):
 
     ## Find unique phi
     phis=[]
-    for i in range(len(d[1])):
+    for i in xrange(len(d[1])):
         pp = d[1][i]
         if pp in phis: pass
         else: phis.append(pp)
@@ -41,7 +41,7 @@ def reader(fn='igstrain_load_ph1.out',isort=False,icheck=False):
 
     ## Find unique psis
     psis = []
-    for i in range(len(dl)):
+    for i in xrange(len(dl)):
         d = dl[i].split()
         st, ph, beta, psi1, psi2 = map(
             float,[d[0], d[1], d[2], d[3], d[4]])
@@ -55,9 +55,9 @@ def reader(fn='igstrain_load_ph1.out',isort=False,icheck=False):
     v      = np.zeros((nstp,nphi,npsis))
     steps  = np.zeros((nstp))
     il = 0
-    for istp in range(nstp):
-        for iphi in range(nphi):
-            for ibeta in range(npsis/2):
+    for istp in xrange(nstp):
+        for iphi in xrange(nphi):
+            for ibeta in xrange(npsis/2):
                 il = ibeta + iphi*npsis/2 + nphi*npsis/2*istp
                 dat = map(float,dl[il].split())
                 steps[istp] = dat[0]
@@ -81,8 +81,8 @@ def reader(fn='igstrain_load_ph1.out',isort=False,icheck=False):
             print ph
             phis = ph
             print 'Data along phi should be rearranged'
-            for istp in range(nstp):
-                for ipsi in range(npsis):
+            for istp in xrange(nstp):
+                for ipsi in xrange(npsis):
                     ep = epshkl[istp,:,ipsi]
                     ng = ngr[istp,:,ipsi]
                     vv = v[istp,:,ipsi]
@@ -98,8 +98,8 @@ def reader(fn='igstrain_load_ph1.out',isort=False,icheck=False):
             # print psis
             # print ps
             print 'Data along psi should be rearranged'
-            for istp in range(nstp):
-                for iphi in range(nphi):
+            for istp in xrange(nstp):
+                for iphi in xrange(nphi):
                     ep = epshkl[istp,iphi,:]
                     ng = ngr[istp,iphi,:]
                     vv = v[istp,iphi,:]
@@ -124,7 +124,13 @@ def reader(fn='igstrain_load_ph1.out',isort=False,icheck=False):
 
 def read_exp(fn='Bsteel_BB_00.txt',path='rs'):
     """
-    return sorted experimental results
+
+    Arguments
+    =========
+    fn   = 'Bsteel_BB_00.txt'
+    path = 'rs'
+
+    Return sorted experimental results
     """
     from os import sep
     from glob import glob
@@ -140,7 +146,7 @@ def read_exp(fn='Bsteel_BB_00.txt',path='rs'):
     fs = glob('%s%s*.txt'%(paths,files[0][0]))
     fs.sort() # sorted ...
     nphi = len(fs); phis = []
-    for i in range(nphi):
+    for i in xrange(nphi):
         phis.append(float(fs[i].split('Phi')[1].split('.')[0]))
         sin2psi,ehkl,dspacing,psi = read(fs[i])
         npsi = len(psi)
@@ -149,7 +155,7 @@ def read_exp(fn='Bsteel_BB_00.txt',path='rs'):
     dhkl = np.zeros((nstp,nphi,npsi))
     strain = np.zeros((2,nstp))
 
-    for i in range(len(files)):
+    for i in xrange(len(files)):
         e_xx, e_yy = float(files[i][1]), float(files[i][2])
         fns.append(files[i][0])
         ex.append(e_xx); ey.append(e_yy)
@@ -157,7 +163,7 @@ def read_exp(fn='Bsteel_BB_00.txt',path='rs'):
         strain[0,i] = e_xx
         strain[1,i] = e_yy
         dum = []
-        for iphi in range(len(fs)):
+        for iphi in xrange(len(fs)):
             sin2psi, eps, ds, ps = read(fs[iphi])
             dum.append(eps)
             x,y = sort(ps,eps)
@@ -171,27 +177,6 @@ def read_exp(fn='Bsteel_BB_00.txt',path='rs'):
     ehkl = np.array(ehkl)
     strain = np.array(strain)
     return phis,psi,ehkl,dhkl,strain
-
-# def __check_power_law_fit__():
-#     fig=plt.figure(1);ax=fig.add_subplot(111)
-#     x = np.linspace(1,10,10)
-#     y = np.cos(-x**2/8.0)
-
-#     ax.plot(x,y,'s',label='data')
-#     new_x = np.linspace(1,10,1000)
-#     y_lin = interpolate(new_x,x,y,iopt=1)
-#     ax.plot(new_x,y_lin,'--',label='NN')
-
-#     xlog = np.log(x)
-#     ylog = np.log(y)
-
-#     fig=plt.figure(2);ax=fig.add_subplot(111)
-#     ax.plot(xlog,ylog)
-
-#     z = np.polyfit(xlog,ylog,1)
-
-#     print z
-#     # f = np.poly1d(z)
 
 def __check_interpolate__():
     fig=plt.figure();ax=fig.add_subplot(111)
@@ -266,14 +251,14 @@ def interpolate(xs,xp,fp,iopt=0):
 
     y_left=[]; y_right=[]
     if any(xs[i]<xp[0] or xs[i]>xp[-1]
-           for i in range(len(xs)))\
+           for i in xrange(len(xs)))\
                and iopt!=7 and iopt!=4:
         # print 'Part of the array should be',
         # print 'exptrapolated.'
 
         indices = []
         xs_within = []; left=[]; right=[]
-        for i in range(len(xs)):
+        for i in xrange(len(xs)):
             if not(xs[i]<xp[0] or xs[i]>xp[-1]):
                 xs_within.append(xs[i])
 
@@ -354,22 +339,44 @@ def interpolate(xs,xp,fp,iopt=0):
         raise IOError
 
     Y=[]
-    for i in range(len(y_left)):
+    for i in xrange(len(y_left)):
         Y.append(y_left[i])
-    for i in range(len(y)):
+    for i in xrange(len(y)):
         Y.append(y[i])
-    for i in range(len(y_right)):
+    for i in xrange(len(y_right)):
         Y.append(y_right[i])
 
     return Y
 
 def u_gaussian(epshkl,sigma=5e-5):
+    """
+    Induce a guassian scattering to the given
+    epshkl
+
+    Arguments
+    =========
+    epshkl
+    sigma
+    """
     return np.random.normal(0.,sigma) + epshkl
 
 def u_epshkl(e,sigma=5e-5):
+    """
+    Call u_gaussian and perturbe epshkl
+    by a gaussian with mean value of 0 and the given
+    value of standard deviation
+
+    Arguments
+    =========
+    e
+    sigma
+
+    Return the 'perturbed' strain
+    """
     np.random.seed()
     a=[]
-    for i in range(len(e)):
+    for i in xrange(len(e)):
+        # d = np.random.normal(0.,sigma) + e[i]
         d = u_gaussian(e[i],sigma)
         a.append(d)
     return a
@@ -473,18 +480,11 @@ class DiffDat:
     the experimental and simulative sets of diffraction
     data obtained either by proto or by EVPSC.
     """
-    def __init__(self,
-                 phi=None,
-                 psi=None,
-                 sf=None,
-                 ig=None,
-                 ehkl=None,
-                 dhkl=None,name=None,
-                 strain=None,
-                 stress=None,
-                 vf=None,ngr=None,
-                 *args
-                 ):
+    def __init__(
+            self,phi=None,psi=None,sf=None,
+            ig=None,ehkl=None,dhkl=None,name=None,
+            strain=None,stress=None,vf=None,
+            ngr=None,*args):
         """
         Complete data structure for a set of diffraction
         experiment data required for stress analysis.
@@ -627,30 +627,30 @@ class DiffDat:
 
         if type(self.sf)!=type(None):
             sf_new = np.zeros((nstp,6,nphi,npsi_new))
-            for istp in range(nstp):
-                for iphi in range(nphi):
-                    for k in range(6):
+            for istp in xrange(nstp):
+                for iphi in xrange(nphi):
+                    for k in xrange(6):
                         y = self.sf[istp,k,iphi,:]
                         sf_new[istp,k,iphi,:] = \
                             interpolate(x,x0,y)
         if type(self.ig)!=type(None):
             ig_new = np.zeros((nstp,nphi,npsi_new))
-            for istp in range(nstp):
-                for iphi in range(nphi):
+            for istp in xrange(nstp):
+                for iphi in xrange(nphi):
                     y = self.ig[istp,iphi,:]
                     ig_new[istp,iphi,:] = \
                         interpolate(x,x0,y)
         if type(self.ehkl)!=type(None):
             ehkl_new = np.zeros((nstp,nphi,npsi_new))
-            for istp in range(nstp):
-                for iphi in range(nphi):
+            for istp in xrange(nstp):
+                for iphi in xrange(nphi):
                     y = self.ehkl[istp,iphi,:]
                     ehkl_new[istp,iphi,:] = \
                         interpolate(x,x0,y)
         if type(self.dhkl)!=type(None):
             dhkl_new = np.zeros((nstp,nphi,npsi_new))
-            for istp in range(nstp):
-                for iphi in range(nphi):
+            for istp in xrange(nstp):
+                for iphi in xrange(nphi):
                     y = self.dehkl[istp,iphi,:]
                     dhkl_new[istp,iphi,:] = \
                         interpolate(x,x0,y)
@@ -681,30 +681,30 @@ class DiffDat:
 
         if self.sf!=None:
             sf_new = np.zeros((nstp_new,6,nphi,npsi))
-            for k in range(6):
-                for iphi in range(nphi):
-                    for ipsi in range(npsi):
+            for k in xrange(6):
+                for iphi in xrange(nphi):
+                    for ipsi in xrange(npsi):
                         y = self.sf[:,k,iphi,ipsi].copy()
                         sf_new[:,k,iphi,ipsi] = \
                             interpolate(x,self.strain_eff,y)
         if self.ehkl!=None:
             ehkl_new = np.zeros((nstp_new,nphi,npsi))
-            for iphi in range(nphi):
-                for ipsi in range(npsi):
+            for iphi in xrange(nphi):
+                for ipsi in xrange(npsi):
                     y = self.ehkl[:,iphi,ipsi].copy()
                     ehkl_new[:,iphi,ipsi] = \
                         interpolate(x,self.strain_eff,y)
         if self.dhkl!=None:
             dhkl_new = np.zeros((nstp_new,nphi,npsi))
-            for iphi in range(nphi):
-                for ipsi in range(npsi):
+            for iphi in xrange(nphi):
+                for ipsi in xrange(npsi):
                     y = self.dhkl[:,iphi,ipsi].copy()
                     dhkl_new[:,iphi,ipsi] = \
                         interpolate(x,self.strain_eff,y)
         if self.ig!=None:
             ig_new = np.zeros((nstp_new,nphi,npsi))
-            for iphi in range(nphi):
-                for ipsi in range(npsi):
+            for iphi in xrange(nphi):
+                for ipsi in xrange(npsi):
                     y = self.ig[:,iphi,ipsi].copy()
                     ig_new[:,iphi,ipsi] = \
                         interpolate(x,self.strain_eff,y)
@@ -721,6 +721,10 @@ class DiffDat:
     def determine_phis(self,phi_new):
         """
         Rearrange SF/ehkl/IG for the given phis
+
+        Argument
+        --------
+        phi_new
         """
         deg = 180./pi
         nphi = self.nphi
@@ -729,7 +733,7 @@ class DiffDat:
         phi_old  = self.phi.tolist()
         nphi_new = len(phi_new)
         ind = []
-        for i in range(len(phi_new)):
+        for i in xrange(len(phi_new)):
             try:
                 j = phi_old.index(phi_new[i])
             except ValueError:
@@ -748,7 +752,7 @@ class DiffDat:
         ehkl_new = np.zeros((nstp,nphi_new,npsi))
         dhkl_new = np.zeros((nstp,nphi_new,npsi))
         ig_new = np.zeros((nstp,nphi_new,npsi))
-        for i in range(len(ind)):
+        for i in xrange(len(ind)):
             if type(self.sf)!=type(None):
                 sf_new[:,:,i,:] = self.sf[:,:,ind[i],:]
             if type(self.ehkl)!=type(None):
@@ -779,9 +783,9 @@ class DiffDat:
             return
         else:
             print 'Vol=0 found:'
-            for i in range(self.nstp):
-                for j in range(self.nphi):
-                    for k in range(self.npsi):
+            for i in xrange(self.nstp):
+                for j in xrange(self.nphi):
+                    for k in xrange(self.npsi):
                         if self.ngr[i,j,k]==0:
                             #print i,j,k
                             self.mask(istp=i,iphi=j,ipsi=k)
@@ -789,24 +793,24 @@ class DiffDat:
     def mask_vol_margin(self,pmargin):
         """
         Mask grains whose volume is lower than
-        a critical margin
+        a critical margin <pmargin>
 
         Arguments
         =========
         pmargin = 0.1 (discard 10% below)
         """
-        for istp in range(self.nstp):
+        for istp in xrange(self.nstp):
             ## find average volume for each nstp
-            for iphi in range(self.nphi):
+            for iphi in xrange(self.nphi):
                 npsi = 0; vf_tot = 0.
-                for ipsi in range(self.npsi):
+                for ipsi in xrange(self.npsi):
                     if self.vf[istp,iphi,ipsi]>0 and\
                        not(np.isnan(self.vf[istp,iphi,ipsi])):
                         npsi = npsi + 1
                         vf_tot = vf_tot + self.vf[istp,iphi,ipsi]
                 vf_mean = vf_tot / npsi
                 margin = vf_mean * pmargin
-                for ipsi in range(self.npsi):
+                for ipsi in xrange(self.npsi):
                     if self.vf[istp,iphi,ipsi]<margin \
                        and not(np.isnan(self.vf[istp,iphi,ipsi])):
                         self.mask(istp,iphi,ipsi)
@@ -839,8 +843,8 @@ class DiffDat:
         if self.sf!=None:
             fig_sf = plt.figure(ifig,figsize=(16,9))
             ax_sf =[]
-            for iphi in range(nphi):
-                for k in range(6):
+            for iphi in xrange(nphi):
+                for k in xrange(6):
                     ax=fig_sf.add_subplot(6,nphi,k*nphi+iphi+1)
                     if k==0: ax.set_title(r'$\phi=$%4.1f'%
                                           (self.phi[iphi]*deg))
@@ -848,7 +852,7 @@ class DiffDat:
                     ax.locator_params(nbins=4)
                     ax_sf.append(ax)
                     __deco__(ax=ax,iopt=1,ft=15,ij=ijh[k])
-                    for istp in range(nstp):
+                    for istp in xrange(nstp):
                         y = self.sf[istp,k,iphi,:]
                         ax.plot(x,y*1e6,'-x')
             #figbw(fig_sf) # make'em BW style
@@ -857,13 +861,13 @@ class DiffDat:
         if self.ehkl!=None:
             fig_ehkl = plt.figure(ifig+1,figsize=(16,4))
             ax_ehkl=[]
-            for iphi in range(nphi):
+            for iphi in xrange(nphi):
                 ax=fig_ehkl.add_subplot(1,nphi,iphi+1)
                 ax.grid('on')
                 ax.locator_params(nbins=4)
                 ax_ehkl.append(ax)
                 __deco__(ax=ax,iopt=0)
-                for istp in range(nstp):
+                for istp in xrange(nstp):
                     y = self.ehkl[istp,iphi,:]
                     ax.plot(x,y*1e3)
                     if istp==0: ax.set_title(r'$\phi=$%4.1f$^\circ$'%
@@ -874,13 +878,13 @@ class DiffDat:
             fig_ig = plt.figure(ifig+2,figsize=(16,4))
 
             ax_ehkl=[]
-            for iphi in range(nphi):
+            for iphi in xrange(nphi):
                 ax=fig_ig.add_subplot(1,nphi,iphi+1)
                 ax.grid('on')
                 ax.locator_params(nbins=4)
                 ax_ehkl.append(ax)
                 __deco__(ax=ax,iopt=2)
-                for istp in range(nstp):
+                for istp in xrange(nstp):
                     y = self.ig[istp,iphi,:]
                     ax.plot(x,y*1e3)
             fig_ig.tight_layout()
@@ -925,7 +929,6 @@ class ResidualStress:
         from tempfile import mkstemp as mktemp
         from time import asctime
         from os import getcwd
-
 
         self.log = open('rs.log','w') ###mktemp(dir=getcwd()
         self.log.write('\nLog file from '+\
@@ -1118,9 +1121,9 @@ class ResidualStress:
 
         self.sfm = np.zeros((sfm.shape[0],6,\
                                  sfm.shape[2],sfm.shape[3]))
-        for istp in range(len(sfm)):
-            for k in range(len(sfm[istp])):
-                for iphi in range(len(sfm[istp,k])):
+        for istp in xrange(len(sfm)):
+            for k in xrange(len(sfm[istp])):
+                for iphi in xrange(len(sfm[istp,k])):
                     self.sfm[istp,k,iphi,:] \
                         = sfm[istp,k,iphi,:].copy()
 
@@ -1131,9 +1134,9 @@ class ResidualStress:
         self.sfm[:,5,:,:] = dum[:,:,:]
 
 
-        for istp in range(len(self.sfm)):
-            for k in range(len(self.sfm[istp])):
-                for iphi in range(len(self.sfm[istp,k])):
+        for istp in xrange(len(self.sfm)):
+            for k in xrange(len(self.sfm[istp])):
+                for iphi in xrange(len(self.sfm[istp,k])):
                     x = dum_psi
                     y = self.sfm[istp,k,iphi,:].copy()
                     x,y=sort(x,y)
@@ -1150,7 +1153,7 @@ class ResidualStress:
         self.strainm_con = np.array([e11,e22,e33,e12,e13,e23])
         self.stressm_con = np.array([s11,s22,s33,s12,s13,s23])
         self.strainm = [] ; self.stressm = []
-        for ist in range(len(self.stepsm)):
+        for ist in xrange(len(self.stepsm)):
             self.strainm.append(self.strainm_con.T[ist])
             self.stressm.append(self.stressm_con.T[ist])
 
@@ -1197,14 +1200,14 @@ class ResidualStress:
         print '*****************************************************\n'
 
         self.straine=np.zeros((len(straine.T),6))
-        for istp in range(len(self.straine)):
+        for istp in xrange(len(self.straine)):
             self.straine[istp][0] \
                 = straine[0][istp]
             self.straine[istp][1] \
                 = straine[1][istp]
 
         self.strain_sf=np.zeros((len(self.sfe_exx),6))
-        for istp in range(len(self.sfe_exx)):
+        for istp in xrange(len(self.sfe_exx)):
             self.strain_sf[istp][0] \
                 = self.sfe_exx[istp]
             self.strain_sf[istp][1] \
@@ -1261,8 +1264,8 @@ class ResidualStress:
         new_strain[:,1] = strain[:].copy()
 
         ## sorting
-        for istp in range(nstp):
-            for iphi in range(nphi):
+        for istp in xrange(nstp):
+            for iphi in xrange(nphi):
                 # ig
                 y = ig[istp,iphi,:]
                 x,y = sort(psi,y)
@@ -1273,7 +1276,7 @@ class ResidualStress:
                 x,y = sort(psi,y)
                 ehkl[istp,iphi,:] = y.copy()
                 # sf
-                for k in range(6):
+                for k in xrange(6):
                     y = fij[istp,k,iphi,:]
                     x,y=sort(psi,y)
                     fij[istp,k,iphi,:] = y.copy()
@@ -1319,6 +1322,9 @@ class ResidualStress:
     def analysis(self,iopt,istp,ifig=44):
         """
         Define the self.phis, self.psis, self.sf, self.ig, self.tdat
+
+        Combination of experimental and model-predicted
+        properties to calculate the flow stress (IJP 2015 Paper)
 
         Arguments
         =========
@@ -1379,7 +1385,7 @@ class ResidualStress:
         fig=plt.figure(ifig,figsize=(14,3))
         figs=plt.figure(112,figsize=(14,3))
         axes=[]; axesf=[]
-        for iphi in range(nphi):
+        for iphi in xrange(nphi):
             ax =fig.add_subplot(1,nphi,iphi+1)
             axs=figs.add_subplot(1,nphi,iphi+1)
             ax.set_title(r'$\phi=%3.1f^\circ$'%(self.phis[iphi]*180/pi))
@@ -1396,7 +1402,7 @@ class ResidualStress:
         self.coeff()
         # stress calculation
         stress=self.find_sigma()
-        for iphi in range(nphi):
+        for iphi in xrange(nphi):
             x = sin(self.psis)**2
             #x = self.psis
             l, = axes[iphi].plot(
@@ -1469,6 +1475,12 @@ class ResidualStress:
                      iwgt=False):
         """
         Find stress based on d-spacing
+
+        Arguments
+        =========
+        ivo
+        iplot
+        iwgt
         """
         from scipy import optimize
         fmin = optimize.leastsq
@@ -1484,7 +1496,7 @@ class ResidualStress:
             fig_dhkl=wf(nw=self.nphi,nh=2,iarange=True)
             sign_sin2psi=np.sign(self.psis)*np.sin(self.psis)**2
 
-            for iphi in range(self.nphi):
+            for iphi in xrange(self.nphi):
                 ## Observed eps^{hkl}
                 fig_dhkl.axes[iphi].plot(
                     sign_sin2psi,
@@ -1529,9 +1541,9 @@ class ResidualStress:
         """
         self.Ei = np.zeros((self.nphi,self.npsi))
         ## self.Ei[iphi,ipsi] = 0
-        for iphi in range(self.nphi):
-            for ipsi in range(self.npsi):
-                for k in range(6): # six components
+        for iphi in xrange(self.nphi):
+            for ipsi in xrange(self.npsi):
+                for k in xrange(6): # six components
                     # once ivo is given, optimization runs only
                     # for the given ivo components
                     if ivo==None or (ivo!=None and k in ivo):
@@ -1545,16 +1557,18 @@ class ResidualStress:
 
     def calc_Di(self,d0c=None,d0=None):
         """
+        Di(phi,psi) = F_ij (phi,psi) * sig_ij
+
         Arguments
         =========
         d0c = None
         d0  = None
         """
         self.Di = np.zeros((self.nphi, self.npsi))
-        for iphi in range(self.nphi):
-            for ipsi in range(self.npsi):
+        for iphi in xrange(self.nphi):
+            for ipsi in xrange(self.npsi):
                 self.Di[iphi,ipsi] = 0
-                for k in range(6):
+                for k in xrange(6):
                     self.Di[iphi,ipsi] = \
                         self.Di[iphi,ipsi] \
                         + self.cffs[k,iphi,ipsi]\
@@ -1572,8 +1586,8 @@ class ResidualStress:
         """
         self.cffs=np.zeros((6,self.nphi,self.npsi))
         self.xec()
-        for iphi in range(self.nphi):
-            for ipsi in range(self.npsi):
+        for iphi in xrange(self.nphi):
+            for ipsi in xrange(self.npsi):
                 self.cffs[0,iphi,ipsi] = a(self.phis[iphi],self.psis[ipsi],self.s1,self.s2) # s11
                 self.cffs[1,iphi,ipsi] = b(self.phis[iphi],self.psis[ipsi],self.s1,self.s2) # s22
                 self.cffs[2,iphi,ipsi] = c(self.phis[iphi],self.psis[ipsi],self.s1,self.s2) # s33
@@ -1604,7 +1618,7 @@ class ResidualStress:
         npsi = self.npsi
 
         fig = wide_fig(nw=nphi)
-        for iphi in range(nphi):
+        for iphi in xrange(nphi):
             ph = phi[iphi]
             ax = fig.axes[iphi]
             #x = psi
@@ -1618,14 +1632,20 @@ class ResidualStress:
 
     def f_least_d(self,stress=[0,0,0,0,0,0]):
         """
+        f(phi,psi) = e_n(phi,psi) - d (phi,psi)
+        Fbar = Sigma_n (f_n)
+
+        Argument
+        --------
+        stress = [0,0,0,0,0]
         """
         self.sigma=np.array(stress)
         self.coeff()
         self.calc_Di() # initial estimation of d0c
 
         f_array = []
-        for iphi in range(self.nphi):
-            for ipsi in range(self.npsi):
+        for iphi in xrange(self.nphi):
+            for ipsi in xrange(self.npsi):
                 f_array.append(self.tdat[iphi,ipsi] - self.Di[iphi,ipsi])
         return np.array(f_array)
 
@@ -1639,8 +1659,8 @@ class ResidualStress:
         self.coeff()
         self.calc_Ei(ivo=ivo)
         f_array = [ ]
-        for iphi in range(self.nphi):
-            for ipsi in range(self.npsi):
+        for iphi in xrange(self.nphi):
+            for ipsi in xrange(self.npsi):
                 d = self.tdat[iphi,ipsi] \
                     - self.Ei[iphi,ipsi]
                 if np.isnan(d): d = 0
@@ -1662,8 +1682,8 @@ class ResidualStress:
         self.calc_Ei(ivo=ivo)
         ## weight Ei by volumes in (phi,psi)
         f_array = [ ]
-        for iphi in range(self.nphi):
-            for ipsi in range(self.npsi):
+        for iphi in xrange(self.nphi):
+            for ipsi in xrange(self.npsi):
                 d = self.tdat[iphi,ipsi] \
                     - self.Ei[iphi,ipsi]
                 d = d * weight[iphi,ipsi]
@@ -1689,13 +1709,13 @@ def psi_reso2(mod=None,ntot=2):
     nphi = mod.nphi; npsi = mod.npsi
 
     sin2psi_=[]
-    for i in range(len(psis)):
+    for i in xrange(len(psis)):
         sin2psi_.append(np.sign(psis) * sin(psis)**2)
 
     spc = np.linspace(np.min(sin2psi_),np.max(sin2psi_),ntot)
 
     inds = []
-    for i in range(len(spc)):
+    for i in xrange(len(spc)):
         ixd = find_nearest(sin2psi_,spc[i])
         inds.append(ixd)
 
@@ -1706,7 +1726,7 @@ def psi_reso2(mod=None,ntot=2):
     phis = phis[::]
 
     new_psi = []
-    for i in range(len(inds)):
+    for i in xrange(len(inds)):
         new_psi.append(psis[inds[i]])
     psis = np.array(new_psi)
     nphi = len(phis); npsi = len(psis)
@@ -1741,7 +1761,7 @@ def psi_reso3(obj,psi,ntot=2):
     ntot
     """
     sign_sin2psi = []
-    for i in range(len(psi)):
+    for i in xrange(len(psi)):
         sign_sin2psi.append(
             np.sign(psi) \
             * sin(psi)**2)
@@ -1749,7 +1769,7 @@ def psi_reso3(obj,psi,ntot=2):
     spc  = np.linspace(np.min(sign_sin2psi),
                        np.max(sign_sin2psi),ntot)
     inds = []
-    for i in range(len(spc)):
+    for i in xrange(len(spc)):
         inds.append(find_nearest(
             sign_sin2psi,spc[i]))
     return select_psi(obj, inds)
@@ -1757,7 +1777,7 @@ def psi_reso3(obj,psi,ntot=2):
 def select_psi(dat,inds):
     array = []
     dum = dat.T
-    for i in range(len(inds)):
+    for i in xrange(len(inds)):
         array.append(dum[inds[i]])
     return np.array(array).T
 
@@ -1817,19 +1837,19 @@ def filter_psi(mod=None,psimx=None,sin2psimx=None):
     # assumed that psis is sorted - ascending order
     if psimx!=None:
         psimx = psimx * pi/180.
-        for i in range(len(psis)):
+        for i in xrange(len(psis)):
             if psis[i]>=-psimx:
                 i0=i; break
-        for i in range(len(psis)):
+        for i in xrange(len(psis)):
             if psis[i]>=psimx:
                 i1=i; break
     if sin2psimx!=None:
         ref = sin(psis)**2.
-        for i in range(len(ref)):
+        for i in xrange(len(ref)):
             if ref[i]<= sin2psimx:
                 i0 = i; break
         reft = ref[::-1]
-        for i in range(len(reft)):
+        for i in xrange(len(reft)):
             if reft[i]<=sin2psimx:
                 i1 = len(reft) - i; break
 
@@ -1874,7 +1894,7 @@ def filter_psi2(obj=None,sin2psi=[],bounds=[0.,1.]):
     bounds  = [0,  1.]
     """
     inds = []
-    for i in range(len(sin2psi)):
+    for i in xrange(len(sin2psi)):
         val = sin2psi[i]
         if val>=bounds[0] and val<=bounds[1]:
             inds.append(i)
@@ -1884,7 +1904,7 @@ def filter_psi2(obj=None,sin2psi=[],bounds=[0.,1.]):
     new_obj_t = new_obj.swapaxes(0,-1)
     obj_t = obj.swapaxes(0,-1)
 
-    for i in range(len(inds)):
+    for i in xrange(len(inds)):
         new_obj_t[i]=obj_t[inds[i]]
 
     new_obj = new_obj_t.swapaxes(0,-1)

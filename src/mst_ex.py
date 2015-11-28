@@ -1,5 +1,5 @@
 ## MS&T 2014 Fall meeting application
-## Used for stress uncertainty paper
+## Used for stress uncertainty paper (Monte Carlo)
 ## - plot flow stress along various paths
 
 from os import sep, popen
@@ -32,9 +32,10 @@ def write_args(f,**kwargs):
     f.write('\n')
 
 
-def main_plot_flow_all(hkl='211',sin2psimx=0.5,
-                       psi_nbin=1,pmargin=None,iplot_rs=False,
-                       path=''):
+def main_plot_flow_all(
+        hkl='211',sin2psimx=0.5,psi_nbin=1,
+        pmargin=None,iplot_rs=False,
+        path=''):
     """
     Arguments
     =========
@@ -529,14 +530,6 @@ def use_intp_sfig(ss=2,iopt=0,iplot=False,
 
     return StressFactor, IGStrain
 
-# def z2n(array):
-#     arr = array[::]
-#     return arr[arr==0]=np.nan
-
-# def replace_0tn(*args):
-#     a=[]
-#     for arg in args: a.ppend(z2n(arg))
-#     return a
 
 def influence_of_intp(ss=2,bounds=[0,0.5],
                       psi_nbin=13,iplot=False,
@@ -867,7 +860,8 @@ def wrap_func(
     return x, y
 
 def influence_of_cnts_stats(
-        ## characteristics of an ensemble for stress data
+        ## characteristics of an ensemble for
+        ## stress data
         sigmas=[1e-5, 2e-5, 5e-5, 1e-4],
         bounds=[0.,0.5],
         ss=3,
@@ -887,22 +881,36 @@ def influence_of_cnts_stats(
         DEC_freq_sym=True,
         NCPU=0):
     """
-    Influence of counting statistics uncertainty
+    Propagate errors due to
+     1) counting statistics error (CSE)
+     2) incomplete DECs (by utilizing only
+          a portion of model DECs)
+     3) Infinite number of tilting angles in use
+     4) Incomplete range of psi angle ranges in use
+     5) Geometric distortion (Bragg angle / psi)
+     6) Peak intensity: I(phi,psi) / Ird
 
     With fixing other variables, investigates the
-    propagation of counting stat error on to the final
+    propagation of counting stat error to final
     diffraction stress by examining a number of
-    statistical ensembles (nsample) characterized
+    statistical ensembles <nsample> characterized
     by given arguments
+
+    ## diffraction condition
+    #bragg=78.2,  ## Fe {211} using Cr K-alpha
+    #bragg=78.2,  ## Fe {310} using Cobalt
+    #ird=0.182,     ## Intensity of random distribution
 
     Arguments
     =========
-    sigmas      : Pure CSE
+    sigmas      : Counting Stat Error
     bounds      : Bounds of tilting range
+                  (low psi to high psi)
     ss          : Sampling frequency in DECs
-    nbins       : How many tilting angles in diffraction
+    nbins       : How many tilting angles in
+                  diffraction
     iwgt        : Do we weight (E-e) by peak intensity?
-    nsample     : The number of ensembles.
+    nsample     : The number of ensembles
     intp_opt    : DEC interpolation method
     iplot       : Flag for plotting
     bragg       : Bragg's angle
@@ -945,7 +953,6 @@ def influence_of_cnts_stats(
         dec_inv_frq=ss,
         dec_interp=intp_opt,
         nfrq=nfrq)
-
     print '\n\n**************'
     print 'test completed'
     print '**************\n\n'
@@ -976,13 +983,8 @@ def influence_of_cnts_stats(
                         bragg,
                         ird,nfrq),))
 
-    ## diffraction condition
-    #bragg=78.2,    ## Fe {211} using Cr K-alpha
-    #ird=0.182,     ## Intensity of random distribution
-
     ## close/join
-    pool.close()
-    pool.join()
+    pool.close(); pool.join()
     ## terminate
     pool.terminate()
 
