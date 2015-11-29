@@ -87,16 +87,16 @@ def reader(fn='debug.sff',lb='\r'):
     # each eps_xx takes a block that has (8,nphi*npsi) elements.
 
     # ix,iy = 0,0
-    for istr in range(nstr):
+    for istr in xrange(nstr):
         ix = istr * 9
-        for iphi in range(nphi):
+        for iphi in xrange(nphi):
             iy0 = iphi * npsi
             if istr==0 and iphi==0:
                 psis = []
-            for ipsi in range(npsi):
+            for ipsi in xrange(npsi):
                 iy = iy0 + ipsi
                 e0[istr,iphi,ipsi] = dat[ix+8,iy]
-                for ij in range(6):
+                for ij in xrange(6):
                     fij[istr,iphi,ipsi,ij] = dat[ix+2+ij,iy]
 
                 if istr==0 and iphi==0:
@@ -153,11 +153,11 @@ def f1122(fn='debug.sff',ifig=1,iphi=0,i=1,j=1,ilab=True,
     ijs = [[1,1],[2,2]]
 
     istr0 = -1
-    for istr in range(len(eps)):
+    for istr in xrange(len(eps)):
         if istr==0 and title=='EXP': pass
         elif ieps==None or istr in ieps:
             istr0 = istr0 + 1
-            for i in range(2):
+            for i in xrange(2):
                 f  = fij[istr][iphi]
                 i0,j0 = ijs[i]
 
@@ -205,7 +205,7 @@ def f1122(fn='debug.sff',ifig=1,iphi=0,i=1,j=1,ilab=True,
     ax03.set_ylabel(r'$\varepsilon^\mathrm{IG}$ [$\mu\varepsilon$]',dict(fontsize=ft))
     ax03.set_xlabel(r'$\sin^2{\psi}$',dict(fontsize=ft))
 
-    for i in range(len(axes)):
+    for i in xrange(len(axes)):
         ax = axes[i]
         ax.grid('on')
         ax.legend(loc='best',fancybox=True).\
@@ -304,7 +304,7 @@ def f1122_3d(fn='debug.sff', ifig=1, iphi=0, i=1, j=1, ilab=True,
 
 
 
-    for istr in range(len(eps)):
+    for istr in xrange(len(eps)):
         f = fij[istr][iphi]
         print len(f)
         y = f.T[iv-1]
@@ -370,7 +370,7 @@ def fij_epsxx(fn='debug.sff', iphi=0, ipsi=3, i=1, j=1, ifig=1):
     F = []
 
 
-    for istr in range(len(eps)):
+    for istr in xrange(len(eps)):
         f = fij[istr][iphi]
         y = f.T[iv-1]
         F.append(y[ipsi])
@@ -399,5 +399,5 @@ def fij_epsxxs(fn='YJ_Bsteel_BB.sff',iphi=0,i=1,j=1,psi=3):
     #psi = np.arange(10)
     psi = readpsi(fn)
     print 'psi:', psi
-    for p in range(len(psi)):
+    for p in xrange(len(psi)):
         fij_epsxx(fn=fn,iphi=iphi,i=i,j=j,ipsi=p)

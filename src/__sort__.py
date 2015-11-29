@@ -8,7 +8,7 @@ def __findalltr__(path='.'):
     import glob
     fn = glob.glob('%s%s*.txt'%(path,sep))
     fntr = [] # triaxial files only.
-    for i in range(len(fn)):
+    for i in xrange(len(fn)):
         cfn = fn[i]
         cfn = cfn.split('.txt')[0]
 #        print cfn[-4:]
@@ -20,7 +20,7 @@ def __alltr_ids__(path='.'):
     """ Returns all triaxial data file's ids..."""
     fntr = __findalltr__(path=path)
     ids = []
-    for i in range(len(fntr)):
+    for i in xrange(len(fntr)):
         cfn = fntr[i]
         iid = int(cfn.split('_')[-1].split('Data')[0])
         ids.append(iid)

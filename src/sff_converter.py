@@ -95,34 +95,34 @@ def main(fn='temp.sff', difile=None, iph=1, factor=1e6, itab=False,
 
     sff = open(fn, 'w') # stress factor file
     sff.write('Header')
-    for i in range(neps*10-2): sff.write('\t')
+    for i in xrange(neps*10-2): sff.write('\t')
     sff.write('\r\n')
     sff.write('#strainLevels \t %i'%neps)
-    for i in range(neps*10-3): sff.write('\t')
+    for i in xrange(neps*10-3): sff.write('\t')
     sff.write('\r\n')
     sff.write('#phivalues \t%i'%nphi)
-    for i in range(neps*10-3): sff.write('\t')
+    for i in xrange(neps*10-3): sff.write('\t')
     sff.write('\r\n')
     sff.write('#psivalues \t%i'%npsi)
-    for i in range(neps*10-3): sff.write('\t')
+    for i in xrange(neps*10-3): sff.write('\t')
     sff.write('\r\n')
     sff.write(('%s'%('e^{eff} \t%5.3f'%(strains[0]))).ljust(14))
-    for i in range(8): sff.write('\t')
+    for i in xrange(8): sff.write('\t')
 
     if neps>1:
         sff.write(('\t%5.3f'%(strains[1])).rjust(115))
-        for i in range(9): sff.write('\t')
-        for i in range(neps-2):
+        for i in xrange(9): sff.write('\t')
+        for i in xrange(neps-2):
             sff.write(('\t%5.3f'%(strains[i+2])).rjust(118))
-            for j in range(9):
+            for j in xrange(9):
                 if j==8 and i==neps-3: pass
                 else: sff.write('\t')
 
     sff.write('\r\n')
-    for i in range(neps):
+    for i in xrange(neps):
         stemp = '%10s%9s ' ; ftemp = '%9s'%'%6.2f'
         ftemp = ftemp + '%8s '%'%6.2f'
-        for j in range(7):
+        for j in xrange(7):
             stemp = stemp + '%13s '
             ftemp = ftemp + '% +12.6e '
         sff.write(stemp%('Phi\t','Psi\t','F11\t','F22\t',
@@ -136,9 +136,9 @@ def main(fn='temp.sff', difile=None, iph=1, factor=1e6, itab=False,
     print 'nphi,neps,npsi:', nphi,neps,npsi
 
     sff.write('\r\n') # line breaker
-    for i in range(nphi):
-        for j in range(npsi):
-            for k in range(neps):
+    for i in xrange(nphi):
+        for j in xrange(npsi):
+            for k in xrange(neps):
                 ph = phis[i]
                 ps = psis[j]
                 sf = fij[k,i,j,:]*factor

@@ -87,9 +87,9 @@ def binning(phi, wgt, n=20):
     p0s  = p0s[::-1]
 
     wbar = np.zeros((len(p0s),))
-    for i in range(len(phi)):
+    for i in xrange(len(phi)):
         p = phi[i]
-        for j in range(len(p0s)):
+        for j in xrange(len(p0s)):
             if p>=p0s[j]:
                 wbar[j] = wbar[j] + wgt[i]
                 break
@@ -120,7 +120,7 @@ def plotpeak(steps=[0,1,2], n=20, ipb=1, iph=1):
 
     a1 = []
     a2 = []
-    for i in range(len(steps)):
+    for i in xrange(len(steps)):
         wgt1, phi1, wgt2, phi2, avg1, avg2 \
             = arcscanout(istep=steps[i], ipb=ipb, iph=iph)
         a1.append(avg1)
@@ -218,7 +218,7 @@ def effmodout(istep=1, ipb=1, iph=1):
 
     # macroscopic stress reads
     sbar = np.zeros((3,3))
-    for i in range(3):
+    for i in xrange(3):
         sbar[i,0],sbar[i,1],sbar[i,2] = map(float, dat[1+i].split())
 
 
@@ -235,14 +235,14 @@ def effmodout(istep=1, ipb=1, iph=1):
 
     eps1 = float(dat[2].split()[1])
     dec1 = np.zeros((6,6))
-    for i in range(6):
+    for i in xrange(6):
         dec1[i,0], dec1[i,1], dec1[i,2], dec1[i,3], \
             dec1[i,4], dec1[i,5] = map(float, dat[4+i].split())
 
     eps2 = float(dat[11].split()[1])
 
     dec2 = np.zeros((6,6))
-    for i in range(6):
+    for i in xrange(6):
         dec2[i,0], dec2[i,1], dec2[i,2], dec2[i,3],\
             dec2[i,4],dec2[i,5] =  map(float, dat[13+i].split())
 
@@ -361,7 +361,7 @@ def fijout(i=1, j=1, ipb=1, istep=1, iph=1):
     psi2 = float(dat[7].split()[1])
     fij1 = np.zeros((3,3)); fij2 = np.zeros((3,3))
 
-    for k in range(3):
+    for k in xrange(3):
         fij1[k] = np.array(map(float, dat[3+k].split()))
         fij2[k] = np.array(map(float, dat[8+k].split()))
 
@@ -389,7 +389,7 @@ def fijstep(i=1, j=1, istep=1, iph=1, difn=None):
     npsi = nbeta * 2 # two detectors
 
     psis = []
-    for k in range(nbeta):
+    for k in xrange(nbeta):
         psis.append(betas[k]+11.8)
         psis.append(betas[k]-11.8)
 
@@ -400,8 +400,8 @@ def fijstep(i=1, j=1, istep=1, iph=1, difn=None):
     f = np.zeros((nphi, npsi))
 
     ipb = 1
-    for k in range(nphi):
-        for l in range(nbeta):
+    for k in xrange(nphi):
+        for l in xrange(nbeta):
             phi  = phis[k]
             beta = betas[l]
 
@@ -445,7 +445,7 @@ def fij(i=1, j=1, iph=1, difn=None):
             x = psi
             sortedpsi, ind = ssort(x)
             temp = []
-            for k in range(len(sortedpsi)):
+            for k in xrange(len(sortedpsi)):
                 temp.append(ft[ind[k]-1])
             ft = np.array(temp)
             f = ft.T
@@ -485,7 +485,7 @@ def internalepsplot(iph=1, phi=1, difn=None):
 
     nstep = len(acueps)
 
-    for istep in range(nstep):
+    for istep in xrange(nstep):
         for p in phis:
             dat = intepsphiout(istep=istep, iph=iph, phi=p,
                                isort=True)
@@ -567,20 +567,20 @@ def fijplot(i=1,j=1,iph=1,ifig=0, ired=False, difn=None):
     fig = plt.figure(ifig, figsize=figsize)
 
     axes = []
-    for k in range(len(f)): #  phi
+    for k in xrange(len(f)): #  phi
         fig.add_subplot(nrow, ncol, k + 1)
         ax = plt.gca()
         axes.append(ax)
-        for l in range(len(f[i])): # step
+        for l in xrange(len(f[i])): # step
             label=r'$\varepsilon$ %6.3f'%eps[l]
             # Reducing of psi range -- as requested by Thomas - 10/1/2012
             # - ~ +
             if ired:
-                for m in range(len(psi[l])):
+                for m in xrange(len(psi[l])):
                     if psi[l][m]>-45:
                         m0 = m
                         break
-                for m in range(len(psi[l])):
+                for m in xrange(len(psi[l])):
                     if psi[l][m]>45:
                         m1 = m
                         break
@@ -679,7 +679,7 @@ def eps_sig_fij_sort(i=1, j=1, ipb=[1,2,3,4], opt=1, iph=1, difn=None):
     psi   = []; sigma = []
     eps   = []
 
-    for k in range(len(ipb)):
+    for k in xrange(len(ipb)):
         p, b, e1, e2, s = eps_sig_fij(i=i,j=j,ipb=ipb[k], iph=iph, difn=difn)
         phi.append(p); beta.append(beta)
         psi1 = b - 11.8; psi2 = b + 11.8
@@ -698,7 +698,7 @@ def eps_sig_fij_sort(i=1, j=1, ipb=[1,2,3,4], opt=1, iph=1, difn=None):
     temp1 = []
     temp2 = []
     temp3 = []
-    for k in range(len(sorted)):
+    for k in xrange(len(sorted)):
         temp1.append(sigma[ind[k]-1])
         temp2.append(eps[ind[k]-1])
         temp3.append(psi[ind[k]-1])
@@ -763,7 +763,7 @@ def intepsphiout(istep=0, phi=0, iphi=0, iph=1, isort=False, iopt=0):
         dat = dl[2:]
         dat = dat[(istep)*npb: (istep)*npb + npb]
         if len(dat)==0: raise IOError, 'empty dat is returned ..'
-        for i in range(len(dat)):
+        for i in xrange(len(dat)):
             temp = map(float, dat[i].split())
             step, p, beta, psi1, psi2, eps1, eps2,\
                 sig1, sig2, n1, n2, v1, v2 = temp[:13]
@@ -779,7 +779,7 @@ def intepsphiout(istep=0, phi=0, iphi=0, iph=1, isort=False, iopt=0):
         if isort:
             temp1, temp2 = [], []
             sortedarray, ind = ssort(psi)#, len(psi))
-            for k in range(len(sortedarray)):
+            for k in xrange(len(sortedarray)):
                 temp1.append(eps[ind[k]-1])
                 temp2.append(sig[ind[k]-1])
 
@@ -856,7 +856,7 @@ def internal_eps_plot(
     psi_eps_dat = []
     psi_sig_dat = []
 
-    for i in range(nphi): # phi
+    for i in xrange(nphi): # phi
         if ifig!=None:
             fig.add_subplot(nrow,ncol,i+1)
             ax = fig.axes[-1]
@@ -870,7 +870,7 @@ def internal_eps_plot(
         temp1 = np.zeros((NPSI,neps+1)) # internal strain
         temp2 = np.zeros((6,NPSI, neps+1)) # macro stress
 
-        for j in range(neps):
+        for j in xrange(neps):
             psi, eps, sig, ms11, ms22, ms33, ms23, ms13, ms12, \
                 me11, me22, me33, me23, me13, me12 \
                 = intepsphiout(istep=j, phi=phis[i],
@@ -888,11 +888,11 @@ def internal_eps_plot(
 
             if ifig!=None:
                 if ired:
-                    for m in range(len(psi)):
+                    for m in xrange(len(psi)):
                         if psi[m]>-45:
                             m0 = m
                             break
-                    for m in range(len(psi)):
+                    for m in xrange(len(psi)):
                         if psi[m]>45:
                             m1 = m
                             break
@@ -906,7 +906,7 @@ def internal_eps_plot(
                         label=r'$\varepsilon$ %6.3f'%acueps[j])
 
                     iprob = 0
-                    for k in range(len(psi)):
+                    for k in xrange(len(psi)):
                         if k in ppsi:
                             iprob = iprob + 1
                             ax01.plot(ms11, np.array(eps[k])*10**6,'.',

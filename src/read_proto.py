@@ -88,7 +88,7 @@ class ProtoExp:
             raise IOError, 'Not further developed yet.'
             # fns = glob('%s%s*.txt'%(path,sep))
             # scan_i = []
-            # for i in range(len(fns)):
+            # for i in xrange(len(fns)):
             #     try:
             #         j = int(fns[i].split(sep)[-1].\
             #                 split('_')[1].split('Data')[0])
@@ -100,7 +100,7 @@ class ProtoExp:
             # self.nscan = len(scan_i)
 
             # self.fns = fns
-            # for i in range(self.nscan):
+            # for i in xrange(self.nscan):
             #     fs = glob('%s%s*_%sData*.txt'%(
             #         path,sep,
             #         str(scan_i[i]).zfill(4)))
@@ -140,7 +140,7 @@ class ProtoExp:
             self.phis = []
             self.psis = []
 
-            for i in range(self.nscan):
+            for i in xrange(self.nscan):
                 fn_check = glob('%s%s%sData*.txt'%(path,sep,flab[i]))[0]
                 #igain=open(fn_check,'r').readlines()[58].split(':')[1].split('\n')[0]
                 igain=open(fn_check,'r').readlines()[38].split(':')[1].split('\n')[0]
@@ -153,16 +153,16 @@ class ProtoExp:
                 fs = glob(dum)
                 nphi = len(fs)
                 self.P_scan.append(ProtoScan())
-                for iphi in range(nphi):
+                for iphi in xrange(nphi):
                     self.P_scan[i].add_phi(ProtoPhi(
                         fn=fs[iphi],isym=isym))
 
                 self.P_scan[i].get_dspc_avg()
                 self.P_scan[i].get_epshkl_davg()
 
-                #for i in range(self.nscan):
+                #for i in xrange(self.nscan):
                 nphis.append(self.P_scan[i].nphi)
-                for j in range(len(self.P_scan[i].protophi)):
+                for j in xrange(len(self.P_scan[i].protophi)):
                     npsis.append(self.P_scan[i].protophi[j].npsi)
                     self.phis.append(self.P_scan[i].protophi[j].phi)
                     self.psis.append(self.P_scan[i].protophi[j].psis)
@@ -193,22 +193,22 @@ class ProtoExp:
     def list(self):
         print '#--------------------------------------------#'
         print '%8s %4i'%('nphis:', self.nphis),
-        for i in range(len(self.phis)):
+        for i in xrange(len(self.phis)):
             print '%+4i'%self.phis[i],
         print ''
         print '%8s %4i'%('npsis:', self.npsis),
-        for i in range(3):
+        for i in xrange(3):
             print '%+4.1f'%self.psis[i],
         print ' ... ',
-        for i in range(1):
+        for i in xrange(1):
             print '%+4.1f'%self.psis[-i-1],
         print ''
         print '%8s %3i'%('nsteps:', len(self.P_scan))
         print '%8s'%'E_{VM}:',
-        for i in range(3):
+        for i in xrange(3):
             print '%4.2f'%(self.flow.epsilon_vm[i]),
         print ' ...' ,
-        for i in range(1):
+        for i in xrange(1):
             print '%4.2f'%(self.flow.epsilon_vm[-i-1]),
         print
         print '#--------------------------------------------#'
@@ -218,12 +218,12 @@ class ProtoExp:
         nphi = self.nphi
         npsi = self.npsi
         ehkl = np.zeros((nstp,nphi,npsi))
-        for istp in range(nstp):
+        for istp in xrange(nstp):
             P = self.P_scan[istp]
             d_avg = P.d_avg
-            for iphi in range(nphi):
+            for iphi in xrange(nphi):
                 p_phi = P.protophi[iphi]
-                for ipsi in range(npsi):
+                for ipsi in xrange(npsi):
                     p_psi = p_phi.ppscans[ipsi]
                     ehkl[istp,iphi,ipsi]\
                         = (p_psi.dspc-d_avg)/d_avg
@@ -237,11 +237,11 @@ class ProtoExp:
         nphi = self.nphi
         npsi = self.npsi
         ehkl = np.zeros((nstp,nphi,npsi))
-        for istp in range(nstp):
+        for istp in xrange(nstp):
             P = self.P_scan[istp]
-            for iphi in range(nphi):
+            for iphi in xrange(nphi):
                 p_phi = P.protophi[iphi]
-                for ipsi in range(npsi):
+                for ipsi in xrange(npsi):
                     p_psi = p_phi.ppscans[ipsi]
                     ehkl[istp,iphi,ipsi]\
                         = (p_psi.dspc-d0)/d0
@@ -270,13 +270,13 @@ class ProtoExp:
         norm = mpl.colors.Normalize(vmin=mn, vmax=mx)
         cmap, c = mpl_lib.norm_cmap(mx = mx, mn=mn)
 
-        for i in range(self.flow.nstp):
+        for i in xrange(self.flow.nstp):
             eps = self.flow.epsilon_vm[i]
             cl = c.to_rgba(eps)
-            for j in range(self.nphi):
+            for j in xrange(self.nphi):
                 X = self.psi
                 Y = []
-                for ipsi in range(self.npsi):
+                for ipsi in xrange(self.npsi):
                     y = self.P_scan[i].protophi[j].\
                         ppscans[ipsi].dspc
                     Y.append(y)
@@ -306,7 +306,7 @@ class ProtoExp:
     def plot(self,istps=[-1]):
         ps = []
         nstps = len(istps)
-        for istp in range(len(istps)):
+        for istp in xrange(len(istps)):
             ps.append(self.P_scan[istp])
 
         import matplotlib.pyplot as plt
@@ -324,16 +324,16 @@ class ProtoExp:
                         w0=0,w1=0,left=0.15,h0=0,h1=0,
                         up=0.1,down=0.1)
         # axest = []
-        # for i in range(len(figs.axes)):
+        # for i in xrange(len(figs.axes)):
         #     tax = figs.axes[i].twinx()
         #     axest.append(tax)
 
-        for istp in range(nstps):
-            for iphi in range(self.nphis):
+        for istp in xrange(nstps):
+            for iphi in xrange(self.nphis):
                 iax = self.nphis * istp + iphi
                 X = []
                 Y = []; Y0 = []
-                for ipsi in range(ps[istp].protophi[iphi].npsi):
+                for ipsi in xrange(ps[istp].protophi[iphi].npsi):
                     x = np.sin(
                         ps[istp].protophi[iphi].\
                         ppscans[ipsi].psi*np.pi/180.)**2
@@ -361,7 +361,7 @@ class ProtoExp:
         """
         Adjust psi values by putting an offset
         """
-        for i in range(self.flow.nstp):
+        for i in xrange(self.flow.nstp):
             self.P_scan[i].put_psi_offset(offset)
 
         self.psi = self.psi + offset
@@ -380,21 +380,21 @@ class ProtoScan:
         self.nphi = len(self.protophi)
     def get_dspc_avg(self):
         dspc = []
-        for i in range(len(self.protophi)):
+        for i in xrange(len(self.protophi)):
             ps = self.protophi[i].ppscans
-            for j in range(len(ps)):
+            for j in xrange(len(ps)):
                 dspc.append(ps[j].dspc)
         dspc = np.array(dspc)
         self.dspc_avg = np.average(dspc)
         self.d_avg = np.average(dspc)
     def get_epshkl_davg(self):
         self.get_dspc_avg()
-        for i in range(len(self.protophi)):
+        for i in xrange(len(self.protophi)):
             ps = self.protophi[i].ppscans
-            for j in range(len(ps)):
+            for j in xrange(len(ps)):
                 ps[j].epshkl = (ps[j].dspc - self.d_avg)/self.d_avg
     def put_psi_offset(self,offset=0.0):
-        for i in range(len(self.protophi)):
+        for i in xrange(len(self.protophi)):
             self.protophi[i].put_psi_offset(offset)
 
 class ProtoPhi:
@@ -411,9 +411,9 @@ class ProtoPhi:
         # combine detectors for a single phi
         self.ppscans = []
         self.psis = []
-        for i in range(self.ndet):
+        for i in xrange(self.ndet):
             det = self.detectors[i]
-            for j in range(len(det.ppscans)):
+            for j in xrange(len(det.ppscans)):
                 p = det.ppscans[j]
                 self.psis.append(p.psi)
                 self.ppscans.append(p)
@@ -426,7 +426,7 @@ class ProtoPhi:
         # symmetrize the d-spacings...
         if isym:
             import copy
-            for i in range(len(self.ppscans)/2):
+            for i in xrange(len(self.ppscans)/2):
                 i0 = i
                 i1 = -i - 1
                 p0 = copy.deepcopy(self.ppscans[i0])
@@ -438,7 +438,7 @@ class ProtoPhi:
     def plot(self):
         import matplotlib.pyplot as plt
         X=[]; Y=[]
-        for i in range(self.npsi):
+        for i in xrange(self.npsi):
             x = self.ppscans[i].psi
             y = self.ppscans[i].dspc
             X.append(x)
@@ -446,9 +446,9 @@ class ProtoPhi:
         plt.plot(X,Y,'-x')
 
     def put_psi_offset(self,offset=0.0):
-        for idet in range(self.ndet):
+        for idet in xrange(self.ndet):
             det = self.detectors[idet]
-            for j in range(len(det.ppscans)):
+            for j in xrange(len(det.ppscans)):
                 det.ppscans[j].put_psi_offset(offset)
 
         self.psis = self.psis + offset
@@ -501,7 +501,7 @@ class Det:
 
     def add_ppscans(self):
         self.ppscans=[]
-        for i in range(self.npsis):
+        for i in xrange(self.npsis):
             self.ppscans.append(
                 PhiPsiScan(psi=self.psis[i],
                            phi=self.phi,
@@ -514,7 +514,7 @@ class Det:
         """
         Put offset of psi...
         """
-        for i in range(len(self.ppscans)):
+        for i in xrange(len(self.ppscans)):
             self.ppscans[i].put_psi_offset(offset=offset)
 
         # any systematic offset doesn't change the order of psi

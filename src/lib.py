@@ -8,7 +8,7 @@ def write_args(f,ihead=False,**kwargs):
         f.write(
             'nhead including this line: %i\n'%(
                 len(kwargs)+4))
-        for i in range(40): f.write('-')
+        for i in xrange(40): f.write('-')
         f.write('\n')
 
     ## write keys and arugments
@@ -16,7 +16,7 @@ def write_args(f,ihead=False,**kwargs):
         f.write('%12s  =  %12s \n'%(key, kwargs[key]))
 
     if ihead:
-        for i in range(40): f.write('-')
+        for i in xrange(40): f.write('-')
         f.write('\n')
     pass
 
@@ -51,7 +51,7 @@ def ex1(mx=0.5,w_rad=5.):
 
     psis = np.arcsin(np.sqrt(sin2psi)) * 180./np.pi
     xs = sin2psi[::]
-    for i in range(npsi):
+    for i in xrange(npsi):
       x = xs[i]
       psi = psis[i]
       psil, psiu, sin2l, sin2u = sin2psi_bounds(w_rad=w_rad,psi0=psi)
@@ -74,7 +74,7 @@ def sin2psi_opt(psi,iopt):
     sin2psi = sin(psi)**2
     if iopt==0: return sin2psi
     if iopt==1:
-        for i in range(len(sin2psi)):
+        for i in xrange(len(sin2psi)):
             sin2psi[i] = sin2psi[i] * signs[i]
         return sin2psi
     if iopt==2:

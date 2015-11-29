@@ -18,7 +18,7 @@ def main(fn=None,ref='Bsteel_BB_opt0.txt'):
 #    ax1 = fig.add_subplot(121); ax1.grid('on')
 #    ax2 = fig.add_subplot(122); ax2.grid('on')
 
-    for i in range(len(ind)):
+    for i in xrange(len(ind)):
         f = datl[ind[i]].split()[0]
         epsx = float(datl[ind[i]].split()[1])
         epsy = float(datl[ind[i]].split()[2])
@@ -27,7 +27,7 @@ def main(fn=None,ref='Bsteel_BB_opt0.txt'):
         f = f+'Data2Phi0.txt'
         fn.append(f)
 
-    for i in range(len(fn)):
+    for i in xrange(len(fn)):
         sin2psi, ehkl,dspacing,psi = read(fn[i],iopt=1) # d: strain * 10^3
         x = np.array(sin2psi).copy()
         x,ehkl = sort(x,ehkl)
@@ -95,7 +95,7 @@ def ex_01(fns=[
 
     fig = wf(nh=1,nw=1,uw=4,left=0.2); ax=fig.axes[0]
     ehkl_dat = []
-    for i in range(len(fns)):
+    for i in xrange(len(fns)):
         sign_sin2psi,ehkl,dspacing,psi = read(fns[i],iopt=0,isort=True)
         ax.plot(sign_sin2psi,ehkl,'-x',label=fns[i].split('Phi')[1].split('.')[0])
         ehkl_dat.append(ehkl)

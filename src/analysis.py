@@ -7,7 +7,7 @@ def psidsp(ids=None, phi=-90):
     import matplotlib.pyplot as plt
     fnlin = __sort__.main(mode='lin', i=ids)
     fn = None
-    for i in range(len(fnlin)):
+    for i in xrange(len(fnlin)):
         p = float(fnlin[i].split('Phi')[1]\
                       .split('.')[0])
         if p==phi:
@@ -32,12 +32,12 @@ def psidsp(ids=None, phi=-90):
 
 def psidsp_phi(ids=4, phi=[-90, 0, 45, 135]):
     """ sin2psi vs dspacing plots for many phis for a certain ids """
-    for i in range(len(phi)):
+    for i in xrange(len(phi)):
         psidsp(ids=ids, phi=phi[i])
 
 def psidsp_ids(phi=-90, ids=[4,5,6]):
     """ sin2psi vs dspacing plots for many ids for a certain phi angle"""
-    for i in range(len(ids)):
+    for i in xrange(len(ids)):
         psidsp(ids=ids[i], phi=phi)
 
 def readstress(i1=0,i2=0,path='.'):
@@ -46,7 +46,7 @@ def readstress(i1=0,i2=0,path='.'):
     fntr, dummy_ids = __sort__.main(mode='tr',path=path)
     sig = []
     err = []
-    for i in range(len(fntr)):
+    for i in xrange(len(fntr)):
         cfn = fntr[i]
         s, er = __reader__.main(cfn, mode='tr')
         sig.append(s[i1,i2])
@@ -83,7 +83,7 @@ def sigeps(ix=0, iy=1, path='.',dicfn=None,fig=None,iax=0,label=None,
     print '# of data points: ', len(s11)
 
     fn_trs=[]
-    for i in range(len(fntr)):
+    for i in xrange(len(fntr)):
         fn_trs.append(fntr[i].split(sep)[-1])
 
     # An virtual strain
@@ -103,7 +103,7 @@ def sigeps(ix=0, iy=1, path='.',dicfn=None,fig=None,iax=0,label=None,
             s11e = s22e[::]
             s22e = dum[::]
 
-        for i in range(len(images)):
+        for i in xrange(len(images)):
             fn_triaxial = fn[i]
             idx = np.array(fn_trs).searchsorted(fn_triaxial)
             S1.append(s11[idx])
@@ -118,9 +118,8 @@ def sigeps(ix=0, iy=1, path='.',dicfn=None,fig=None,iax=0,label=None,
         fc.set_zero_shear_stress()
 
         e11=[];e22=[];e33=[]
-        for i in range(len(images)):
+        for i in xrange(len(images)):
             i0s=images[i]
-
             i0 = i0s[0]-1
 
             e11.append(ex[i0])

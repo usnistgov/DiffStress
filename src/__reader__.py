@@ -1,4 +1,7 @@
-""" Reads X-Ray file and returns data in an organized way for further analysis """
+"""
+Reads X-Ray file and returns data in an organized way 
+for further analysis
+"""
 
 def main(fn='24JUL12_0022Data.txt', mode='tr'):
 
@@ -112,7 +115,7 @@ def __logreader__(fn='log', loc=None):
     ln_fn     = []
     images    = []
 
-    for i in range(len(cnt)):
+    for i in xrange(len(cnt)):
 
         if len(cnt[i])<3: pass
         else:
@@ -128,7 +131,7 @@ def __logreader__(fn='log', loc=None):
             fn_phis.append(dum + 'Data4Phi135.txt')
             
             ln_fn.append([])
-            for j in range(len(fn_phis)):
+            for j in xrange(len(fn_phis)):
                 ln_fn[i].append(fn_phis[j])
 
             images.append([])

@@ -151,7 +151,7 @@ def reader2(fn='igstrain_fbulk_ph1.out',iopt=1,isort=True):
     isf = []; blocks = []
     nblock = 0
     incomplete = False
-    for i in range(len(dstr)):
+    for i in xrange(len(dstr)):
         rst = dstr[i].split('\n')
         ablock = rst[1:-1]
         blocks.append(ablock)
@@ -159,7 +159,7 @@ def reader2(fn='igstrain_fbulk_ph1.out',iopt=1,isort=True):
             npb = len(ablock)
             phis = []
             psis = []
-            for j in range(npb):
+            for j in xrange(npb):
                 phi = float(ablock[j].split()[0])
                 psi = float(ablock[j].split()[1])
                 if not(phi in phis): phis.append(phi)
@@ -180,7 +180,7 @@ def reader2(fn='igstrain_fbulk_ph1.out',iopt=1,isort=True):
     #print 'total number of data block', nblock
     if iopt==1:
         usf = []
-        for i in range(len(isf)):
+        for i in xrange(len(isf)):
             i1,i2 = isf[i]
             if not(isf[i] in usf):
                 usf.append(isf[i])
@@ -188,7 +188,7 @@ def reader2(fn='igstrain_fbulk_ph1.out',iopt=1,isort=True):
         nsf = len(usf)
         print nsf, 'kinds of stress factor are probed:',
 
-        for i in range(nsf):
+        for i in xrange(nsf):
             i1,i2 = usf[i]
             print 'F%1i%1i'%(i1,i2),
 
@@ -202,12 +202,12 @@ def reader2(fn='igstrain_fbulk_ph1.out',iopt=1,isort=True):
     if iopt==1: tdat = np.zeros((10,nst,nsf,nphi,npsi))
     if iopt==2: tdat = np.zeros((9,nst,nphi,npsi))
 
-    for i in range(nst):
-        for j in range(nsf):
+    for i in xrange(nst):
+        for j in xrange(nsf):
             n = nsf * i + j
             ablock = blocks[n]
-            for k in range(nphi):
-                for l in range(npsi):
+            for k in xrange(nphi):
+                for l in xrange(npsi):
                     ipb = npsi * k + l
 
                     if iopt==1:
@@ -300,7 +300,7 @@ def reader3(fn='igstrain_unloads_avg.out',isort=False):
     # file structure
     phis = []; psis = []
     lines = blocks[0].split('\n')[1:-1]
-    for il in range(len(lines)):
+    for il in xrange(len(lines)):
         phi,psi,eps,f11,f22,f33,f23,f13,f12 = \
             map(float,lines[il].split())
 
@@ -309,12 +309,12 @@ def reader3(fn='igstrain_unloads_avg.out',isort=False):
 
     dat = np.zeros((nstp,len(phis),len(psis)))
     fij = np.zeros((nstp,len(phis),len(psis),6))
-    for ist in range(nstp):
+    for ist in xrange(nstp):
         ablock = blocks[ist]
         lines = ablock.split('\n')[1:-1]
-        for iphi in range(len(phis)):
+        for iphi in xrange(len(phis)):
             x=[]; y=[]; z=[]
-            for ipsi in range(len(psis)):
+            for ipsi in xrange(len(psis)):
                 l = len(psis) * iphi + ipsi
                 ph,ps,ep,f1,f2,f3,f4,f5,f6 = \
                     map(float, lines[l].split())
@@ -324,7 +324,7 @@ def reader3(fn='igstrain_unloads_avg.out',isort=False):
                     fij[ist,iphi,ipsi,:] = z[0][:]
             if isort:
                 sx, sy, sz = sort(x,y,z)
-                for ix in range(len(sx)):
+                for ix in xrange(len(sx)):
                     dat[ist,iphi,ix] = sy[ix]
                     fij[ist,iphi,ix,:] = sz[ix][:]
 
@@ -361,7 +361,7 @@ def reader4(fn='igstrain_unload_ph1.out',
     #tdat = np.zeros((len(steps),
     # collect psi1 and psi2
     psis = []; psis1 = []; psis2 = []
-    for il in range(nbeta):
+    for il in xrange(nbeta):
         d = dat[il]
         istep, phi, beta, psi1, psi2, eps1,\
             eps2, sig1, sig2 = d[:9]
@@ -377,9 +377,9 @@ def reader4(fn='igstrain_unload_ph1.out',
         ngrd = np.zeros((nst,nphi,npsi))
 
     il = 0
-    for ist in range(nst):
-        for iphi in range(nphi):
-            for ib in range(nbeta):
+    for ist in xrange(nst):
+        for iphi in xrange(nphi):
+            for ib in xrange(nbeta):
                 d = dat[il]
                 istep, phi, beta, psi1, psi2, \
                     eps1, eps2, sig1, sig2 = d[:9]
@@ -532,7 +532,7 @@ def ex03(fn='int_eps_ph1.out',iphi=0,ifig=1):
               'b','k','m','r','g','b','k',
               'm','r','g','b','k','m']
 
-    for i in range(len(u)):
+    for i in xrange(len(u)):
 #        ex02(fn,i,iphi,ax01,ax01x,ax02,
         dum = e11[i]+e22[i]#)#*2
         if i==0: dum = +0.
@@ -567,7 +567,7 @@ def uniq(a):
     """
     u   = []
     ind = []
-    for i in range(len(a)):
+    for i in xrange(len(a)):
         if a[i] in u: pass
         else:
             u.append(a[i])
@@ -631,7 +631,7 @@ def ex_igb(fn='igstrain_fbulk_ph1.out',ifig=2,iphi=0,isf=0,
     rsqt = np.zeros((6,nst,npsi)) # f^{hkl}
 
     if mxnst!=None: nst=mxnst
-    for i in range(nst):
+    for i in xrange(nst):
         ehkl  = tdat[0,i,isf,iphi,:] # e(hkl,phi,psi)
         e     = tdat[1,i,isf,iphi,:] # macro
         ehkle = tdat[2,i,isf,iphi,:] # e - macro
@@ -651,7 +651,7 @@ def ex_igb(fn='igstrain_fbulk_ph1.out',ifig=2,iphi=0,isf=0,
         axes04[i].set_title(r'%s $\bar{E}^{\mathrm{eff}} = %4.2f$'%(
                 axe_lab[i],eps[i]))
         igys = []; igos = []; igts = []
-        for j in range(nsf): ## Number of elastic loading for stress factor calc.
+        for j in xrange(nsf): ## Number of elastic loading for stress factor calc.
             ehkl_ = tdat[0,i,j,iphi,:] # e(hkl,phi,psi)
             e_    = tdat[1,i,j,iphi,:] # macro
             fhkl_ = tdat[3,i,j,iphi,:] # Fhkl
@@ -666,7 +666,7 @@ def ex_igb(fn='igstrain_fbulk_ph1.out',ifig=2,iphi=0,isf=0,
             igo = ehkl_ - e_ ## old way
             igt = []
             m = 0
-            for k in range(len(fbulk_)):
+            for k in xrange(len(fbulk_)):
                 if fbulk_[k]==0:
                     m=m+1
                     igt.append(0.)
@@ -740,7 +740,7 @@ def ex_igb(fn='igstrain_fbulk_ph1.out',ifig=2,iphi=0,isf=0,
         igys = np.array(igys).swapaxes(0,1)
         igts = np.array(igts).swapaxes(0,1)
         igoe=[]; igye=[]; igte=[]
-        for m in range(len(igo_avg)):
+        for m in xrange(len(igo_avg)):
             igoe.append(igos[m].std())
             igte.append(igts[m].std())
             igye.append(igys[m].std())
@@ -789,21 +789,21 @@ def ex_igb(fn='igstrain_fbulk_ph1.out',ifig=2,iphi=0,isf=0,
         sin2psi = np.sin(psi*np.pi/180.)**2
 
     ## Deco the axes
-    for i in range(nst):
+    for i in xrange(nst):
         axes01[i].set_ylim(yl,yh)
         axes02[i].set_ylim(yl,yh)
         axes03[i].set_ylim(yl,yh)
         #axes04[i].set_ylim(yl,yh)
         axes01[i].set_xlim(0.,); axes02[i].set_xlim(0.,)
         axes03[i].set_xlim(0.,); axes04[i].set_xlim(0.,)
-    for i in range(len(axes)):
+    for i in xrange(len(axes)):
         axes[i].set_xlabel(r'$\sin^2{\psi}$', dict(fontsize=20))
         axes01[i].set_xlabel(r'$\sin^2{\psi}$', dict(fontsize=20))
         axes02[i].set_xlabel(r'$\sin^2{\psi}$', dict(fontsize=20))
         axes03[i].set_xlabel(r'$\sin^2{\psi}$', dict(fontsize=20))
         axes04[i].set_xlabel(r'$\sin^2{\psi}$', dict(fontsize=20))
-    for i in range(len(axes)): axes[i].grid('on')
-    for i in range(len(axes)): axes[i].set_xlim(0.,0.5)
+    for i in xrange(len(axes)): axes[i].grid('on')
+    for i in xrange(len(axes)): axes[i].set_xlim(0.,0.5)
     ax01.set_ylabel(
         r'$\varepsilon^{hkl} - F^{hkl}_{ij}\bar{\Sigma}_{ij}$'+\
         r'  $[\mu\varepsilon]$',dict(fontsize=15))
@@ -862,7 +862,7 @@ def ex_igb_t(fn='igstrain_fbulk_ph1.out',
         eps = flow.epsilon_vm[::]
 
     avg = []; sfs = []; rsqs = [];
-    for i in range(nphi):
+    for i in xrange(nphi):
         a, sf, rsq = ex_igb(
             fn=fn,ifig=i*7+1,iphi=i,isf=0,
             mxnst=mxnst,flow=flow)# a[2,nst,npsi], sf[6,nst,npsi]
@@ -891,18 +891,18 @@ def ex_igb_t(fn='igstrain_fbulk_ph1.out',
     if mxnst==None: nst=len(sfs)
     else: nst=mxnst
 
-    for ist in range(nst):
+    for ist in xrange(nst):
         f.writelines('-- eps^{eff}: %5.3f\n'%eps[ist])
-        for iphi in range(len(avg[0][ist])):
+        for iphi in xrange(len(avg[0][ist])):
             phi = phis[iphi]
             psi = avg[0,ist,iphi,:]
             ep  = avg[1,ist,iphi,:]
-            for i in range(len(psi)):
+            for i in xrange(len(psi)):
                 ps  = psi[i]
                 e   = ep[i]
                 fij = sfs[ist,iphi,i,:]
                 f.writelines('%3.0f %+7.2f %+12.7e'%(phi,ps,e))
-                for j in range(len(fij)):
+                for j in xrange(len(fij)):
                     f.writelines(' %+12.7e'%fij[j])
                 f.writelines('\n')
     f.close()
@@ -953,7 +953,7 @@ def ex_igb_bix(fn='igstrain_bix_ph1.out',ifig=1,iphi=0,
 
     if mxnst!=None: nst=mxnst
 
-    for i in range(nst):
+    for i in xrange(nst):
         ehkl  = tdat[0,i,iphi,:] #e(hkl)
         e     = tdat[1,i,iphi,:] #macro
         ehkle = tdat[2,i,iphi,:] #e-macro
@@ -1022,7 +1022,7 @@ def ex_igb_bix(fn='igstrain_bix_ph1.out',ifig=1,iphi=0,
                                      r' and $\bar{\Sigma}_{22}$ [MPa]',
                                  dict(fontsize=15))
 
-        for j in range(nphi):
+        for j in xrange(nphi):
             ehkl  = tdat[0,i,j,:] #e(hkl)
             e     = tdat[1,i,j,:] #macro
             ehkle = tdat[2,i,j,:] #e-macro
@@ -1052,12 +1052,12 @@ def ex_igb_bix(fn='igstrain_bix_ph1.out',ifig=1,iphi=0,
 #    axes01[0].legend(loc='best',fancybox=True).get_frame().set_alpha(0.5)
     axes01[1].legend(loc='best',fancybox=True).get_frame().set_alpha(0.5)
 
-    for i in range(len(axes01)):
+    for i in xrange(len(axes01)):
         #axes01[i].set_title(axe_lab[i])
         axes01[i].set_xlabel(r'$\sin^2{\psi}$', dict(fontsize=20))
         axes01[i].grid('on')
 
-    for i in range(len(axes02)):
+    for i in xrange(len(axes02)):
         axes02[i].set_xlabel(r'$\sin^2{\psi}$', dict(fontsize=20))
         axes02[i].set_ylabel(r'IG strain $[\mu\varepsilon]$', dict(fontsize=20))
         axes02[i].grid('on')
@@ -1089,7 +1089,7 @@ def pub_plot(ifig=10):
     ax2=fig.add_subplot(133)
 
     ## Experimental IG strain
-    for ist in range(len(exx)-1):
+    for ist in xrange(len(exx)-1):
         if ist==0: pass
         else:
             ax.plot(np.sin(psis*np.pi/180.)**2,
@@ -1117,7 +1117,7 @@ def pub_plot(ifig=10):
     # ## Model IG strain
     # rst,sf2 = ex_igb_bix(mxnst=4,fn='igstrain_bix_ph1.out')
     # nst = len(rst[0][0])
-    # for ist in range(nst):
+    # for ist in xrange(nst):
     #     psi = rst[0,ist,0,:]
     #     x = np.sin(psi*np.pi/180.)**2
     #     y = rst[1,ist,0,:]
@@ -1157,20 +1157,20 @@ def ex_igb_bix_t(fn='igstrain_bix_ph1.out',
                  %('phi','psi','eps0','F11','F22',
                    'F33','F23','F13','F12'))
 
-    for ist in range(len(rst[0])):
+    for ist in xrange(len(rst[0])):
         f.writelines('-- eps^{eff}: %5.3f\n'%eps[ist])
-        for iphi in range(nphi):
+        for iphi in xrange(nphi):
             phi = phis[iphi]
             psi = rst[0,ist,iphi,:]
             ep = rst[1,ist,iphi,:]
-            for i in range(len(psi)):
+            for i in xrange(len(psi)):
                 ps = psi[i]
                 e  = ep[i]
                 f11 = sf2[0,ist,iphi,i]
                 f22 = sf2[1,ist,iphi,i]
                 f.writelines('%3.0f %+7.2f %+12.7e'%(phi,ps,e))
                 f.writelines(' %+12.7e %+12.7e'%(f11,f22))
-                for j in range(4): f.writelines(' %+12.7e'%0.)
+                for j in xrange(4): f.writelines(' %+12.7e'%0.)
                 f.writelines('\n')
     f.close()
     plt.close('all')
@@ -1202,10 +1202,10 @@ def ex_igb_cf(fnu='igstrain_fbulk_ph1.out',
     markers=['x','o','.','d','*']
     ls     =['--x','--o','--.','--d','--*']
     axes=[]
-    for i in range(nphi):
+    for i in xrange(nphi):
         axes.append(fig.add_subplot(2,3,i+1))
-    for ist in range(len(avgu[0])):
-        for iphi in range(len(avgu[0][ist])):
+    for ist in xrange(len(avgu[0])):
+        for iphi in xrange(len(avgu[0][ist])):
             ax = axes[iphi]
             phi = phis[iphi]
             psi = avgu[0,ist,iphi,:]
@@ -1236,7 +1236,7 @@ def ex_igb_cf(fnu='igstrain_fbulk_ph1.out',
     fig02.tight_layout()
     fig02.savefig('ige_cf_phi1.pdf')
 
-    for i in range(len(axes)):
+    for i in xrange(len(axes)):
         ax = axes[i]
         ph = phis[i]
         #ax.set_title(r'%s $\phi=%3.0f^\circ$'%(at[i],ph))

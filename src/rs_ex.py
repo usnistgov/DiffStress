@@ -29,25 +29,25 @@ def ex(ifig=50,
     strain_eff = strains.T[0]+strains.T[1]
     strain_eff = strain_eff.T
     stress = []
-    for i in range(len(strain_eff)):
+    for i in xrange(len(strain_eff)):
         dum = myrs.analysis(iopt=0,istp=i)
         stress.append((dum[0] + dum[1])/2.)
     ax.plot(strain_eff,stress,'-x',label='Model SF/IG/ehkl')
 
     stress = []
-    for i in range(len(strain_eff)):
+    for i in xrange(len(strain_eff)):
         dum = myrs.analysis(iopt=1,istp=i)
         stress.append((dum[0] + dum[1])/2.)
     ax.plot(strain_eff,stress,'-x',label='Exp SF/IG/ehkl')
 
     stress = []
-    for i in range(len(strain_eff)):
+    for i in xrange(len(strain_eff)):
         dum = myrs.analysis(iopt=2,istp=i)
         stress.append((dum[0] + dum[1])/2.)
     ax.plot(strain_eff,stress,'-x',label='Model SF/IG + Exp ehkl')
 
 
-    for i in range(len(exp_ref)):
+    for i in xrange(len(exp_ref)):
         exp_ref = exp_ref[i]
         x,y=np.loadtxt(exp_ref).T
         ax.plot(x,y,'--',label=exp_lab[i])
@@ -256,16 +256,16 @@ def ex_consistency(
 
     # 0.5 Mask DEC where volume fraction
     ## model_ngr or model_vfs
-    for i in range(len(model_vfs)):
-        for j in range(len(model_vfs[i])):
-            for k in range(len(model_vfs[i][j])):
+    for i in xrange(len(model_vfs)):
+        for j in xrange(len(model_vfs[i])):
+            for k in xrange(len(model_vfs[i][j])):
                 if model_ngr[i,j,k]==0:
                     _sf_[i,:,j,k]=np.nan
                     # _ig_[i,j,k]=np.nan
                     raw_sfs[i,:,j,k]=np.nan
                     model_sfs[i,:,j,k]=np.nan
                     raw_ehkl[i,j,k] = np.nan
-                for m in range(6):
+                for m in xrange(6):
                     if _sf_[i,m,j,k]==0 or raw_sfs[i,m,j,k]==0:
                         # print 'encountered zero sf'
                         _sf_[i,m,j,k] = np.nan
@@ -317,8 +317,8 @@ def ex_consistency(
     if iscatter:
         nstp, nphi, npsi = model_ehkls.shape
         tdats = np.zeros((nstp,nphi,npsi))
-        for istp in range(nstp):
-            for iphi in range(nphi):
+        for istp in xrange(nstp):
+            for iphi in xrange(nphi):
                 # ## Previous perturbation rule
                 # tdats[istp,iphi,:] = u_epshkl(
                 #     model_tdats[istp,iphi],
@@ -327,7 +327,7 @@ def ex_consistency(
                 ## New perturbation rule
                 if type(theta_b).__name__== 'NoneType':
                     raise IOError, 'theta_b should be given'
-                for ipsi in range(npsi):
+                for ipsi in xrange(npsi):
                     ## multitudes of random
                     mrd = model_vfs[istp,iphi,ipsi]/ird
                     tdats[istp,iphi,ipsi] = u_epshkl_geom_inten(
@@ -379,7 +379,7 @@ def ex_consistency(
 
     # nstp = 3 ## debugging
 
-    for istp in range(nstp):
+    for istp in xrange(nstp):
         """
         Dimensions of data arrays for:
         ==============================
@@ -406,8 +406,8 @@ def ex_consistency(
 
         ## masking can be improved by being
         ## specific on phi axis -> require fix in RS.rs
-        # for iphi in range(len(ref[0])):
-        for ipsi in range(len(ref_psis)):
+        # for iphi in xrange(len(ref[0])):
+        for ipsi in xrange(len(ref_psis)):
             if not(np.isnan(ref[0:2,:,ipsi]).any()):
                 inds.append(ipsi)
 
@@ -433,14 +433,14 @@ def ex_consistency(
             weight = wgt) # None
 
         if verbose or True:
-            for i in range(6): print '%+7.1f'%(dsa_sigma[i]),
+            for i in xrange(6): print '%+7.1f'%(dsa_sigma[i]),
             print ''
         stress.append(dsa_sigma)
 
         full_Ei = np.zeros((model_rs.nphi,len(raw_psis)))
-        for iphi in range(model_rs.nphi):
-            for ipsi in range(len(raw_psis)):
-                for k in range(2):
+        for iphi in xrange(model_rs.nphi):
+            for ipsi in xrange(len(raw_psis)):
+                for k in xrange(2):
                     full_Ei[iphi,ipsi] \
                         = full_Ei[iphi,ipsi]+\
                         raw_sfs[istp,k,iphi,ipsi]*dsa_sigma[k]
@@ -501,7 +501,7 @@ def ex_consistency(
         for a in [ax1, ax_vm]:
             a.plot(flow_dsa.epsilon_vm,flow_dsa.sigma_vm,'k+',
                    label=r'$\hat{\sigma}^\mathrm{RS}$')
-        for i in range(len(exp_ref)):
+        for i in xrange(len(exp_ref)):
             f = exp_ref[i]; lab = exp_lab[i]
             edat = np.loadtxt(f).T
             ax1.plot(edat[0],edat[1],'-',lw=2,label=lab)
@@ -520,7 +520,7 @@ def ex_consistency(
         npoints = len(sigma_wgt[0,0])
         wgtx = sigma_wgt[0,0];      wgty = sigma_wgt[1,1]
         dsax = flow_dsa.sigma[0,0]; dsay = flow_dsa.sigma[1,1]
-        # for i in range(npoints):
+        # for i in xrange(npoints):
         #     ax2.plot([wgtx[i],dsax[i]],[wgty[i],dsay[i]],'k-',alpha=0.2)
 
         ax2.set_ylim(-100,700); ax2.set_xlim(-100,700)
@@ -615,7 +615,7 @@ def __model_fit_plot__(
     ax_er = fige.axes[:nphi]; axesf = figs.axes;
     if ivf: axesv = []
 
-    for iphi in range(nphi):
+    for iphi in xrange(nphi):
         ax = fig.axes[iphi]; axs = figs.axes[iphi]
         ax.set_title( r'$\phi=%3.1f^\circ$'%(phis[iphi]*180/pi))
         axs.set_title(r'$\phi=%3.1f^\circ$'%(phis[iphi]*180/pi))
@@ -624,7 +624,7 @@ def __model_fit_plot__(
             axesv.append(axes[iphi].twinx())
             axesv[iphi].locator_params(nbins=4)
 
-    for iphi in range(nphi):
+    for iphi in xrange(nphi):
         ax = axes[iphi]; ae = ax_er[iphi]
         if ivf: av = axesv[iphi];
         ## convert psi to user's convenience.
@@ -654,7 +654,7 @@ def __model_fit_plot__(
         if iwind:
             raise IOError, 'iwind is not stable'
             xerr = []
-            for i in range(len(psis)):
+            for i in xrange(len(psis)):
                 X = psis[i]*180./np.pi; Y = y[i]
                 pl, lu, s2l, s2u = sin2psi_wind(
                     w_rad=wdeg,psi0=X)
@@ -683,7 +683,7 @@ def __model_fit_plot__(
         elif ileg!=True:
             lab1=None; lab2=None
 
-        for i in range(len(isf)):
+        for i in xrange(len(isf)):
             if i==0:# and ileg:
                 lab=lab1
                 #st = c1+m1
@@ -723,7 +723,7 @@ def __model_fit_plot__(
                     ax.plot(xv,DEC_interp[i][iphi]*1e6,'k--',
                             label=_l2_,color=c)
 
-                for j in range(len(sf[i][iphi][:])):
+                for j in xrange(len(sf[i][iphi][:])):
                     if sf[i][iphi][j]!=0:
                         if j==0:
                             ax.plot(
@@ -760,7 +760,7 @@ def __model_fit_plot__(
             label=None
             lab1 =None
 
-        for iphi in range(nphi):
+        for iphi in xrange(nphi):
             ax=axes[iphi]
 
             ## Calculate the elastic strain
@@ -778,10 +778,10 @@ def __model_fit_plot__(
                     bbox_to_anchor=(1.4,1))
 
 
-    for iax in range(len(axes)):
+    for iax in xrange(len(axes)):
         axes[iax].set_ylim(-1500,)
 
-    for iax in range(len(axes)):
+    for iax in xrange(len(axes)):
         axes[iax].set_ylim(-1500,)
         if ivf:
             axesv[iax].set_ylim(0,0.30)
@@ -794,7 +794,7 @@ def __model_fit_plot__(
     tune_x_lim(axesf,   axis='y')
 
     ## remove redundant axis labels
-    for i in range(len(axes)-1):
+    for i in xrange(len(axes)-1):
         rm_lab(axes[i+1], axis='y')
         rm_lab(axes[i+1], axis='x')
         rm_lab(axesf[i+1],axis='y')
@@ -832,7 +832,7 @@ def __model_fit_plot_3d__(container,istp,nxphi=None):
     from mpl_lib import mpl_lib
     ax3d = mpl_lib.axes3()
 
-    for iphi in range(nphi):
+    for iphi in xrange(nphi):
         #x = sin(psis)**2
         x = psis
         y = np.ones(len(x))*phis[iphi]
@@ -840,7 +840,7 @@ def __model_fit_plot_3d__(container,istp,nxphi=None):
         z = Ei[iphi]
         ax3d.plot(x,y,z,'rx')
 
-    for iphi in range(nphi):
+    for iphi in xrange(nphi):
         x = psis
         y = np.ones(len(x)) * phis[iphi]
         x, y = convs(k=x,p=y)
@@ -870,11 +870,11 @@ def sf_scan(fn='sf_ph1.out',npair=1):
     if np.mod(nstp,npair)!=0:
         raise IOError, 'Cannot be paired with given npair...'
 
-    for i in range(nstp/npair):
-        for j in range(npair):
+    for i in xrange(nstp/npair):
+        for j in xrange(npair):
             s = sig[i*npair+j]
             e = eps[i*npair+j]
-            for k in range(2):
+            for k in xrange(2):
                 figs.axes[k].plot(s[k], e[10])
                 figs.axes[k].plot(s[k], e[1])
                 figs.axes[k].plot(s[k], e[100])
@@ -908,7 +908,7 @@ def stress_plot(ext=['311','211','220','200'],ifig=1,nphi=3,istp=2,sin2psimx=Non
     f_w=[]
     f_d=[]
 
-    for i in range(len(ext)):
+    for i in xrange(len(ext)):
         # weighted flow, flow based on diffraction analysis
         diff, flow_w, flow_d = ex_consistency(iplot=False,mod_ext=ext[i],
                                               sin2psimx=sin2psimx)

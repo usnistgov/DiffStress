@@ -23,12 +23,12 @@ def write_args(f,**kwargs):
     **kwargs
     """
     f.write('nhead including this line: %i\n'%(len(kwargs)+4))
-    for i in range(80): f.write('-')
+    for i in xrange(80): f.write('-')
     f.write('\n')
 
     for key in kwargs:
         f.write('%12s  =  %12s \n'%(key, kwargs[key]))
-    for i in range(80): f.write('-')
+    for i in xrange(80): f.write('-')
     f.write('\n')
 
 
@@ -55,7 +55,7 @@ def main_plot_flow_all(
     ax1,ax2,ax3 = fig.axes
     axes_label.__eqv__(ax1,ft=10)
     errors = []
-    for i in range(len(fns)):
+    for i in xrange(len(fns)):
         fn = fns[i]
         strain_path = fn.split('_')[0]
         untargz(fn)
@@ -82,7 +82,7 @@ def main_plot_flow_all(
         npoints = len(fwgt.sigma[0,0])
         wgtx = fwgt.sigma[0,0]; wgty = fwgt.sigma[1,1]
         dsax = fdsa.sigma[0,0]; dsay = fdsa.sigma[1,1]
-        for j in range(npoints):
+        for j in xrange(npoints):
             ax2.plot([wgtx[j],dsax[j]],[wgty[j],dsay[j]],'k-',alpha=0.5)
 
     ax1.set_xlim(-0.1,1.1); ax1.set_ylim(-50,700);
@@ -104,7 +104,7 @@ def main_plot_flow_all(
 
 def error_est_conds(psi_nbin=21,sin2psimx=0.5):
     paths=['BB','URD','UTD','PSRD','PSTD']
-    for i in range(len(paths)):
+    for i in xrange(len(paths)):
         error_est(
             paths[i],psi_nbin=psi_nbin,
             sin2psimx=sin2psimx,iplot_rs=False)
@@ -120,7 +120,7 @@ def error_est(
     fig = wf(nw=1,nh=1,left=0.2,uw=3.5,
              w0=0,w1=0.3,right=0,iarange=True)
     ax=fig.axes[0]
-    for i in range(len(hkls)):
+    for i in xrange(len(hkls)):
         err = main_plot_flow_all(
             hkl=hkls[i],sin2psimx=sin2psimx,
             psi_nbin=psi_nbin,pmargin=None,
@@ -206,8 +206,8 @@ def return_vf():
     vdat = np.zeros((nstp,nphi,npsis))
     ngrd = np.zeros((nstp,nphi,npsis))
 
-    for istp in range(nstp):
-        for iphi in range(nphi):
+    for istp in xrange(nstp):
+        for iphi in xrange(nphi):
             dum_v = _vdat_[istp,iphi,:][::]
             vdat[istp,iphi,:] = ss(dum_v[::],ind)[::]
 
@@ -249,8 +249,8 @@ def plot_sf(sff_fn='temp.sff',pmargin=0.1):
     vdat = np.zeros((nstp,nphi,npsis))
     ngrd = np.zeros((nstp,nphi,npsis))
 
-    for istp in range(nstp):
-        for iphi in range(nphi):
+    for istp in xrange(nstp):
+        for iphi in xrange(nphi):
             dum_v = _vdat_[istp,iphi,:][::]
             vdat[istp,iphi,:] = ss(dum_v[::],ind)[::]
 
@@ -264,7 +264,7 @@ def plot_sf(sff_fn='temp.sff',pmargin=0.1):
 
     fig=wf(nw=1,nh=1)
     ax=fig.axes[0]
-    for istp in range(nstp):
+    for istp in xrange(nstp):
         sign_sin2psi = np.sign(SF.psi)*np.sin(SF.psi*np.pi/180.)**2
         ax.plot(sign_sin2psi,SF.vf[istp,0,:],'--')
 
@@ -320,8 +320,8 @@ def plot_sf_psis(
     vdat = np.zeros((nstp,nphi,npsis))
     ngrd = np.zeros((nstp,nphi,npsis))
 
-    for istp in range(nstp):
-        for iphi in range(nphi):
+    for istp in xrange(nstp):
+        for iphi in xrange(nphi):
             dum_v = _vdat_[istp,iphi,:][::]
             vdat[istp,iphi,:] = ss(dum_v[::],ind)[::]
 
@@ -331,7 +331,7 @@ def plot_sf_psis(
     ## Find only psi_ref values
     ## sin2psi_ref = np.sin(psi_ref*np.pi/180.)**2
     inds = []
-    for i in range(len(psi_ref)):
+    for i in xrange(len(psi_ref)):
         inds.append(find_nearest(SF.psi, psi_ref[i]))
 
     #SF.mask_vol() ## shake off all zero values
@@ -339,8 +339,8 @@ def plot_sf_psis(
     fig=wf(nh=nphi,nw=len(psi_ref),iarange=True)
     figv=wf(nh=nphi,nw=len(psi_ref),iarange=True)
     fe0=wf(nh=nphi,nw=len(psi_ref),iarange=True)
-    for iphi in range(nphi):
-        for ipsi in range(len(psi_ref)):
+    for iphi in xrange(nphi):
+        for ipsi in xrange(len(psi_ref)):
             #ax = fig.axes[iphi+nphi*ipsi]
             ax = fig.axes[ipsi+len(psi_ref)*iphi]
             axt = figv.axes[ipsi+len(psi_ref)*iphi]
@@ -619,7 +619,7 @@ def influence_of_intp(ss=2,bounds=[0,0.5],
     dsax, dsay = fd.sigma[0,0], fd.sigma[1,1]
 
     if iplot:
-        for i in range(npoints):
+        for i in xrange(npoints):
             axs[1].plot([wgtx[i],dsax[i]],
                         [wgty[i],dsay[i]],
                         'k-',alpha=0.2)
@@ -683,7 +683,7 @@ def influence_of_nbin(
         fig = wide_fig(nw=1,nh=1);ax=fig.axes[0]
 
     Y = []
-    for i in range(len(nbins)):
+    for i in xrange(len(nbins)):
         nb = nbins[i]
         fw, e = influence_of_intp(
             ss=ss, bounds=bounds,
@@ -749,9 +749,9 @@ def influence_of_nbin_scatter(
         ax           = fig.axes[0]
         ax1          = fig.axes[1]
 
-    for i in range(len(nbins)):
+    for i in xrange(len(nbins)):
         nbin = nbins[i]
-        for j in range(nsample):
+        for j in xrange(nsample):
             x, y = influence_of_nbin(
                 ss=ss,bounds=bounds,
                 nbins=[nbin], iscatter=iscatter,
@@ -767,9 +767,9 @@ def influence_of_nbin_scatter(
 
     nbin, nstp, nsamp = Y.shape
 
-    for i in range(nbin):
+    for i in xrange(nbin):
         e = []; s = []
-        for j in range(nstp):
+        for j in xrange(nstp):
             mean = Y[i,j,:].mean()
             std  = Y[i,j,:].std()
             e.append(mean)
@@ -968,9 +968,9 @@ def influence_of_cnts_stats(
 
     ## function is now wrap_func
     results = []
-    for i in range(len(sigmas)):
+    for i in xrange(len(sigmas)):
         results.append([])
-        for j in range(nsample):
+        for j in xrange(nsample):
             results[i].append(
                 pool.apply_async(
                     wrap_func,
@@ -989,33 +989,33 @@ def influence_of_cnts_stats(
     pool.terminate()
 
     ## below is to post-process the results
-    for i in range(len(sigmas)):
-        for j in range(nsample):
+    for i in xrange(len(sigmas)):
+        for j in xrange(nsample):
             x,y = results[i][j].get()
             Y_all[i][j][:] = y[::]
 
     M = np.zeros((len(sigmas),len(x)))
     S = np.zeros((len(sigmas),len(x)))
-    for i in range(len(sigmas)):
+    for i in xrange(len(sigmas)):
         y = Y_all[i][:][:]
         y = y.T[::] ## len(x), nsample
-        for k in range(len(x)):
+        for k in xrange(len(x)):
             M[i][k] = y[k].mean()
             S[i][k] = y[k].std()
 
     nbins = 10
     H  = np.zeros((len(sigmas), len(x), nbins))
     BE = np.zeros((len(sigmas), len(x), nbins+1))
-    for i in range(len(sigmas)):
+    for i in xrange(len(sigmas)):
         y = Y_all[i][:][:]
         y = y.T[::] ## len(x), nsample
-        for k in range(len(x)):
+        for k in xrange(len(x)):
             hist,bin_edges = np.histogram(y[k],bins=10)
             H[i,k,:] = hist[::]
             BE[i,k,:] = bin_edges[::]
 
     if iplot:
-        for i in range(len(sigmas)):
+        for i in xrange(len(sigmas)):
             ax1.plot(x,M[i],ls[i],mfc='None',color='k',label='%6.0e'%sigmas[i])
             ax2.errorbar(x,M[i],yerr=S[i],color='k',ls=ls[i])
         if type(ss).__name__=='int' and DEC_freq_sym:
@@ -1088,7 +1088,7 @@ def influence_of_intp_extp(
              'Power law fit']
 
     xs=[];Ms=[];Ss=[]
-    for iopt in range(len(iopts)):
+    for iopt in xrange(len(iopts)):
         x,M,S,h,b = influence_of_cnts_stats(
             ss=ss,bounds=bounds,
             nbins=nbins,
@@ -1100,7 +1100,7 @@ def influence_of_intp_extp(
         Ss.append(S)
 
     fig=mpl_lib.wide_fig(nw=1,nh=1);ax=fig.axes[0]
-    for iopt in range(len(iopts)):
+    for iopt in xrange(len(iopts)):
         x=xs[iopt]
         M=Ms[iopt]
         s=Ss[iopt]

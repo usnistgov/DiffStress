@@ -59,8 +59,8 @@ class SF:
         phi = self.phi.copy()
         psi = self.psi.copy()
         self.sf_iso = np.zeros((len(phi),len(psi),6))
-        for iphi in range(len(phi)):
-            for ipsi in range(len(psi)):
+        for iphi in xrange(len(phi)):
+            for ipsi in xrange(len(psi)):
                 self.sf_iso[iphi,ipsi] = calc_iso_sf(
                     phi=phi[iphi],psi=psi[ipsi],
                     nu=nu,Y=E,iopt=1).copy()
@@ -157,9 +157,9 @@ class SF:
         xp = self.flow.epsilon_vm.copy()
         print 'Strain reference at which sf was measured:'
         print xp
-        for iphi in range(self.nphi):
-            for ipsi in range(self.npsi):
-                for k in range(self.nij):
+        for iphi in xrange(self.nphi):
+            for ipsi in xrange(self.npsi):
+                for k in xrange(self.nij):
                     _y_  = self.sf_old[:,iphi,ipsi,k].copy()
                     ## find non zero not (nan) values
                     inds = []
@@ -168,7 +168,7 @@ class SF:
                         _xp_ = xp.copy()
                         n_avail_dat = 0
                     else:
-                        for m in range(len(_y_)):
+                        for m in xrange(len(_y_)):
                             if _y_[m]!=0 and not(np.isnan(_y_[m])):
                                 inds.append(m)
                         n_avail_dat = len(inds)
@@ -238,9 +238,9 @@ class SF:
 
         self.sf_new = np.zeros(
             (self.nstp,self.nphi,len(x),self.nij))
-        for istp in range(self.nstp):
-            for iphi in range(self.nphi):
-                for k in range(self.nij):
+        for istp in xrange(self.nstp):
+            for iphi in xrange(self.nphi):
+                for k in xrange(self.nij):
                     y = self.sf_old[istp,iphi,:,k]
                     self.sf_new[istp,iphi,:,k] \
                         = rs.interpolate(x,x0,y)
@@ -266,7 +266,7 @@ class SF:
         nphi_new = len(phi_new)
         ind = []
 
-        for i in range(len(phi_new)):
+        for i in xrange(len(phi_new)):
             try:
                 j = phi_old.index(phi_new[i])
             except ValueError:
@@ -282,7 +282,7 @@ class SF:
         sf_new = np.zeros((
             self.nstp,nphi_new,self.npsi,self.nij))
 
-        for i in range(len(ind)):
+        for i in xrange(len(ind)):
             sf_new[:,i,:,:] = self.sf[:,ind[i],:,:]
         self.sf = sf_new.copy()
         self.phi = np.array(phi_new)
@@ -299,13 +299,13 @@ class SF:
                 ' Do mask based on volume margin:',\
                 ' %5.3f%%'%(pmargin*100)
             ntot = 0
-            for istp in range(self.nstp):
+            for istp in xrange(self.nstp):
                 n = 0
-                for iphi in range(self.nphi):
+                for iphi in xrange(self.nphi):
                     mean  = np.mean(self.vf[istp,iphi,:])
                     limit = mean*pmargin
                     print 'mean and limit:', mean, limit
-                    for ipsi in range(self.npsi):
+                    for ipsi in xrange(self.npsi):
                         if self.vf[istp,iphi,ipsi]<limit:
                             self.sf[istp,iphi,ipsi,:] = np.nan
                             n = n + 1
@@ -341,7 +341,7 @@ class SF:
             nh = 3
         else: nh = 2
 
-        if mxnphi==None: mxnphi = self.nphi
+        if type(mxnphi)==type(None): mxnphi = self.nphi
         figs = wide_fig(nw=mxnphi,nh=nh,w0=0,w1=0,
                         left=0.2,right=0.15)
         mx = max(self.flow.epsilon_vm)
@@ -353,8 +353,8 @@ class SF:
         cmap, c = mpl_lib.norm_cmap(mx=mx,mn=mn)
         colors=[]
         self.flow.nstp = len(self.flow.epsilon_vm)
-        for i in range(mxnphi):
-            for j in range(self.flow.nstp):
+        for i in xrange(mxnphi):
+            for j in xrange(self.flow.nstp):
                 eps = self.flow.epsilon_vm[j]
                 cl = c.to_rgba(eps)
                 if i==0: colors.append(cl)
@@ -373,8 +373,8 @@ class SF:
                         r'$\phi: %3.1f^\circ{}$'%self.phi[i])
 
         if nh==3:
-            for i in range(mxnphi):
-                for j in range(self.flow.nstp):
+            for i in xrange(mxnphi):
+                for j in xrange(self.flow.nstp):
                     eps = self.flow.epsilon_vm[j]
                     cl = c.to_rgba(eps)
                     y = self.vf[j,i,:]
@@ -391,7 +391,7 @@ class SF:
         if nh==3: deco(figs.axes[mxnphi*2],iopt=7,ipsi_opt=1,hkl=hkl)
         mpl_lib.tune_xy_lim(figs.axes[:mxnphi*2])
         if ylim!=None:
-            for i in range(len(figs.axes[:mxnphi*2])):
+            for i in xrange(len(figs.axes[:mxnphi*2])):
                 figs.axes[i].set_ylim(ylim)
         if nh==3: mpl_lib.tune_xy_lim(figs.axes[mxnphi*2:mxnphi*3])
         ticks_bin_u(figs.axes[:mxnphi*2],n=4)
@@ -412,9 +412,9 @@ class SF:
         nbin = nbin_sin2psi
         indx = self.__binning__(nbin=nbin,mx=0.5)
 
-        for i in range(len(indx)):
+        for i in xrange(len(indx)):
             print '%i bin'%(i+1)
-            for j in range(len(indx[i])):
+            for j in xrange(len(indx[i])):
                 print '%4i'%indx[i][j],
                 print '%4.2f'%(self.sin2psi[indx[i][j]]),
             print
@@ -424,19 +424,19 @@ class SF:
                           w0=0,w1=0,left=0.2,right=0.15)
 
         eps = self.flow.epsilon_vm
-        for i in range(mxnphi):
-            for j in range(nbin):
+        for i in xrange(mxnphi):
+            for j in xrange(nbin):
                 ax = figs_p.axes[i+mxnphi*j]
                 if j==nbin-1: ax.set_title(
                         r'$\phi: %3.1f^\circ{}$'%self.phi[i])
                 idx = indx[j]
-                for k in range(len(idx)):
+                for k in xrange(len(idx)):
                     y = self.sf[:,i,[idx[k]],0][::]
                     ax.plot(eps,y,'x')
 
-        for i in range(nbin):
+        for i in xrange(nbin):
             axes=[]
-            for j in range(mxnphi*2):
+            for j in xrange(mxnphi*2):
                 axes.append(figs_p.axes[j+mxnphi*i])
             #mpl_lib.tune_xy_lim(axes)
             if i==0 and j==0:  rm_inner(axes[1:])
@@ -449,13 +449,13 @@ class SF:
         ticks_bin_u(figs_p.axes,n=3)
 
         if ylim!=None:
-            for i in range(len(figs_p.axes)):
+            for i in xrange(len(figs_p.axes)):
                 figs_p.axes[i].set_ylim(ylim)
 
         if iopt==1:
-            for i in range(len(figs.axes)):
+            for i in xrange(len(figs.axes)):
                 figs.axes[i].set_xlim(0.0,0.5)
-            for i in range(3):
+            for i in xrange(3):
                 figs.axes[i].set_ylim(-2,2)
                 figs.axes[3+i].set_ylim(0.,0.1)
         plt.draw();plt.show()
@@ -465,15 +465,15 @@ class SF:
         borders = np.linspace(0., mx, nbin+1)
         bounds = []
         indx = []
-        for i in range(nbin):
+        for i in xrange(nbin):
             bounds.append(borders[i:i+2])
             indx.append([])
         ## Find elements along axis psi that belong to
         ## individual bins
-        for i in range(nbin):
+        for i in xrange(nbin):
             mn, mx = bounds[i]
             print 'mn, mx:', mn, mx
-            for j in range(self.npsi):
+            for j in xrange(self.npsi):
                 if mn<=self.sin2psi[j] and self.sin2psi[j]<mx:
                     indx[i].append(j)
         return indx
@@ -515,8 +515,8 @@ class IG:
         self.ig_new = np.zeros(
             (len(epsilon_vm),self.nphi,self.npsi))
         xp = self.flow.epsilon_vm.copy()
-        for iphi in range(self.nphi):
-            for ipsi in range(self.npsi):
+        for iphi in xrange(self.nphi):
+            for ipsi in xrange(self.npsi):
                 _y_  = self.ig_old[:,iphi,ipsi].copy()
 
                 ## find non zero not (nan) values
@@ -526,7 +526,7 @@ class IG:
                     _xp_ = xp.copy()
 
                 else:
-                    for m in range(len(_y_)):
+                    for m in xrange(len(_y_)):
                         if _y_[m]!=0 and not(np.isnan(_y_[m])):
                             inds.append(m)
 
@@ -589,8 +589,8 @@ class IG:
 
         self.ig_new = np.zeros(
             (self.nstp,self.nphi,len(x)))
-        for istp in range(self.nstp):
-            for iphi in range(self.nphi):
+        for istp in xrange(self.nstp):
+            for iphi in xrange(self.nphi):
                 y = self.ig_old[istp,iphi,:]
                 self.ig_new[istp,iphi,:] = interp(
                     x,x0,y)
@@ -608,7 +608,7 @@ class IG:
         nphi_new = len(phi_new)
         ind = []
 
-        for i in range(len(phi_new)):
+        for i in xrange(len(phi_new)):
             try:
                 j = phi_old.index(phi_new[i])
             except ValueError:
@@ -625,7 +625,7 @@ class IG:
         ig_new = np.zeros((
             self.nstp,nphi_new,self.npsi))
 
-        for i in range(len(ind)):
+        for i in xrange(len(ind)):
             ig_new[:,i,:] = self.ig[:,ind[i],:]
         self.ig = ig_new.copy()
         self.phi = np.array(phi_new)
@@ -653,8 +653,8 @@ class IG:
         cmap, c = mpl_lib.norm_cmap(mx=mx,mn=mn)
         colors=[]
         self.flow.nstp = len(self.flow.epsilon_vm)
-        for i in range(mxnphi):
-            for j in range(self.flow.nstp):
+        for i in xrange(mxnphi):
+            for j in xrange(self.flow.nstp):
                 eps = self.flow.epsilon_vm[j]
                 cl = c.to_rgba(eps)
                 if i==0: colors.append(cl)
@@ -673,7 +673,7 @@ class IG:
         ticks_bin_u = mpl_lib.ticks_bins_ax_u
 
         deco(figs.axes[0],iopt=2,ipsi_opt=1)
-        for i in range(len(figs.axes)):
+        for i in xrange(len(figs.axes)):
             figs.axes[i].set_xlim(-0.5,0.5)
         mpl_lib.tune_xy_lim(figs.axes)
         rm_inner(figs.axes)
@@ -730,8 +730,8 @@ def calc_iso_sf(phi,psi,nu,Y,iopt=0):
 
     from MP.mat import voigt
     vij = voigt.vij
-    for i in range(3):
-        for j in range(3):
+    for i in xrange(3):
+        for j in xrange(3):
             k = vij[i,j]
             sf6[k] = sf[i,j]
 

@@ -42,13 +42,13 @@ def main(sample = 'Asteel'):
     nspots1 = [o for o in os.listdir(cwd1) \
                    if os.path.isdir(os.path.join(cwd1,o))]
 
-    for j in range(len(nspots1)): # BB, PS
+    for j in xrange(len(nspots1)): # BB, PS
         print 'nspots1:', nspots1
         cwd2 = os.path.join(cwd1, nspots1[j])
         nspots2 = [o for o in os.listdir(cwd2) \
                        if os.path.isdir(os.path.join(cwd2,o))]
 
-        for k in range(len(nspots2)): # 2012July25-26 ... 
+        for k in xrange(len(nspots2)): # 2012July25-26 ...
             print 'nspots2:', nspots2[k]
             cwd3 = os.path.join(cwd2, nspots2[k])
             fn = os.path.join(cwd3, 'log') # log file.
@@ -56,9 +56,9 @@ def main(sample = 'Asteel'):
             print 'nfns', lnfns
             print 'trfns', trfns
 
-            for i in range(len(trfns)):
+            for i in xrange(len(trfns)):
                 fdict['filenames'].append(os.path.join(cwd3, trfns[i]))
-                for l in range(len(lnfns[i])):
+                for l in xrange(len(lnfns[i])):
                     fdict['linfn'].append(os.path.join(cwd3, lnfns[i][l]))
 
             if nspots1[j].split('_')[-1]=='BB':
@@ -83,7 +83,7 @@ def copy(sample='Asteel'):
     pwd = os.getcwd()
     fdict = main(sample)
 
-    # for i in range(len(fdict['filenames'])):
+    # for i in xrange(len(fdict['filenames'])):
     #     fn = fdict['filenames'][i]
     #     filename = os.path.split(fn)[-1]
 
@@ -93,7 +93,7 @@ def copy(sample='Asteel'):
     print np.array(fdict['linfn']).shape
 
     missing = []
-    for j in range(len(fdict['linfn'])):
+    for j in xrange(len(fdict['linfn'])):
 
         fn = fdict['linfn'][j]
         filename = os.path.split(fn)[-1]
@@ -105,4 +105,3 @@ def copy(sample='Asteel'):
             missing.append(fn)
     print 'missing file names:'
     print missing
-

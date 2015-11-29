@@ -58,17 +58,17 @@ def plot(fn,irst=False):
 
     ymax=max(dat[1:1+len(sigmas)].flatten())
 
-    for i in range(len(sigmas)):
+    for i in xrange(len(sigmas)):
         ax1.plot(dat[0],dat[1+i],ls[i],mfc='None',color='k',label='%6.0e'%sigmas[i])
         #ax1.plot(dat[0][::ss],np.zeros((len(dat[0][::ss]),)),'o',mec='k',mfc='None',ms=8)
         x=dat[0][::ss]
-        for j in range(len(x)):
+        for j in xrange(len(x)):
             ax1.plot([x[j],x[j]],[0,ymax],'--',color='gray',alpha=0.2)
 
     ## standard deviation
     fig = wide_fig(nw=1,nh=1);
     ax1 = fig.axes[0]
-    for i in range(len(sigmas)):
+    for i in xrange(len(sigmas)):
         ax1.errorbar(dat[0],dat[1+i],yerr=dat[1+i+len(sigmas)], label='%6.0e'%sigmas[i])
 
 
@@ -77,12 +77,12 @@ def write_args(fn,**kwargs):
     Write keyword arguements to the file
     """
     fn.write('nhead including this line: %i\n'%(len(kwargs)+4))
-    for i in range(80): fn.write('-')
+    for i in xrange(80): fn.write('-')
     fn.write('\n')
 
     for key in kwargs:
         fn.write('%12s  =  %12s \n'%(key, kwargs[key]))
-    for i in range(80): fn.write('-')
+    for i in xrange(80): fn.write('-')
     fn.write('\n')
 
 def read_args(fn):
@@ -96,7 +96,7 @@ def read_args(fn):
     f     = open(fn,'r')
     lines = f.readlines()[2:nline-2]
     dicts  = {}
-    for i in range(len(lines)):
+    for i in xrange(len(lines)):
         key,val = lines[i].split('=')
         try:
             val = float(val.split('\n')[0])
@@ -218,15 +218,15 @@ if __name__=='__main__':
                DEC_freq_sym=DEC_freq_sym,NCPU=NCPU)
 
     fout.write('%7s '%'evm')
-    for i in range(len(sigmas)): fout.write('%7.1e '%sigmas[i])
-    for i in range(len(sigmas)): fout.write('%4istd '%(i+1))
+    for i in xrange(len(sigmas)): fout.write('%7.1e '%sigmas[i])
+    for i in xrange(len(sigmas)): fout.write('%4istd '%(i+1))
 
     fout.write('\n')
-    for i in range(len(x)):
+    for i in xrange(len(x)):
         fout.write('%7.3f '%x[i])
-        for j in range(len(sigmas)):
+        for j in xrange(len(sigmas)):
             fout.write('%7.3f '%M[j][i])
-        for j in range(len(sigmas)):
+        for j in xrange(len(sigmas)):
             fout.write('%7.3f '%s[j][i])
         fout.write('\n')
 

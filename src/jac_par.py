@@ -25,9 +25,9 @@ gs=gridspec.GridSpec(
 def tabular_figs02():
     fig=plt.figure()
     axes=[]
-    for i in range(len(sigmas)):
+    for i in xrange(len(sigmas)):
         axes.append([])
-        for j in range(len(nbins)):
+        for j in xrange(len(nbins)):
             if sigmas[i]==0: iscatter=False
             else:            iscatter= True
 
@@ -60,7 +60,7 @@ def tabular_figs02():
                 mpl_lib.rm_lab(ax,axis='y')
 
 
-    for iax in range(len(fig.axes)):
+    for iax in xrange(len(fig.axes)):
         fig.axes[iax].set_ylim(0,)
         fig.axes[iax].set_xlim(0,)
     tune_xy_lim(fig.axes)
@@ -69,7 +69,7 @@ def tabular_figs02():
 
 
     ## annotations
-    for j in range(len(nbins)):
+    for j in xrange(len(nbins)):
         if j==0: s=r'$N^\psi$=%i'%nbins[j]
         else:
             s = '%i'%nbins[j]
@@ -78,7 +78,7 @@ def tabular_figs02():
             size=14,xy=(0.5,1.2),
             xycoords='axes fraction')
 
-    for i in range(len(sigmas)):
+    for i in xrange(len(sigmas)):
         if i==0:
             s=r'$s^\mathrm{CSE}$=%i'%(
                 sigmas[i]*(10**6))
@@ -115,9 +115,9 @@ def tabular_figs01():
     """
     fig=plt.figure()
     axes=[]
-    for i in range(len(sigmas)):
+    for i in xrange(len(sigmas)):
         axes.append([])
-        for j in range(len(nbins)):
+        for j in xrange(len(nbins)):
             ax=fig.add_subplot(gs[i,j])
             axes[i].append(ax)
             ax.locator_params(nbins=4);
@@ -170,7 +170,7 @@ def tabular_figs01():
                 mpl_lib.rm_lab(ax,axis='x')
                 mpl_lib.rm_lab(ax,axis='y')
 
-    for j in range(len(nbins)):
+    for j in xrange(len(nbins)):
         if j==0: s=r'$N^\psi$=%i'%nbins[j]
         else:
             s = '%i'%nbins[j]
@@ -179,7 +179,7 @@ def tabular_figs01():
             size=14,xy=(0.5,1.2),
             xycoords='axes fraction')
 
-    for i in range(len(sigmas)):
+    for i in xrange(len(sigmas)):
         if i==0:
             s=r'$s^\mathrm{CSE}$=%i'%(
                 sigmas[i]*(10**6))
@@ -196,7 +196,7 @@ def tabular_figs01():
             size=14,xy=(1.20,0.5),
             xycoords='axes fraction')
 
-    for iax in range(len(fig.axes)):
+    for iax in xrange(len(fig.axes)):
         fig.axes[iax].set_ylim(-1500,)
     tune_xy_lim(fig.axes)
     tune_x_lim(fig.axes,axis='y')
@@ -265,9 +265,9 @@ def DEC_intp(ss=[1,2,4],intps=[0,3,4],inds=[79,90,120]):
 
     axes=[]
     ms=['o','x','+','d','>','t']
-    for i in range(len(ss)):
+    for i in xrange(len(ss)):
         axes.append([])
-        for j in range(len(intps)):
+        for j in xrange(len(intps)):
             ## interpolated DECs
             print i,j
             print ss[i],intps[j]
@@ -283,7 +283,7 @@ def DEC_intp(ss=[1,2,4],intps=[0,3,4],inds=[79,90,120]):
             ax.locator_params(nbins=4)
             axes[i].append(ax)
 
-            for k in range(len(inds)):
+            for k in xrange(len(inds)):
                 ind = inds[k]
                 val_sin2psi = sin2psi[ind]
                 val_psi     = psi[ind] * 180./np.pi
@@ -318,7 +318,7 @@ def DEC_intp(ss=[1,2,4],intps=[0,3,4],inds=[79,90,120]):
 
 
     ## annotations
-    for j in range(len(intps)):
+    for j in xrange(len(intps)):
         if j==0: s = 'Piecewise'
         if j==1: s = 'Quadratic'
         if j==2: s = 'Linear fit'
@@ -329,7 +329,7 @@ def DEC_intp(ss=[1,2,4],intps=[0,3,4],inds=[79,90,120]):
             size=10,xy=(0.5,1.2),
             xycoords='axes fraction')
 
-    for i in range(len(ss)):
+    for i in xrange(len(ss)):
         s = r'$f^{\ \mathbb{F}}=^1/_{%i}$'%ss[i]
         axes[i][-1].annotate(
             s=s,
@@ -384,10 +384,10 @@ def DEC_evol(steps = [0,6,9,19]):
         wspace=0,hspace=0,left=0.25,right=0.8,top=0.8)
 
     axes=[]; axev=[]; axs=[]; axv=[]
-    for i in range(len(steps)):
+    for i in xrange(len(steps)):
         axes.append([])
         axev.append([])
-        for j in range(nphi):
+        for j in xrange(nphi):
             ax = fig.add_subplot(gs[i,j])
             av = ax.twinx()
 
@@ -414,7 +414,7 @@ def DEC_evol(steps = [0,6,9,19]):
     tune_xy_lim(axv)
     tune_x_lim(axv,axis='y')
 
-    for i in range(len(steps)):#range(nstp):
+    for i in xrange(len(steps)):#range(nstp):
         if i ==0: s = r'$\bar{E}^{VM}=%.2f$'%fc.epsilon_vm[steps[i]]
         else:    s = r'$%.2f$'%fc.epsilon_vm[steps[i]]
         axes[i][-1].annotate(
@@ -425,7 +425,7 @@ def DEC_evol(steps = [0,6,9,19]):
             size=10,xy=(1.60,0.5),
             xycoords='axes fraction')
 
-    for j in range(nphi):
+    for j in xrange(nphi):
         s = r'$\phi=%.1f^\circ{}$'%(phi[j]*180./np.pi)
         axes[0][j].annotate(
             s=s,
@@ -441,7 +441,7 @@ def DEC_evol(steps = [0,6,9,19]):
     deco(ax=axev[-1][-1],ft=10,iopt=7,hkl='211',ipsi_opt=1)
     axev[-1][-1].grid('off');
 
-    for i in range(len(axv)):
+    for i in xrange(len(axv)):
         axv[i].set_ylim(0.,0.3)
         axv[i].locator_params(nbins=4)
 
