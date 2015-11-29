@@ -1,4 +1,8 @@
-##
+"""
+Analyze experimental data from proto
+"""
+
+## dependents
 import numpy as np
 import os
 from os import sep
@@ -13,13 +17,13 @@ def main_reader(path='../dat/23JUL12', fref='Bsteel_BB_00.txt',
     """
     Arguments
     =========
-    path
-    fref
-    fn_sf
+    path (path that contains the data file)
+    fref (reference data that gives strain and date-named for X-ray)
+    fn_sf (stress factor file name)
     icheck
     isym
-    fc
-    fn_str
+    fc     (flow curve object)
+    fn_str (stress-strain data file)
     """
     if type(fc)==type(None) and type(fn_str)==type(None):
         print '---------------------------------------------'
@@ -43,7 +47,7 @@ def main_reader(path='../dat/23JUL12', fref='Bsteel_BB_00.txt',
 
         ## Find proper line-breaker
         lbs=['\r','\n']; lns = []
-        for i in range(len(lbs)):
+        for i in xrange(len(lbs)):
             lns.append(len(dat.split(lbs[i])))
         lns = np.array(lns)
         lb = lbs[lns.argmax()]
@@ -121,12 +125,10 @@ class StressAnalysis:
         """
         import copy
         self.EXP,self.SF,self.IG,self.SF_orig,self.IG_orig\
-            = main_reader(path=path,
-                          fref=fref,
-                          fn_sf=fn_sf,
-                          fc=fc_sf,fn_str=fn_str,
-                          icheck=False,
-                          isym=isym)
+            = main_reader(
+                path=path,fref=fref,fn_sf=fn_sf,
+                fc=fc_sf,fn_str=fn_str,icheck=False,
+                isym=isym)
 
         self.nstp = self.EXP.flow.nstp
 
@@ -136,9 +138,9 @@ class StressAnalysis:
         if False:
             d_bar = np.zeros((self.EXP.nphi))
             d_diff = np.zeros((self.EXP.nphi,self.EXP.npsi))
-            for iphi in range(self.EXP.nphi):
+            for iphi in xrange(self.EXP.nphi):
                 ds = []
-                for ipsi in range(self.EXP.npsi):
+                for ipsi in xrange(self.EXP.npsi):
                     d = self.EXP.P_scan[0].protophi[iphi].ppscans[ipsi].dspc
                     ds.append(d)
                 m = np.array(ds).mean()
@@ -146,14 +148,14 @@ class StressAnalysis:
                 print 'STD (d) at phi %4.0f = %f'%(self.EXP.phis[iphi],e)
                 print 'Mean(d) at phi %4.0f = %f'%(self.EXP.phis[iphi],m)
                 d_bar[iphi] = m
-                for ipsi in range(self.EXP.npsi):
+                for ipsi in xrange(self.EXP.npsi):
                     d = self.EXP.P_scan[0].protophi[iphi].ppscans[ipsi].dspc
                     d_diff[iphi,ipsi] = d - d_bar[iphi]
 
             # ## should I flatten the error????
-            for istp in range(self.nstp):
-                for iphi in range(self.EXP.nphi):
-                    for ipsi in range(self.EXP.npsi):
+            for istp in xrange(self.nstp):
+                for iphi in xrange(self.EXP.nphi):
+                    for ipsi in xrange(self.EXP.npsi):
                         self.EXP.P_scan[istp].protophi[iphi].ppscans[ipsi].dspc\
                             = self.EXP.P_scan[istp].protophi[iphi].ppscans[ipsi].dspc \
                             - d_diff[iphi,ipsi]
@@ -183,16 +185,16 @@ class StressAnalysis:
         figs = wide_fig(nw=nphi)
         # calculate Ei based on the current stress & SF
         Ei = np.zeros((nphi, npsi))
-        for iphi in range(nphi):
-            for ipsi in range(npsi):
-                for k in range(len(sigma)):
+        for iphi in xrange(nphi):
+            for ipsi in xrange(npsi):
+                for k in xrange(len(sigma)):
                     Ei[iphi,ipsi]\
                         = Ei[iphi,ipsi] + \
                         self.SF.sf[istp,iphi,ipsi,k] * \
                         sigma[k]
         ehkl = self.EXP.ehkl[istp].copy()
         ig   = self.IG.ig[istp].copy()
-        for iphi in range(nphi):
+        for iphi in xrange(nphi):
             #x = np.sin(self.EXP.psi*np.pi**180)**2
             x = self.EXP.psi[::]
             l, = figs.axes[iphi].plot(x,Ei[iphi,:],'-rx',
@@ -217,13 +219,13 @@ class StressAnalysis:
         self.Ei = np.zeros((nphi,npsi)) # initialize self.Ei
         sf = self.SF.sf[self.istp]
 
-        # for k in range(6):
+        # for k in xrange(6):
         #     self.Ei[:,:] = self.Ei[:,:] + \
         #         sf[:,:,k] * self.sigma[k]
 
-        for iphi in range(nphi):
-            for ipsi in range(npsi):
-                for k in range(6):
+        for iphi in xrange(nphi):
+            for ipsi in xrange(npsi):
+                for k in xrange(6):
                     if ivo==None or (ivo!=None and k in ivo):
                         self.Ei[iphi,ipsi] = \
                          self.Ei[iphi,ipsi] + \
@@ -266,8 +268,8 @@ class StressAnalysis:
 
         f_array=[]
 
-        for iphi in range(nphi):
-            for ipsi in range(npsi):
+        for iphi in xrange(nphi):
+            for ipsi in xrange(npsi):
                 d = self.EXP.ehkl[self.istp,iphi,ipsi] -\
                     self.IG.ig[self.istp,iphi,ipsi] -\
                     self.Ei[iphi,ipsi]
@@ -304,8 +306,8 @@ class StressAnalysis:
         if iwgt==False: wgt=None
         elif iwgt:
             wgt = np.zeros((self.EXP.nphi,self.EXP.npsi))
-            for iphi in range(self.EXP.nphi):
-                for ipsi in range(self.EXP.npsi):
+            for iphi in xrange(self.EXP.nphi):
+                for ipsi in xrange(self.EXP.npsi):
                     wgt[iphi,ipsi]=self.EXP.P_scan[
                         istp].protophi[iphi].ppscans[ipsi].ints
 
@@ -334,7 +336,7 @@ class StressAnalysis:
             nphi = self.EXP.nphi
             x = self.EXP.psi
             figs = wide_fig(nw=nphi)
-            for iphi in range(nphi):
+            for iphi in xrange(nphi):
                 l, = figs.axes[iphi].plot(x,Ei[iphi,:],'--')
                 figs.axes[iphi].plot(x,ehkl[iphi,:],'-x',
                                      color=l.get_color())
@@ -409,7 +411,7 @@ def main(path='../dat/BB/',
     Eis = []; eps = []; igs = []
 
     d_ehkl = np.zeros((mystress.EXP.nphi))
-    for istp in range(mystress.nstp):
+    for istp in xrange(mystress.nstp):
         stress, d0 = mystress.find_sigma(
             ivo=[0,1],istp=istp,iplot=False,iwgt=iwgt,
             ifix_d0=ifix_d0,d0=d0_ref)
@@ -425,17 +427,17 @@ def main(path='../dat/BB/',
         igs.append(ig.copy())
 
         if istp==0:
-            for iphi in range(mystress.EXP.nphi):
+            for iphi in xrange(mystress.EXP.nphi):
                 d_ehkl[iphi] = np.array(ehkl[iphi][::]).std()
 
     print '-----------------------------------'
     print 'Standard deviation in d_ehkl at istp=0\n'
     print 'phi:',
-    for iphi in range(mystress.EXP.nphi):
+    for iphi in xrange(mystress.EXP.nphi):
         print '%7.0f '%mystress.EXP.phis[iphi],
     print 'avg'
     print 'std:',
-    for iphi in range(mystress.EXP.nphi):
+    for iphi in xrange(mystress.EXP.nphi):
         print '%7.1e '%d_ehkl[iphi],
     print '%7.1e '%d_ehkl.mean()
 
@@ -472,12 +474,12 @@ def main(path='../dat/BB/',
     cmap, c = mpl_lib.norm_cmap(
         mx=mx,mn=mn) # c.to_rbga()
 
-    for iphi in range(mystress.EXP.nphi):
+    for iphi in xrange(mystress.EXP.nphi):
         x = mystress.EXP.psi
         ax = figs.axes[iphi]
         ax.set_title(
             r'$\phi: %3.1f^\circ{}$'%mystress.EXP.phi[iphi])
-        for istp in range(mystress.EXP.flow.nstp):
+        for istp in xrange(mystress.EXP.flow.nstp):
             y_fit = Eis[istp,iphi]
             y1=eps[istp,iphi] # e^{hkl}
             y0=igs[istp,iphi] # e^{ig}
@@ -503,11 +505,11 @@ def main(path='../dat/BB/',
         from matplotlib.backends.backend_pdf import PdfPages
         pdf_pages = PdfPages('Fit_results.pdf')
         x = mystress.EXP.psi
-        for istp in range(mystress.EXP.flow.nstp):
+        for istp in xrange(mystress.EXP.flow.nstp):
             figx = wide_fig(nw=mystress.EXP.nphi+1,
                             w0=0,w1=0,left=0.2,
                             right=0.15)
-            for iphi in range(mystress.EXP.nphi):
+            for iphi in xrange(mystress.EXP.nphi):
                 x = mystress.EXP.psi
                 ax = figx.axes[iphi]
                 ax.set_title(
@@ -531,7 +533,7 @@ def main(path='../dat/BB/',
             ax.plot(eps_vm[istp],
                     mystress.flow.sigma_vm[istp],'ro')
 
-            for i in range(len(figx.axes)-2):
+            for i in xrange(len(figx.axes)-2):
                 figx.axes[i].set_ylim(-0.0010,0.0006)
 
             fancy_legend(figx.axes[0])

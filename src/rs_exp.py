@@ -2,6 +2,13 @@
 Experimental residual stress analysis
 """
 def check(EXP=None):
+    """
+    Check Experimental data
+
+    Argument
+    ========
+    <EXP> = None
+    """
     from MP.lib import mpl_lib
     from phikhi import draw_circ
     draw_circ = draw_circ.main
@@ -9,11 +16,11 @@ def check(EXP=None):
 
     figs = wide_fig(nw=2)
 
-    if EXP==None:EXP=main()
+    if type(EXP)==type(None):EXP=main()
     EXP.list()
     d_avg = []
 
-    for istp in range(len(EXP.P_scan)):
+    for istp in xrange(len(EXP.P_scan)):
         d_avg.append(EXP.P_scan[istp].d_avg)
 
     figs.axes[0].plot(-EXP.flow.epsilon[2,2],d_avg,'x')
@@ -23,9 +30,9 @@ def check(EXP=None):
     PF_scans = EXP.P_scan[istp]
     counts = []
     X = []; Y = []
-    for iphi in range(len(PF_scans.protophi)):
+    for iphi in xrange(len(PF_scans.protophi)):
         pp = PF_scans.protophi[iphi].ppscans
-        for i in range(len(pp)):
+        for i in xrange(len(pp)):
             counts.append(pp[i].ints)
             X.append(pp[i].x)
             Y.append(pp[i].y)
@@ -33,9 +40,9 @@ def check(EXP=None):
     mxc = max(counts)
     mnc = min(counts)
     k = 0
-    for iphi in range(len(PF_scans.protophi)):
+    for iphi in xrange(len(PF_scans.protophi)):
         pp = PF_scans.protophi[iphi].ppscans
-        for i in range(len(pp)):
+        for i in xrange(len(pp)):
             alpha = (counts[k]-mnc)/(mxc-mnc)
             pf.plot(X[k],Y[k],'ko',ms=4,
                     alpha=alpha)
@@ -54,16 +61,26 @@ def read_main(path='../dat/23JUL12',fref='Bsteel_BB_00.txt',
 
     Arguments
     =========
-    path: path should be the one that contains all proto
-          X-ray files
-    fref and fn_sf should be given as a fully pathed file name
+    <path> path should be the one that contains all proto
+             X-ray files
+    <fref> and <fn_sf> should be given as a
+          fully pathed file name
+    <fc>
+    <fn_str>
+    <icheck>
+    <isym>
+
+    Returns
+    =======
+    ExpProto, SF, IG
     """
     import read_proto, os
     ExpProto = read_proto.ProtoExp(path,fref,isym)
-    if icheck:check(ExpProto)
-    if path==None: path='.'
-    SF, IG = read_IGSF(fn=fn_sf, #'%s%s%s'%(path,os.sep,fn_sf),
-                       fc=fc,fn_str=fn_str)
+    if icheck: check(ExpProto)
+    if type(path)==type(None): path='.'
+    SF, IG = read_IGSF(
+        fn=fn_sf, #'%s%s%s'%(path,os.sep,fn_sf),
+        fc=fc,fn_str=fn_str)
     return ExpProto, SF, IG
 
 def read_IGSF(fn='YJ_Bsteel_BB.sff', fc=None, fn_str=None):
@@ -77,13 +94,18 @@ def read_IGSF(fn='YJ_Bsteel_BB.sff', fc=None, fn_str=None):
     fn = 'YJ_Bsteel_BB.sff' ; file name of sff file
     fc = None (should be a 'mech.FlowCurve' object)
     fn_str = 'STR_STR.OUT'
+
+    Returns
+    =======
+    <SF>, <IG>
     """
     import numpy as np
     import RS; reload(RS)
     from RS import sff_plot, sfig_class
 
-    if fc!=None and fn_str!=None: raise IOError,\
-       'Only one of fc and fn_str should be given'
+    if type(fc)!=type(None) and type(fn_str)!=type(None):
+        raise IOError,\
+            'Only one of fc and fn_str should be given'
 
     StressFactor = sfig_class.SF
     IGstrain = sfig_class.IG
@@ -91,7 +113,7 @@ def read_IGSF(fn='YJ_Bsteel_BB.sff', fc=None, fn_str=None):
     SF = StressFactor()  # class
     IG = IGstrain()      # class
 
-    if fn!=None:
+    if type(fn)!=type(None):
         # sf[nstp,nphi,npsi,6]
         sf, ig, phi, psi, eps_macro = read_sff(fn)
         sf = sf * 1e-12 # Pascal
@@ -112,13 +134,13 @@ def read_IGSF(fn='YJ_Bsteel_BB.sff', fc=None, fn_str=None):
         #IG.flow.set_zero_epsilon_ij(2,2)
         IG.flow.set_zero_shear_strain()
 
-    elif fn==None:
+    elif type(fn)==type(None):
         print 'SFF file name is missing.',
         print ' Empty SF, IG objects are returned'
-    if fc!=None:
+    if type(fc)!=type(None):
         print "Warning: overwrite the SF.flow / IG.flow"
         SF.flow = fc; IG.flow = fc
-    elif fn_str!=None:
+    elif type(fn_str)!=type(None):
         print "Warning: overwirte the SF.flow / IG.flow"
         from MP.mat import mech
         fc=mech.FlowCurve(name='Flow for SF/IG')
