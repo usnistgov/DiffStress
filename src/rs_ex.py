@@ -91,6 +91,8 @@ def ex_consistency(
     ig_ext    : Overwrite IG strain
     vf_ext    : Overwrite grain volume fraction (nstp,nphi,npsi)
     iscatter (False) : introducing a random scattering of 'ehkl'
+    sigma     : Level of standard deviation in the Gaussian distribution
+                used to 'perturb' the lattice strain.
 
     #2. tilting angle restriction/treatments
     sin2psimx : limiting the maximum sin2psi values, with which
@@ -132,8 +134,7 @@ def ex_consistency(
     import time
     from MP import progress_bar
     uet = progress_bar.update_elapsed_time
-
-    t0=time.time()
+    t0 = time.time()
     if ilog:
         fn = 'ex_consistency.log'
         f = open(fn,'w')
@@ -334,7 +335,6 @@ def ex_consistency(
                         e     = model_tdats[istp,iphi,ipsi],
                         sigma = sigma,
                         psi   = model_rs.psis[ipsi],
-
                         ## need to calculate the below...
                         theta_b = theta_b,
                         mrd = mrd)
@@ -393,7 +393,7 @@ def ex_consistency(
             if istp % nfrq !=0:
                 continue
 
-        if iplot==False and istep!=None:
+        if iplot==False and type(istep)!=type(None):
             nstp = 1
             istp = istep
 
@@ -445,7 +445,7 @@ def ex_consistency(
                         = full_Ei[iphi,ipsi]+\
                         raw_sfs[istp,k,iphi,ipsi]*dsa_sigma[k]
 
-        if istep!=None and iplot==False:
+        if type(istep)!=type(None) and iplot==False:
             return model_rs, s11,s22, dsa_sigma[0],dsa_sigma[1],\
                 raw_psis.copy(),\
                 raw_vfs[istp].copy(),raw_sfs[istp].copy(),\
@@ -495,6 +495,7 @@ def ex_consistency(
         flow_dsa.get_33strain(model_rs.dat_model.flow.epsilon[:,:,::nfrq])
 
     flow_dsa.get_eqv()
+    sigma_wgt = flow_weight.sigma
 
     ## Various plots
     if iplot:
@@ -510,9 +511,6 @@ def ex_consistency(
         for a in [ax1,ax_vm]:
             fancy_legend(a,size=10,nscat=1)
 
-    sigma_wgt = flow_weight.sigma
-
-    if iplot:
         ax2.plot(sigma_wgt[0,0],sigma_wgt[1,1],'k-')
         ax2.plot(flow_dsa.sigma[0,0],flow_dsa.sigma[1,1],'k+')
 
