@@ -124,7 +124,8 @@ def reader(fn='pepshkl.out',step=0,phi=0,skiprows=1,iopt=1):
         return psi1,psi2,e1,e2,phkl1,phkl2,vol1,vol2,s11,s22,e11,e22,ngr1,ngr2
 
 
-def reader2(fn='igstrain_fbulk_ph1.out',iopt=1,isort=True):
+def reader2(fn='igstrain_fbulk_ph1.out',
+            iopt=1,isort=True,verbose=False):
     """
     Arguments
     =========
@@ -134,14 +135,16 @@ def reader2(fn='igstrain_fbulk_ph1.out',iopt=1,isort=True):
             diffraction results are repeatedly obtained for
             individual elastic loading for stress factor probing
       iopt2: ??
+    verbose=False
     """
     import MP.ssort as sort
     shsort = sort.shellSort
     ss     = sort.ind_swap
 
-    print '\n\n###########################################'
-    print '# Reader for igstrain_fbulk_ph?.out files #'
-    print '###########################################\n'
+    if verbose:
+        print '\n\n###########################################'
+        print '# Reader for igstrain_fbulk_ph?.out files #'
+        print '###########################################\n'
 
     dstr = open(fn,'r').read()
     if iopt==1: dstr = dstr.split('-- F')[1::]
@@ -186,18 +189,18 @@ def reader2(fn='igstrain_fbulk_ph1.out',iopt=1,isort=True):
                 usf.append(isf[i])
             else: break
         nsf = len(usf)
-        print nsf, 'kinds of stress factor are probed:',
+        if verbose: print nsf, 'kinds of stress factor are probed:',
 
         for i in xrange(nsf):
             i1,i2 = usf[i]
-            print 'F%1i%1i'%(i1,i2),
+            if verbose: print 'F%1i%1i'%(i1,i2),
 
     elif iopt==2: nsf = 1
 
     if iopt==1:nst=nblock / nsf
     elif iopt==2: nst=nblock
 
-    print '\nIG strains were measured at', nst, 'steps'
+    if verbose: print '\nIG strains were measured at', nst, 'steps'
 
     if iopt==1: tdat = np.zeros((10,nst,nsf,nphi,npsi))
     if iopt==2: tdat = np.zeros((9,nst,nphi,npsi))
@@ -275,7 +278,7 @@ def reader2(fn='igstrain_fbulk_ph1.out',iopt=1,isort=True):
         tdat = ss(_tdat_[::],ind)[::]
         tdat = tdat.swapaxes(0,-1)[::]
 
-    print '\ntdat(property, ist, isf, iphi, ipsi)'
+    if verbose: print '\ntdat(property, ist, isf, iphi, ipsi)'
     if iopt==1: return tdat,usf
     if iopt==2: return tdat
     raise IOError, 'Unexpected iopt was given'

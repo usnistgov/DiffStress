@@ -9,13 +9,14 @@ cos = np.cos; sin = np.sin; pi  = np.pi
 FlowCurve = mech.FlowCurve
 rb = read_blocks.main
 
-def reader(fn='igstrain_load_ph1.out',isort=False,icheck=False):
+def reader(fn='igstrain_load_ph1.out',isort=False,icheck=False,verbose=False):
     """
     Arguments
     =========
     fn = 'igstrain_load_ph1.out'
     isort = False
     icheck = False : plot the e(hkl) or not
+    verbose = False
     """
     if isort: from MP.ssort import sh as sort
     dl  = open(fn).readlines()
@@ -77,10 +78,13 @@ def reader(fn='igstrain_load_ph1.out',isort=False,icheck=False):
         ph = phis.copy()
         # ph.sort()
         if not(all(phis==ph)):
-            print phis
-            print ph
+            if verbose :
+                print phis
+                print ph
             phis = ph
-            print 'Data along phi should be rearranged'
+            if verbose:
+                print 'Data along phi'+\
+                    ' should be rearranged'
             for istp in xrange(nstp):
                 for ipsi in xrange(npsis):
                     ep = epshkl[istp,:,ipsi]
@@ -97,7 +101,9 @@ def reader(fn='igstrain_load_ph1.out',isort=False,icheck=False):
         if not(all(psis==ps)):
             # print psis
             # print ps
-            print 'Data along psi should be rearranged'
+            if verbose:
+                print 'Data along psi'+\
+                    ' should be rearranged'
             for istp in xrange(nstp):
                 for iphi in xrange(nphi):
                     ep = epshkl[istp,iphi,:]
