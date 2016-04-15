@@ -525,6 +525,19 @@ class Det:
         print 'An offset value for psi was introduced.'
         print 'Consider redoing sort_sin2psi if necessary'
 
+
+def conv(p,k):
+    """
+    convert phi, khi to x,y
+    """
+    k = k * np.pi / 180.
+    p = p * np.pi / 180.
+    k = k - np.pi
+    r = np.sin(k)/(1-np.cos(k))
+    x = r * np.cos(p) ; y = r* np.sin(p)
+    return x,y
+
+
 class PhiPsiScan:
     def __init__(self,psi,phi,dspc,th2,fwhm,ints):
         self.psi=psi
@@ -535,8 +548,8 @@ class PhiPsiScan:
         self.ints=ints
         self.xy_coord()
     def xy_coord(self):
-        from phikhi import psikhi2cart
-        conv = psikhi2cart.conv
+        # from phikhi import psikhi2cart
+        # conv = psikhi2cart.conv
         self.x, self.y = conv(p=self.phi,k=self.psi)
     def put_psi_offset(self,offset=0.0):
         """
