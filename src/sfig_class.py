@@ -521,6 +521,7 @@ class IG:
 
                 ## find non zero not (nan) values
                 inds = []
+                n_avail_dat = 0 ## in case that IG strain is all zeroes (Brian Lin's case)
                 if (_y_==0).all():
                     _y_  = _y_.copy()
                     _xp_ = xp.copy()
@@ -537,7 +538,7 @@ class IG:
                     # print 'interpolation is not ',
                     # print 'feasible due to insufficient',
                     # print 'number of data'
-                    self.ig_new[:,iphi,ipsi] = np.nan
+                    self.ig_new[:,iphi,ipsi] = 0. # np.nan
                 elif n_avail_dat>=2:
                     _y_  = _y_[inds].copy()
                     _xp_ = xp[inds].copy()
@@ -560,7 +561,7 @@ class IG:
                         except:
                             nans = np.zeros(len(epsilon_vm))
                             nans = np.nan * nans
-                            self.ig_new[:,iphi,ipsi] = nans
+                            self.ig_new[:,iphi,ipsi] = 0. #np.nan
 
                 else: raise IOError, 'Unexpected case'
 

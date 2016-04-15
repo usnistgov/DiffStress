@@ -27,5 +27,5 @@ template of the 'sff' file from the current software package.
 This software was used for the following publications
 -----------------------------------------------------
 1. Uncertainty in flow stress measurements using X-ray diffraction for sheet metals subjected to large plastic deformations, Y Jeong, T Gnaeupel-Herold, M Iadicola, A Creuziger (Submitted to Journal of Applied Crystallography)
-2. Multiaxial constitutive behavior of an interstitial-free steel: measurements through X-ray and digital image correlation, Y Jeong, M Iadicola, T Gnaeupel-Herold, A Creuziger (Under peer-review in Acta Materialia)
+2. Multiaxial constitutive behavior of an interstitial-free steel: measurements through X-ray and digital image correlation, Y Jeong, M Iadicola, T Gnaeupel-Herold, A Creuziger (Accepted for publication in Acta Materialia)
 3. Evaluation of biaxial flow stress based on Elasto-Viscoplastic Self-Consistent analysis of X- ray Diffraction Measurements, Y Jeong, T Gnaeupel-Herold, F Barlat, M Iadicola, A Creuziger, M-G Lee (2015) International Journal of Plasticity, 66, 103-118

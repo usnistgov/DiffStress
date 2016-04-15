@@ -74,8 +74,8 @@ def main_reader(path='../dat/23JUL12', fref='Bsteel_BB_00.txt',
         path=path,fref=fref,fn_sf=fn_sf,fc=fc,fn_str=fn_str,
         icheck=icheck,isym=isym)
 
-    ## interpolate based on experimental phis, psis, IG
 
+    ## interpolate based on experimental phis, psis, IG
     # EXP.plot(istps=[0,10,20])
     # SF.plot()
     # IG.plot()
@@ -90,10 +90,14 @@ def main_reader(path='../dat/23JUL12', fref='Bsteel_BB_00.txt',
     IG_orig.flow.get_vm_strain()
 
     SF.interp_strain(EXP.flow.epsilon_vm)
-    IG.interp_strain(EXP.flow.epsilon_vm)
-
     SF.interp_psi(EXP.psis)
+    ## in case that IG strain is available
+    IG.interp_strain(EXP.flow.epsilon_vm)
     IG.interp_psi(EXP.psis)
+
+    ## if not?
+
+
 
     if SF.phi!=EXP.phis:
         print '  ** Phi angles of SF are different **'
