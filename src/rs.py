@@ -839,14 +839,17 @@ class DiffDat:
         self.ehkl=np.ma.array(self.ehkl)
 
     def plot(self,ifig=1):
-        from plt_lib import setFigLinesBW as figbw
+        #from plt_lib import setFigLinesBW as figbw
+        from matplotlib.backends.backend_pdf import PdfPages
+        pdf_master = PdfPages('rs_plot_rst.pdf')
+
         ijh = self.ijh
         deg = 180/pi
         nphi = self.nphi
         nspi = self.npsi
         nstp = len(self.strain)
         x = sin(self.psi)**2
-        if self.sf!=None:
+        if type(self.sf).__name__!='NoneType':
             fig_sf = plt.figure(ifig,figsize=(16,9))
             ax_sf =[]
             for iphi in xrange(nphi):
@@ -863,8 +866,9 @@ class DiffDat:
                         ax.plot(x,y*1e6,'-x')
             #figbw(fig_sf) # make'em BW style
             fig_sf.tight_layout()
+            pdf_master.savefig(fig_sf)
 
-        if self.ehkl!=None:
+        if type(self.ehkl).__name__!='NoneType':
             fig_ehkl = plt.figure(ifig+1,figsize=(16,4))
             ax_ehkl=[]
             for iphi in xrange(nphi):
@@ -879,8 +883,9 @@ class DiffDat:
                     if istp==0: ax.set_title(r'$\phi=$%4.1f$^\circ$'%
                                              (self.phi[iphi]*deg))
             fig_ehkl.tight_layout()
+            pdf_master.savefig(fig_ehkl)
 
-        if self.ig!=None:
+        if type(self.ig).__name__!='NoneType':
             fig_ig = plt.figure(ifig+2,figsize=(16,4))
 
             ax_ehkl=[]
@@ -894,6 +899,9 @@ class DiffDat:
                     y = self.ig[istp,iphi,:]
                     ax.plot(x,y*1e3)
             fig_ig.tight_layout()
+            pdf_master.savefig(fig_ig)
+
+        pdf_master.close()
 
 class ResidualStress:
     def __init__(

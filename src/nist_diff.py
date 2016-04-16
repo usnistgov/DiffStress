@@ -7,8 +7,15 @@ import matplotlib.pyplot as plt
 
 isfile = os.path.isfile
 def fc(fn):
-    """ file check
     """
+    Check if the file <fn> is existing.
+
+    Argument
+    --------
+    fn
+    """
+    if type(fn).__name__=='NoneType':
+        raise IOError, 'None type fn was given'
     if not(isfile(fn)): raise IOError, '%s file not existing'%fn
 
 """
@@ -430,7 +437,9 @@ def fij(i=1, j=1, iph=1, difn=None):
     psi (step, phi)
     """
     fc(difn)
-    from ssort import shellSort as ssort
+    from MP import ssort
+    ssort = ssort.shellSort
+    #from ssort import shellSort as ssort
     istep = 1
     Psi = []
     F   = []
@@ -673,7 +682,10 @@ def eps_sig_fij_sort(i=1, j=1, ipb=[1,2,3,4], opt=1, iph=1, difn=None):
     """
     # import the shell sort f2py-wrapped binary module
     fc(difn)
-    from sort import shellsort as ssort
+    from MP import ssort
+    ssort = ssort.shellSort
+
+    # from sort import shellsort as ssort
 
     phi   = []; beta  = []
     psi   = []; sigma = []
@@ -744,9 +756,14 @@ def intepsphiout(istep=0, phi=0, iphi=0, iph=1, isort=False, iopt=0):
             4: ('igstrain_unloads_avg.out') at unloads
             5: ('igstrain_loads_avg.out')   at loads
     """
-    from ssort import shellSort as ssort
-    from ssort import sh
-    from ssort import ind_swap
+    from MP import ssort
+    sh=ssort.sh
+    ind_swap=ssort.ind_swap
+    ssort=ssort.shellSort
+
+    #from ssort import shellSort as ssort
+    #from ssort import sh
+    #from ssort import ind_swap
 
     eps, sig, psi = [], [], []
     if iopt==0:   filename='int_eps_ph%i.out'%iph
