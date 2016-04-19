@@ -180,7 +180,7 @@ class StressAnalysis:
         Let's visualize the procedure. (sigma in Pascal)
         """
         sigma = np.array(sigma) / 1e6
-        if d0!=None:
+        if type(d0).__name__!='NoneType':
             self.EXP.assign_d0(d0)
         import matplotlib.pyplot as plt
         plt.close('all')
@@ -192,25 +192,30 @@ class StressAnalysis:
         for iphi in xrange(nphi):
             for ipsi in xrange(npsi):
                 for k in xrange(len(sigma)):
-                    Ei[iphi,ipsi]\
-                        = Ei[iphi,ipsi] + \
-                        self.SF.sf[istp,iphi,ipsi,k] * \
-                        sigma[k]
+                    val = self.SF.sf[istp,iphi,ipsi,k]
+                    if np.isnan(val):
+                        print 'nan found'
+                        pass
+                    else:
+                        Ei[iphi,ipsi]\
+                            = Ei[iphi,ipsi] + \
+                            self.SF.sf[istp,iphi,ipsi,k] * \
+                            sigma[k]
         ehkl = self.EXP.ehkl[istp].copy()
         ig   = self.IG.ig[istp].copy()
         for iphi in xrange(nphi):
-            #x = np.sin(self.EXP.psi*np.pi**180)**2
             x = self.EXP.psi[::]
             l, = figs.axes[iphi].plot(x,Ei[iphi,:],'-rx',
                                       label='Fitting')
-            # figs.axes[iphi].plot(x,ehkl[iphi,:],'-ko',
-            #                      label=r'$\varepsilon^{hkl}$')
+            figs.axes[iphi].plot(x,ehkl[iphi,:],'-ko',
+                                 label=r'$\varepsilon^{hkl}$')
             figs.axes[iphi].plot(
-                x,ehkl[iphi,:]-ig[iphi,:],'-ko',
+                x,ehkl[iphi,:]-ig[iphi,:],'b+',
                 label=r'$\varepsilon^{hkl}-\varepsilon^{IG}$')
         fancy_legend(figs.axes[iphi])
         if d0!=None:
             self.EXP.get_ehkl()
+        return Ei
 
     def calc_Ei(self,ivo=None):
         """
@@ -537,8 +542,8 @@ def main(path='../dat/BB/',
             ax.plot(eps_vm[istp],
                     mystress.flow.sigma_vm[istp],'ro')
 
-            for i in xrange(len(figx.axes)-2):
-                figx.axes[i].set_ylim(-0.0010,0.0006)
+            # for i in xrange(len(figx.axes)-2):
+            #     figx.axes[i].set_ylim(-0.0010,0.0006)
 
             fancy_legend(figx.axes[0])
             rm_inner(figx.axes[:4])
