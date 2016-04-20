@@ -4,7 +4,7 @@ DiffStress
 DiffStress is a Python-based diffraction analysis tool that
 analyzes the *tensorial* stress state present on a polycrystal sample.
 The stress analysis utilizes a set of lattice-spacings (interatomic spacings)
- obtained from a polycrystalline specimen using a diffractometer (either X-ray or neutron)
+obtained from a polycrystalline specimen using a diffractometer (either X-ray or neutron)
 
 This python package allows one to analyze both experimental diffraction lattice strains and
 model-emulated lattice strains, e.g., those data from EVPSC.
@@ -20,6 +20,18 @@ current software requires the use of diffraction elastic constants written
 in the format of 'sff', which is used in the 'PF' software
 managed by Thomas Gnaeupel-Herold in NCNR, NIST. One may find the
 template of the 'sff' file from the current software package.
+
+
+Youngung Jeong
+youngung.jeong@gmail.com
+younguj@clemson.edu
+
+(2016 March -)
+International Center for Automotive Research
+Clemson University
+(2014 March -)
+Center for Automotive Lightweighting
+National Institute of Standards and Technology
 
 
 This software has been used for the following publications
