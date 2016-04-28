@@ -145,8 +145,8 @@ class SF:
             =8: zero
             =9: slinear
         """
-        print 'epsilon_vm:'
-        print epsilon_vm
+        # print 'epsilon_vm:'
+        # print epsilon_vm
         import warnings
 
         self.sf_old = self.sf.copy()
@@ -155,8 +155,8 @@ class SF:
         self.sf_new = np.zeros(
             (len(epsilon_vm),self.nphi,self.npsi,self.nij))
         xp = self.flow.epsilon_vm.copy()
-        print 'Strain reference at which sf was measured:'
-        print xp
+        # print 'Strain reference at which sf was measured:'
+        # print xp
         for iphi in xrange(self.nphi):
             for ipsi in xrange(self.npsi):
                 for k in xrange(self.nij):

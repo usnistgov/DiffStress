@@ -501,7 +501,7 @@ def ex_consistency(
     if iplot:
         for a in [ax1, ax_vm]:
             a.plot(flow_dsa.epsilon_vm,flow_dsa.sigma_vm,'k+',
-                   label=r'$\hat{\sigma}^\mathrm{RS}$')
+                   label=r'$\sigma^{d}$')
         for i in xrange(len(exp_ref)):
             f = exp_ref[i]; lab = exp_lab[i]
             edat = np.loadtxt(f).T
@@ -634,17 +634,16 @@ def __model_fit_plot__(
                 x = sin2psi_opt(psis.copy(),2)
                 if ivf: xv = sin2psi_opt(wgt_psi.copy(),2)
 
-        ## E_{i}
-        if ileg: label=r'Fit'
-        else:    label=None
-        ax.plot(x,Ei[iphi]*1e6,'+',mec='k',ms=7,
-                mfc='None',label=label)
+        ## E_{i} -- abundant information
+        # if ileg: label=r'Fit'
+        # else:    label=None
+        # ax.plot(x,Ei[iphi]*1e6,'+',mec='k',ms=7,
+        #         mfc='None',label=label)
         ## e-e_0
-        if hkl==None and ileg:
-            label=r'$\tilde{ \langle\varepsilon^e \rangle}^G$'
-        elif hkl!=None and ileg:
-            label=r'$\tilde{ \langle\varepsilon^e \rangle}^G$'
-            #label=r'$\varepsilon^{\{%s\}}-\varepsilon^{\{%s\}}_0$'%(hkl,hkl)
+        if type(hkl).__name__=='NoneType' and ileg:
+            label=r'$\langle\tilde{\varepsilon}^d \rangle^G$'
+        elif type(hkl).__name__!='NoneType' and ileg:
+            label=r'$\langle\tilde{\varepsilon}^d \rangle^G$'
         elif ileg!=True: label=None
 
         y = tdat[iphi]*1e6
@@ -659,8 +658,8 @@ def __model_fit_plot__(
                 ax.plot([s2l,s2u],[Y,Y],'g-')
                 ax.plot([s2l,s2u],[Y,Y],'g|')
 
-        if hkl==None and ileg: label=r'$E_{i} - \varepsilon^{\{hkl\}}-\varepsilon^{\{hkl\}}_0$'
-        elif hkl!=None and ileg: label='$E_{i} - \varepsilon^{\{%s\}}-\varepsilon^{\{%s\}}_0$'%(hkl,hkl)
+        if type(hkl)==type(None) and ileg: label=r'$E_{i} - \varepsilon^{\{hkl\}}-\varepsilon^{\{hkl\}}_0$'
+        elif type(hkl)!=type(None) and ileg: label='$E_{i} - \varepsilon^{\{%s\}}-\varepsilon^{\{%s\}}_0$'%(hkl,hkl)
         elif ileg!=True: label = None
 
         if ivf: av.plot(xv,vf[iphi],'k-',lw=2,
@@ -672,12 +671,12 @@ def __model_fit_plot__(
 
         ## all_stress_factor_hkl.pdf
         ax=axesf[iphi]
-        if hkl==None and ileg:
+        if type(hkl)==type(None) and ileg:
             lab1=r'$\mathbb{F}_{11}^{I}$ in use'
             lab2=r'$\mathbb{F}_{22}^{I}$ in use'
-        elif hkl!=None and ileg:
-            lab1=r'$\mathbb{F}^{\{%s\}}^{I}_{11}$ in use'%hkl
-            lab2=r'$\mathbb{F}^{\{%s\}}^{I}_{22}$ in use'%hkl
+        elif type(hkl)!=type(None) and ileg:
+            lab1=r'$\mathbb{F}^{\{%s\},I}_{11}$ in use'%hkl
+            lab2=r'$\mathbb{F}^{\{%s\},I}_{22}$ in use'%hkl
         elif ileg!=True:
             lab1=None; lab2=None
 
@@ -747,13 +746,13 @@ def __model_fit_plot__(
         deco(ax=ax,iopt=1,hkl=hkl,ipsi_opt=ipsi_opt)
         # if iphi==0:fancy_legend(ax,nscat=1)
 
-    if stress_wgt!=None:
+    if type(stress_wgt)!=type(None):
         container.sigma = np.array(stress_wgt)
         container.calc_Ei(ivo=ivo)
 
         if ileg:
-            label = r'$\mathbb{F}^{\ I}_{ij} \langle\sigma^c\rangle_{ij}$'
-            lab1 = r'$\mathbb{F}_{ij}\ \hat{\sigma}^{RS}_{ij}$'
+            label = r'$\mathbb{F}\ : \langle \mathbf{\sigma}^{c} \rangle$'
+            lab1 = r'$\mathbb{F}\ : \mathbf{\sigma}^{d}$'
         else:
             label=None
             lab1 =None
