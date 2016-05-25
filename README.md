@@ -28,15 +28,15 @@ in order to quantify the uncertainty in the obtained stress by conducting Monte 
 Application
 ===========
 
-DiffStress comes with a feature that allows Monte Carlo experiments to quantify uncertainties present in flow-stress measurement using
-in-situ diffraction experiments to obtain flow stress curve. Below image shows the resulting
-internal elastic strain (that is corresponding to d-spacing vs. sin2psi curve in a real experiment) and the fitting
-to the elastic law (like the conventional sin2psi method widely used in the community of residual stress measurement).
+DiffStress comes with a feature that allows the Monte Carlo experiment to quantify uncertainties present in flow-stress measurement technique 
+based on in-situ diffraction experiments. Below image shows the resulting internal elastic strain (that is corresponding to d-spacing vs. sin2psi
+curve in a real experiment) and the fitting result (like the conventional sin2psi method widely used in the community of residual stress measurement).
+
 
 ![image of IF stee diffraction](https://github.com/usnistgov/DiffStress/blob/dev/images/illu_1.png)
 
 
-Of course, this method, within the model-predicted values of virtual diffraction experiments are *self-consistent*,
+Of course, this method, within the model-predicted values of virtual diffraction experiments, leads to the *self-consistent* result,
 meaning that the weighted average of stress (the macro stress) is equivalent to the stress esimated by this virtual
 diffraction experiments. Below figure shows that the two flow stress curves (one with weighted average stress another obtained
 by this virtual diffraction experiment) are equivalent.
@@ -46,24 +46,28 @@ by this virtual diffraction experiment) are equivalent.
 
 
 In the real experiments, however, this self-consistency may be challenged by various factors. For example, due to the counting 
-statistical nature, your diffraction peak contains a certain degree of uncertainty when determining the correct d-spacing.
-Also, your peak height is influenced by the presence of crystallographic (and its development w.r.t plastic deformation) thus further affecting the uncertainty in the peak location.
-In DiffStress, one can mimic various types of uncertainties existing in real experiments and propagate these uncertainties to the
-final stress estimation using the aforementioned virtual diffraction experiments. Ultimately, one could compare the two types of
-stresses: the weighted-averaged stress and the stress from this virtual diffraction experiments using the 'perturbed' internal strains.
+statistical nature and a finite period of exposure time, the d-spacing obtained by a diffraction peak may contain a degree of uncertainty.
+Also, your peak height is influenced by the presence of crystallographic (and its evolution w.r.t plastic deformation) thus further affecting the uncertainty in the peak position.
+In DiffStress, one can mimic various types of uncertainties existing in real experiments and can simulate the propagation of these uncertainties to the
+final stress estimation using the virtual diffraction experiments. The core procedure is to superimpose these uncertainties to the internal-strain used in the virtual diffraction experiment.
+The internal-strain is then *perturbed* by counting statistical error, crystallographic texture, and incomplete measurements of diffraction elastic constants, and the finite number of exposure to X-ray beam.
+By using the *perturbed* internal strain, the *errorneous measurement* can be mimicked. Finally, the difference between the weighted-average stress and the one obtained by the diffraction technique can quantify the
+propagated error to the stress measured by the diffraction technique.
 
 
-The below figure shows that the internal-spacing is scattered and deviated from the 'fitting' naturally.
+The below figure show an ensemble, in which the *perturbed* internal strain is scattered and deviated from the 'fitting'.
 ![image of IF stee diffraction](https://github.com/usnistgov/DiffStress/blob/dev/images/illu_2.png)
 
 
-Based on these 'perturbed' internal strain, the stress by diffraction experiment deviates from the 'weighted average' stress as below.
+Based on these perturbed internal strain, the stress obtained by the virtual experiment deviates from the 'weighted average' stress as below.
 ![image of IF stee diffraction](https://github.com/usnistgov/DiffStress/blob/dev/images/illu_2f.png)
 
 
-One can repeatedly conduct these virtual diffraction experiments to obtain a statistically meaning data - the Monte Carlo experiments.
+One can repeatedly conduct these virtual diffraction experiments to obtain a statistically meaning data.
 
 
+Contact information
+===================
 
 Youngung Jeong
 youngung.jeong@gmail.com
