@@ -9,14 +9,27 @@ cos = np.cos; sin = np.sin; pi  = np.pi
 FlowCurve = mech.FlowCurve
 rb = read_blocks.main
 
-def reader(fn='igstrain_load_ph1.out',isort=False,icheck=False,verbose=False):
+def reader(fn='igstrain_load_ph1.out',isort=False,
+           icheck=False,verbose=False):
     """
+    Read 'igstrain_load_ph1.out' and provide
+    a set of sorted data in ndarray
+
     Arguments
     =========
     fn = 'igstrain_load_ph1.out'
     isort = False
     icheck = False : plot the e(hkl) or not
     verbose = False
+
+    Returns
+    -------
+    psis
+    phis
+    epshkl
+    ngr
+    v
+    steps
     """
     if isort: from MP.ssort import sh as sort
     dl  = open(fn).readlines()
@@ -130,6 +143,7 @@ def reader(fn='igstrain_load_ph1.out',isort=False,icheck=False,verbose=False):
 
 def read_exp(fn='Bsteel_BB_00.txt',path='rs'):
     """
+    Reader for experimental data from PROTO system
 
     Arguments
     =========
@@ -137,6 +151,12 @@ def read_exp(fn='Bsteel_BB_00.txt',path='rs'):
     path = 'rs'
 
     Return sorted experimental results
+    ------
+    phis
+    psi
+    ehkl
+    dhkl
+    strain
     """
     from os import sep
     from glob import glob
@@ -185,6 +205,9 @@ def read_exp(fn='Bsteel_BB_00.txt',path='rs'):
     return phis,psi,ehkl,dhkl,strain
 
 def __check_interpolate__():
+    """
+    Illustration interpolations
+    """
     fig=plt.figure();ax=fig.add_subplot(111)
     x = np.linspace(2,9,10)
     y = 5+(x-0.5)*(x-0.1)
@@ -363,6 +386,10 @@ def u_gaussian(epshkl,sigma=5e-5):
     =========
     epshkl
     sigma
+
+    Returns
+    -------
+    delta epsilon + epshkl
     """
     return np.random.normal(0.,sigma) + epshkl
 
@@ -401,6 +428,10 @@ def u_epshkl_geom_inten(e, sigma, psi, theta_b, mrd):
     psi     : tilting angle
     theta_b : bragg angle
     mrd     : multitudes of random distribution
+
+    Return
+    ------
+    perturbed_strain
     """
     # if len(e)>1: raise IOError,'Accepts a single float number'
 
@@ -586,6 +617,15 @@ class DiffDat:
             print 'is not correct'
 
     def __flow_assign__(self,stress,strain):
+        """
+        Arguments
+        ---------
+        stress
+        strain
+
+        self.strain_eff is assigned with assuming that
+        the corresponding flow is biaxial stretching
+        """
         self.stress = stress
         self.strain = np.array(strain).copy()
         self.flow = FlowCurve()
@@ -676,6 +716,12 @@ class DiffDat:
     def interp_strain(self,strain):
         """
         Interpolate with respect to the given strains
+        Assuming that the equivalent strain is the
+        thickness strain.
+
+        Argument
+        --------
+        strain
         """
         ijh = self.ijh
         strain = np.array(strain).copy()
@@ -683,7 +729,10 @@ class DiffDat:
         print 'nstp_new:', nstp_new
         nphi = self.nphi
         npsi = self.npsi
-        x = strain.T[0]+strain.T[1] # effective strain (thickness strain)
+        x = strain.T[0]+strain.T[1] # equivalent strain (thickness strain)
+
+        print 'Equivalent strain used in interp_strain is obtained'
+        print 'assuming that the thickness strain is the equivalent strain'
 
         if self.sf!=None:
             sf_new = np.zeros((nstp_new,6,nphi,npsi))
@@ -1254,6 +1303,11 @@ class ResidualStress:
             strain=self.strain_sf)
 
     def readPF(self,fnPF):
+        """
+        Argument
+        --------
+        fnPF
+        """
         from ght_anl import reader
         from MP.ssort import sh as sort
         fij, ig, phi, psi, strain, sij, dhkl,d0hkl,ehkl = reader(fnPF)
