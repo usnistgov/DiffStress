@@ -6,6 +6,10 @@ which will be used for Monte Carlo experiments to estimate
 the uncertainty in the stress measurements
 """
 
+import matplotlib as mpl
+mpl.use('Agg') ## In case X-window is not available.
+
+
 import numpy as np
 from numpy import pi, sin, cos
 from lib import write_args
@@ -257,22 +261,31 @@ def ex_consistency(
 
     # 0.5 Mask DEC where volume fraction
     ## model_ngr or model_vfs
-    for i in xrange(len(model_vfs)):
-        for j in xrange(len(model_vfs[i])):
-            for k in xrange(len(model_vfs[i][j])):
-                if model_ngr[i,j,k]==0:
-                    _sf_[i,:,j,k]=np.nan
-                    # _ig_[i,j,k]=np.nan
-                    raw_sfs[i,:,j,k]=np.nan
-                    model_sfs[i,:,j,k]=np.nan
-                    raw_ehkl[i,j,k] = np.nan
-                for m in xrange(6):
-                    if _sf_[i,m,j,k]==0 or raw_sfs[i,m,j,k]==0:
-                        # print 'encountered zero sf'
-                        _sf_[i,m,j,k] = np.nan
-                        raw_sfs[i,m,j,k] = np.nan
-                        model_sfs[i,m,j,k] = np.nan
-                        raw_ehkl[i,j,k] = np.nan
+
+
+    ## Assign np.nan if model_ngr == 0
+    filt = model_ngr==0
+    _sf_.transpose(1,0,2,3)[filt] = np.nan
+    raw_sfs.transpose(1,0,2,3)[filt]=np.nan
+    model_sfs.transpose(1,0,2,3)[filt]=np.nan
+    raw_ehkl[filt]=np.nan
+
+    # for i in xrange(len(model_vfs)):
+    #     for j in xrange(len(model_vfs[i])):
+    #         for k in xrange(len(model_vfs[i][j])):
+    #             if model_ngr[i,j,k]==0:
+    #                 _sf_[i,:,j,k]=np.nan
+    #                 # _ig_[i,j,k]=np.nan
+    #                 raw_sfs[i,:,j,k]=np.nan
+    #                 model_sfs[i,:,j,k]=np.nan
+    #                 raw_ehkl[i,j,k] = np.nan
+    #             for m in xrange(6):
+    #                 if _sf_[i,m,j,k]==0 or raw_sfs[i,m,j,k]==0:
+    #                     # print 'encountered zero sf'
+    #                     _sf_[i,m,j,k] = np.nan
+    #                     raw_sfs[i,m,j,k] = np.nan
+    #                     model_sfs[i,m,j,k] = np.nan
+    #                     raw_ehkl[i,j,k] = np.nan
 
     # 1. Limit the range of sin2psi (or psi)
     if type(sin2psimx)!=type(None) or \
