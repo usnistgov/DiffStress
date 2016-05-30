@@ -125,6 +125,78 @@ class SF:
         if hasattr(self, 'vf'): self.vf=vf[::]
         if hasattr(self, 'rsq'): self.rsq=rsq[::]
 
+
+    def interp_strain2(self,epsilon_vm,
+                       iopt=0):
+        """
+        Apply a certain interpolation method
+        on the SF with respect to the given VM strain
+
+        Arguments
+        =========
+        epsilon_vm = []
+        iopt=0: NN (piece-wise linear interpolation)
+            =1: Assign nearest data
+            =2: Cubic
+            =3: Quadratic
+            =4: Linear fit
+            =5: Poly2
+            =6: poly3
+            =7: Place-holder for power law fit
+            =8: zero
+            =9: slinear
+        """
+        import warnings
+        self.sf_old = self.sf.copy()
+        self.sf_new = np.zeros(
+            (len(epsilon_vm),self.nphi,self.npsi,self.nij))
+        xp = self.flow.epsilon_vm.copy()
+        for iphi in xrange(self.nphi):
+            for ipsi in xrange(self.npsi):
+                for k in xrange(self.nij):
+                    y  = self.sf_old[:,iphi,ipsi,k]
+                    ## find non zero not (nan) values
+                    filt = (y!=0)&~np.isnan(y)
+                    _xp_ = xp[filt].copy()
+                    _y_  = y[filt].copy()
+                    n_avail_dat = len(_y_)
+
+                    if n_avail_dat<=1:
+                        self.sf_new[:,iphi,ipsi,k] = np.nan
+                    elif n_avail_dat>1:
+                        try:
+                            self.sf_new[:,iphi,ipsi,k] \
+                                = rs.interpolate(
+                                xs=epsilon_vm,
+                                xp=_xp_,
+                                fp=_y_,
+                                iopt=iopt)
+                        except:
+                            print 'failed, thus using NN interp'
+                            try:
+                                self.sf_new[:,iphi,ipsi,k] \
+                                    = rs.interpolate(
+                                    xs=epsilon_vm,
+                                    xp=_xp_,
+                                    fp=_y_,
+                                    iopt=1) ## if fail, try assign nearest data
+                            except:
+                                nans = np.zeros(len(epsilon_vm))
+                                nans = np.nan * nans
+                                self.sf_new[:,iphi,ipsi] = nans
+
+                    else: raise IOError, 'Unexpected case'
+
+        if self.sf_new.shape!=(len(epsilon_vm),self.nphi,self.npsi,self.nij):
+            raise IOError, 'something wrong'
+
+
+        self.sf = self.sf_new.copy()
+        # Overwrite the flow? self.nstp also needs change
+        self.flow = fc()
+        self.flow.epsilon_vm = np.array(epsilon_vm)
+        self.nstp = len(self.flow.epsilon_vm)
+
     def interp_strain(self,epsilon_vm,
                       iopt=0):
         """
@@ -314,6 +386,23 @@ class SF:
             print '%i number of sf data points were masked in total'%ntot
 
                     ##self.sf[istp,iphi,:,:][self.vf[istp,iphi,:]<limit]=np.nan
+        else:
+            print 'No volume is given. Mask if sf==0'
+            self.sf[self.sf==0]=np.nan
+
+    def mask_vol2(self,pmargin=0.05):
+        """
+        1) Mask data in case that volume (ngr) is zero
+        2) Or, if self.vf is given, use proportional margin
+           to set a limit for indivial plastic level
+        """
+        if hasattr(self, 'vf'):
+            print 'self has vf property.',\
+                ' Do mask based on volume margin:',\
+                ' %5.3f%%'%(pmargin*100)
+            mean = np.mean(self.vf)
+            limit = mean * pmargin
+            self.vf[self.vf<limit] = np.nan
         else:
             print 'No volume is given. Mask if sf==0'
             self.sf[self.sf==0]=np.nan
@@ -570,6 +659,72 @@ class IG:
         self.flow = fc()
         self.flow.epsilon_vm = np.array(epsilon_vm)
         self.nstp = len(self.flow.epsilon_vm)
+
+    def interp_strain2(self,epsilon_vm,iopt=0):
+        """
+        Apply a certain interpolation method
+        on the IG with respect to the given VM strain
+
+        Arguments
+        =========
+        epsilon_vm = []
+        iopt=0: NN (piece-wise linear interpolation)
+            =1: Assign nearest data
+            =2: Cubic
+            =3: Quadratic
+            =4: Linear fit
+            =5: Poly2
+            =6: poly3
+            =7: Place-holder for power law fit
+            =8: zero
+            =9: slinear
+        """
+        self.ig_old = self.ig.copy()
+        self.flow.get_vm_strain()
+        self.flow.epsilon_vm #
+        self.ig_new = np.zeros(
+            (len(epsilon_vm),self.nphi,self.npsi))
+        xp = self.flow.epsilon_vm.copy()
+        for iphi in xrange(self.nphi):
+            for ipsi in xrange(self.npsi):
+                y  = self.ig_old[:,iphi,ipsi].copy()
+                ## find non zero not (nan) values
+                filt = (y!=0)&~np.isnan(y)
+                _xp_ = xp[filt].copy()
+                _y_  = y[filt].copy()
+                n_avail_dat = len(_y_)
+                if n_avail_dat<=1:
+                    self.ig_new[:,iphi,ipsi] = 0. # np.nan
+                elif n_avail_dat>1:
+                    try:
+                        self.ig_new[:,iphi,ipsi]\
+                            = rs.interpolate(
+                            xs=epsilon_vm.copy(),
+                            xp=_xp_,
+                            fp=_y_,
+                            iopt=iopt)
+                    except:
+                        print 'failed in ig interpolation'
+                        try:
+                            self.ig_new[:,iphi,ipsi]\
+                                = rs.interpolate(
+                                xs=epsilon_vm.copy(),
+                                xp=_xp_,
+                                fp=_y_,
+                                iopt=1) ## if fail, try assign nearest data
+                        except:
+                            nans = np.zeros(len(epsilon_vm))
+                            nans = np.nan * nans
+                            self.ig_new[:,iphi,ipsi] = 0. #np.nan
+
+                else: raise IOError, 'Unexpected case'
+
+        self.ig = self.ig_new
+        # Overwrite the flow? self.nstp also needs change
+        self.flow = fc()
+        self.flow.epsilon_vm = np.array(epsilon_vm)
+        self.nstp = len(self.flow.epsilon_vm)
+
     def interp_psi(self,psi=None,iopt=1):
         """
         iopt=0: interpolate along psi

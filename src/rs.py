@@ -43,53 +43,50 @@ def reader(fn='igstrain_load_ph1.out',isort=False,
     steps = np.unique(d[0])
     nstp = len(steps)
 
-    ## Find unique phi
-    phis=[]
-    for i in xrange(len(d[1])):
-        pp = d[1][i]
-        if pp in phis: pass
-        else: phis.append(pp)
-
-    phis = np.array(phis)
-    nphi = len(phis)
+    d1 = np.array(d[1])
+    phis = np.unique(d1)
+    nphi=len(phis)
 
     ## Find unique psis
-    psis = []
+    d5s=np.zeros((len(dl),5))
     for i in xrange(len(dl)):
         d = dl[i].split()
-        st, ph, beta, psi1, psi2 = map(
-            float,[d[0], d[1], d[2], d[3], d[4]])
+        d5s[i,:]=map(float,d[:5])
 
-        if ph!=phis[0]: break
-        psis.append(psi1); psis.append(psi2)
+    psi1 = d5s[:,3]
+    psi2 = d5s[:,4]
+    psis = np.concatenate((psi1,psi2),axis=0)
+    psis = np.unique(psis)
+    npsis = len(psis)
 
-    psis   = np.array(psis); npsis  = len(psis)
     epshkl = np.zeros((nstp,nphi,npsis))
     ngr    = np.zeros((nstp,nphi,npsis))
     v      = np.zeros((nstp,nphi,npsis))
     steps  = np.zeros((nstp))
     il = 0
+
+
+    ## new?
+    dat=np.zeros((nstp,nphi,npsis/2,len(dl[0].split())))
     for istp in xrange(nstp):
         for iphi in xrange(nphi):
             for ibeta in xrange(npsis/2):
                 il = ibeta + iphi*npsis/2 + nphi*npsis/2*istp
-                dat = map(float,dl[il].split())
-                steps[istp] = dat[0]
-                psi1, psi2 = dat[3],dat[4]
-                eps1, eps2 = dat[5],dat[6]
-                n1, n2 = dat[9],dat[10]
-                v1, v2 = dat[11],dat[12]
-                epshkl[istp,iphi,ibeta*2]   = eps1
-                epshkl[istp,iphi,ibeta*2+1] = eps2
-                ngr[istp,iphi,ibeta*2]   = n1
-                ngr[istp,iphi,ibeta*2+1] = n2
-                v[istp,iphi,ibeta*2]   = v1
-                v[istp,iphi,ibeta*2+1] = v2
+                _dat_ = np.array(map(float,dl[il].split()))
+                dat[istp,iphi,ibeta,:]  = _dat_[::]
+
+    epshkl[:,:,0::2] = dat[:,:,:,5]
+    epshkl[:,:,1::2] = dat[:,:,:,6]
+    ngr[:,:,0::2]    = dat[:,:,:,9]
+    ngr[:,:,1::2]    = dat[:,:,:,10]
+    v[:,:,0::2]      = dat[:,:,:,11]
+    v[:,:,1::2]      = dat[:,:,:,12]
+    steps[:]         = dat[:,0,0,0]
 
     if isort:
-        # phi sort
+        import time
+        t0=time.time()
         ph = phis.copy()
-        # ph.sort()
         if not(all(phis==ph)):
             if verbose :
                 print phis
@@ -98,25 +95,33 @@ def reader(fn='igstrain_load_ph1.out',isort=False,
             if verbose:
                 print 'Data along phi'+\
                     ' should be rearranged'
-            for istp in xrange(nstp):
-                for ipsi in xrange(npsis):
-                    ep = epshkl[istp,:,ipsi]
-                    ng = ngr[istp,:,ipsi]
-                    vv = v[istp,:,ipsi]
-                    ph, ep, ng, vv = sort(phis,ep,ng,vv)
-                    epshkl[istp,:,ipsi] = ep[:,ipsi]
-                    ngr[istp,:,ipsi] = ng[:,ipsi]
-                    v[istp,:,ipsi] = vv[:,ipsi]
+
+            ## new
+            ind = np.argsort(phis)
+            epshkl = epshkl[:,ind,:]
+            ngr    =    ngr[:,ind,:]
+            v      =      v[:,ind,:]
+
+            # ## old
+            # for istp in xrange(nstp):
+            #     for ipsi in xrange(npsis):
+            #         ep = epshkl[istp,:,ipsi]
+            #         ng = ngr[istp,:,ipsi]
+            #         vv = v[istp,:,ipsi]
+            #         ph, ep, ng, vv = sort(phis,ep,ng,vv)
+            #         epshkl[istp,:,ipsi] = ep[:,ipsi]
+            #         ngr[istp,:,ipsi] = ng[:,ipsi]
+            #         v[istp,:,ipsi] = vv[:,ipsi]
+
+
         else: pass
-        # psi sort
         ps = psis.copy()
         ps.sort()
         if not(all(psis==ps)):
-            # print psis
-            # print ps
             if verbose:
                 print 'Data along psi'+\
                     ' should be rearranged'
+
             for istp in xrange(nstp):
                 for iphi in xrange(nphi):
                     ep = epshkl[istp,iphi,:]
@@ -127,7 +132,9 @@ def reader(fn='igstrain_load_ph1.out',isort=False,
                     ngr[istp,iphi,:] = ng[:]
                     v[istp,iphi,:] = vv[:]
             psis=ps
-        else:pass
+        else:
+            pass
+        print 'Time spent for sorting in rs.read: ',time.time() - t0
 
     if icheck:
         plt.figure()
@@ -1110,6 +1117,7 @@ class ResidualStress:
         fnmod_sf     : model-predicted F_{ij}(hkl) file name
         fnmod_str    : model-predicted 'STR_STR.OUT' file name
         """
+        import time
         ## log
         self.log.write('\nself.readmod was called\n')
         self.log.write(' Arguments\n=========\n')
@@ -1126,7 +1134,10 @@ class ResidualStress:
 
         self.log.write('rs.reader reads fnmod_epshkl:%s\n'%
                        fnmod_epshkl)
+
+        t0=time.time()
         datm = reader(fnmod_epshkl,isort=True)
+        print 'time spent for reading fnmod_epshkl',time.time()-t0
 
         self.stepsm = map(int,datm[-1])
         self.psism = datm[0]; self.npsim = len(self.psism)
@@ -1184,11 +1195,9 @@ class ResidualStress:
 
         self.sfm = np.zeros((sfm.shape[0],6,\
                                  sfm.shape[2],sfm.shape[3]))
-        for istp in xrange(len(sfm)):
-            for k in xrange(len(sfm[istp])):
-                for iphi in xrange(len(sfm[istp,k])):
-                    self.sfm[istp,k,iphi,:] \
-                        = sfm[istp,k,iphi,:].copy()
+
+        self.sfm[:,:sfm.shape[1],:sfm.shape[2],:] =\
+             sfm[:,:sfm.shape[1],:sfm.shape[2],:].copy()
 
         ## Substitue the upper off-diagonals to the lowers.
         dum_psi = t[8,0,0,0]
@@ -1196,17 +1205,11 @@ class ResidualStress:
         self.sfm[:,3,:,:] = self.sfm[:,5,:,:]
         self.sfm[:,5,:,:] = dum[:,:,:]
 
-
-        for istp in xrange(len(self.sfm)):
-            for k in xrange(len(self.sfm[istp])):
-                for iphi in xrange(len(self.sfm[istp,k])):
-                    x = dum_psi
-                    y = self.sfm[istp,k,iphi,:].copy()
-                    x,y=sort(x,y)
-                    self.sfm[istp,k,iphi,:] = y[:]
+        t0 = time.time()
+        self.sfm = np.sort(self.sfm)
+        print 'time spent for sorting using np.sort', time.time()-t0
 
         # stress/strain states
-#        dstr=np.loadtxt(fnmod_str,skiprows=1).T
         dstr=rb(fnmod_str,skiprows=1)
         if len(dstr.shape)==1:
             dstr = np.array([dstr]).T
@@ -1216,20 +1219,19 @@ class ResidualStress:
         self.strainm_con = np.array([e11,e22,e33,e12,e13,e23])
         self.stressm_con = np.array([s11,s22,s33,s12,s13,s23])
         self.strainm = [] ; self.stressm = []
-        for ist in xrange(len(self.stepsm)):
-            self.strainm.append(self.strainm_con.T[ist])
-            self.stressm.append(self.stressm_con.T[ist])
 
-        self.strainm=np.array(self.strainm)
-        self.stressm=np.array(self.stressm)
+        self.strainm = self.strainm_con.T[:len(self.stepsm)].copy()
+        self.stressm = self.stressm_con.T[:len(self.stepsm)].copy()
 
         ## Standard data structure both EVPSC data and EXP data:
+        t0 = time.time()
         self.dat_model = DiffDat(
             phi=self.phism,psi=self.psism,
             sf=self.sfm,ig=self.eps0m,ehkl=datm[2],
             name='EVPSC',strain=self.strainm,
             stress=self.stressm,
             vf=vf,ngr=ngr)
+        print 'time spent for DiffDat construction:',time.time()-t0
 
     def readexp(self,fnexp_ehkl,
                 fnexp_sf,path):
@@ -1713,12 +1715,6 @@ class ResidualStress:
 
         f_array = self.tdat - self.Di
         f_array[np.isnan(f_array)]=0.
-
-        # f_array = []
-        # for iphi in xrange(self.nphi):
-        #     for ipsi in xrange(self.npsi):
-        #         f_array.append(self.tdat[iphi,ipsi] - self.Di[iphi,ipsi])
-
         return np.array(f_array)
 
     def f_least(self,stress=[0,0,0,0,0,0],ivo=None):
@@ -1735,15 +1731,9 @@ class ResidualStress:
         self.sigma=np.array(stress)
         self.coeff()
         self.calc_Ei(ivo=ivo)
-        f_array=self.tdat[:,:] - self.Ei[:,:,]
+        f_array=self.tdat[:,:] - self.Ei[:,:]
         f_array[np.isnan(f_array)]=0.
-        # for iphi in xrange(self.nphi):
-        #     for ipsi in xrange(self.npsi):
-        #         d = self.tdat[iphi,ipsi] \
-        #             - self.Ei[iphi,ipsi]
-        #         if np.isnan(d): d = 0
-        #         f_array.append(d)
-        # return np.array(f_array)
+        return f_array.flatten()
 
     def f_least_weighted(self,stress=[0,0,0,0,0,0],ivo=None,
                          weight=None):
@@ -1762,17 +1752,7 @@ class ResidualStress:
 
         f_array = (self.tdat - self.Ei) * self.weight
         f_array[np.isnan(f_array)] = 0.
-        return f_array
-
-        # f_array = [ ]
-        # for iphi in xrange(self.nphi):
-        #     for ipsi in xrange(self.npsi):
-        #         d = self.tdat[iphi,ipsi] \
-        #             - self.Ei[iphi,ipsi]
-        #         d = d * weight[iphi,ipsi]
-        #         if np.isnan(d): d = 0
-        #         f_array.append(d)
-        # return np.array(f_array)
+        return f_array.flatten()
 
 def psi_reso2(mod=None,ntot=2):
     """

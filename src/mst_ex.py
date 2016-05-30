@@ -191,6 +191,7 @@ def return_vf():
     vdat: (nstp,nphi,npsis)
     ngrd: (nstp,nphi,npsis)
     """
+    import time
     from pepshkl import reader4
     tdat,_psis_,_vdat_,_ngrd_ = reader4(
         fn='int_els_ph1.out',ndetector=2,iopt=1)
@@ -206,6 +207,7 @@ def return_vf():
     vdat = np.zeros((nstp,nphi,npsis))
     ngrd = np.zeros((nstp,nphi,npsis))
 
+    t0=time.time()
     for istp in xrange(nstp):
         for iphi in xrange(nphi):
             dum_v = _vdat_[istp,iphi,:][::]
@@ -213,6 +215,7 @@ def return_vf():
 
             dum_n = _ngrd_[istp,iphi,:][::]
             ngrd[istp,iphi,:] = ss(dum_n[::],ind)[::]
+    print 'time elapsed the main loop in return_vf:',time.time()-t0
     return vdat, ngrd
 
 
@@ -253,7 +256,6 @@ def plot_sf(sff_fn='temp.sff',pmargin=0.1):
         for iphi in xrange(nphi):
             dum_v = _vdat_[istp,iphi,:][::]
             vdat[istp,iphi,:] = ss(dum_v[::],ind)[::]
-
             dum_n = _ngrd_[istp,iphi,:][::]
             ngrd[istp,iphi,:] = ss(dum_n[::],ind)[::]
 
@@ -416,9 +418,13 @@ def use_intp_sfig(ss=2,iopt=0,iplot=False,
     """
     from rs import ResidualStress as RS
     from copy import copy
+    import time
 
     ## 0. Read volume fraction and number of grains
+    t0 = time.time()
     vf_dat,ngr_dat = return_vf() ## read vf/ngr
+    print 'elapsed time for return_vf in mst_ex.use_intp_sfig:',\
+        time.time()-t0
 
     ## 1. Read original SF/IG/FLow
     RS_model = RS(mod_ext=None,
@@ -460,7 +466,6 @@ def use_intp_sfig(ss=2,iopt=0,iplot=False,
         Flow.get_eqv()
     else: raise IOError, 'Unexpected type for ss'
 
-
     ##   2-2. Create the SF object
     import sfig_class
     #      2-2-1. Original SF
@@ -472,7 +477,7 @@ def use_intp_sfig(ss=2,iopt=0,iplot=False,
         psi=RS_model.dat_model.psi[::]*180./np.pi)
     StressFactor0.flow = _Flow_
     StressFactor0.flow.get_eqv()
-    StressFactor0.mask_vol()
+    StressFactor0.mask_vol2()
 
     #      2-2-2. Rearrange SF [stp,nij,nphi,npsi]
     #                      -> [nstp,nphi,nspi,nij]
@@ -485,7 +490,7 @@ def use_intp_sfig(ss=2,iopt=0,iplot=False,
     StressFactor.flow = Flow
     StressFactor.flow.get_eqv()
     ##     2-2-3. Interpolate them at strains
-    StressFactor.interp_strain(
+    StressFactor.interp_strain2(
         epsilon_vm = _Flow_.epsilon_vm,
         iopt=iopt)
     StressFactor.flow = _Flow_
@@ -514,7 +519,7 @@ def use_intp_sfig(ss=2,iopt=0,iplot=False,
     IGStrain.flow = Flow
     IGStrain.flow.get_eqv()
     ##     2-2-3. Interpolate them at strains
-    IGStrain.interp_strain(
+    IGStrain.interp_strain2(
         epsilon_vm = _Flow_.epsilon_vm,
         iopt=iopt)
     IGStrain.flow = _Flow_

@@ -189,9 +189,13 @@ def ex_consistency(
 
     #------------------------------------------------------------#
     ## i_ip = 1: ioption for the model data
+    dt_RS=time.time()
     model_rs = ResidualStress(
         mod_ext=mod_ext,fnmod_ig='igstrain_fbulk_ph1.out',
         fnmod_sf='igstrain_fbulk_ph1.out',i_ip=1)
+    dt_RS = time.time()-dt_RS
+    uet(dt_RS,'Time spent to load ResidualStress')
+    print
 
     ## Process the sf/eps0/ehkl/wgt and so forth
     ## according to the parameters given
@@ -219,7 +223,6 @@ def ex_consistency(
     else:
         model_sfs = model_rs.dat_model.sf.copy()
         model_igs = model_rs.dat_model.ig.copy()
-
     ## VF
     if not(ivf_ext): model_vfs, model_ngr = return_vf()
     else: model_vfs = vf_ext.copy()
@@ -250,10 +253,13 @@ def ex_consistency(
     sin2psis_init = np.sin(model_rs.psis)**2
 
     # 0. Use interpolated SF
-
+    dt_intp = time.time()
     _sf_, _ig_ = use_intp_sfig(
         dec_inv_frq,iopt=dec_interp,
         iplot=False,iwgt=False)
+    uet(time.time()-dt_intp,'Time spent for sf/ig interpolation')
+    print
+
     ## swapping axes to comply with what is used
     ## in dat_model.sf
     _sf_ = _sf_.sf.swapaxes(1,3).swapaxes(2,3)
@@ -265,9 +271,9 @@ def ex_consistency(
 
     ## Assign np.nan if model_ngr == 0
     filt = model_ngr==0
-    _sf_.transpose(1,0,2,3)[filt] = np.nan
-    raw_sfs.transpose(1,0,2,3)[filt]=np.nan
-    model_sfs.transpose(1,0,2,3)[filt]=np.nan
+    _sf_.transpose(1,0,2,3)[:,filt] = np.nan
+    raw_sfs.transpose(1,0,2,3)[:,filt]=np.nan
+    model_sfs.transpose(1,0,2,3)[:,filt]=np.nan
     raw_ehkl[filt]=np.nan
 
     # for i in xrange(len(model_vfs)):
@@ -382,8 +388,12 @@ def ex_consistency(
     ## deformation levels
 
     stress = []
-    if verbose or True: print '%8s%8s%8s%8s%8s%8s'%(
-        'S11','S22','S33','S23','S13','S12')
+
+
+    if verbose or True:
+        print ('%21s'+'%8s%8s%8s%8s%8s%8s'*2)%(
+            '','S11','S22','S33','S23','S13','S12',
+            'dS11','dS22','dS33','dS23','dS13','dS12')
 
     ################################################
     ## *Serial* Loop over the deformation steps
@@ -392,6 +402,7 @@ def ex_consistency(
 
     # nstp = 3 ## debugging
 
+    timeStressCalc=0.
     for istp in xrange(nstp):
         """
         Dimensions of data arrays for:
@@ -402,6 +413,7 @@ def ex_consistency(
         strain (nstp, 6)
         vf     (nstp, nphi, npsi)
         """
+
         if type(nfrq).__name__=='int':
             if istp % nfrq !=0:
                 continue
@@ -409,8 +421,9 @@ def ex_consistency(
         if iplot==False and type(istep)!=type(None):
             nstp = 1
             istp = istep
+            pass
 
-        print 'processing: %2.2i/%2.2i'%(istp,nstp),
+        print '%13s %3.3i/%3.3i'%('processing:',istp,nstp),
         #model_rs.sf = model_sfs[istp].copy()
 
         ## filter signals where any data is nan
@@ -434,29 +447,40 @@ def ex_consistency(
         #-----------------------------------#
         ## find the sigma ...
         s11 = model_rs.dat_model.\
-              flow.sigma[0,0][istp]
+            flow.sigma[0,0][istp]
         s22 = model_rs.dat_model.\
-              flow.sigma[1,1][istp]
+            flow.sigma[1,1][istp]
+        s33 = model_rs.dat_model.\
+            flow.sigma[2,2][istp]
+        s23 = model_rs.dat_model.\
+            flow.sigma[1,2][istp]
+        s13 = model_rs.dat_model.\
+            flow.sigma[0,2][istp]
+        s12 = model_rs.dat_model.\
+            flow.sigma[0,1][istp]
+        sigma_wa = np.array([s11,s22,s33,s23,s13,s12])
 
         ## find the stress by fitting
         ## the elastic strains
+        tStressCalc=time.time()
         dsa_sigma = model_rs.find_sigma(
             ivo=[0,1],
-            init_guess=[0,0,0,0,0,0],#[s11,s22,0,0,0,0],
+            init_guess=[s11,s22,0,0,0,0],
+            # init_guess=[0,0,0,0,0,0],
             weight = wgt) # None
+        timeStressCalc=timeStressCalc+(time.time()-tStressCalc)
+
+
 
         if verbose or True:
             for i in xrange(6): print '%+7.1f'%(dsa_sigma[i]),
+            for i in xrange(6): print '%+7.1f'%(dsa_sigma[i]-sigma_wa[i]),
             print ''
-        stress.append(dsa_sigma)
 
-        full_Ei = np.zeros((model_rs.nphi,len(raw_psis)))
-        for iphi in xrange(model_rs.nphi):
-            for ipsi in xrange(len(raw_psis)):
-                for k in xrange(2):
-                    full_Ei[iphi,ipsi] \
-                        = full_Ei[iphi,ipsi]+\
-                        raw_sfs[istp,k,iphi,ipsi]*dsa_sigma[k]
+        stress.append(dsa_sigma)
+        full_Ei=np.tensordot(
+            raw_sfs[istp].transpose(1,2,0),
+            dsa_sigma,axes=1)
 
         if type(istep)!=type(None) and iplot==False:
             return model_rs, s11,s22, dsa_sigma[0],dsa_sigma[1],\
@@ -560,7 +584,8 @@ def ex_consistency(
 
     uet(time.time()-t0)
     print
-
+    uet(timeStressCalc,'Elapsed time purely for stress analysis')
+    print
     return model_rs, flow_weight, flow_dsa
 
 
