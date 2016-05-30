@@ -235,13 +235,13 @@ def ex_consistency(
     # 4. Perturb ehkl (common)
     # 5. Filter based on vf?
 
-    ## Unstaged but the 'raw' arrays
+    ## Unstaged but the 'raw' arrays (not used for actual calculation)
     raw_psis = model_rs.dat_model.psi.copy()
     raw_vfs  = model_vfs.copy()
     raw_ehkl = np.copy(model_rs.dat_model.ehkl)
     raw_sfs  = model_sfs.copy()
 
-    ## staged arrays for stress estimation
+    ## staged arrays for stress estimation (used for actual calcultion)
     model_rs.psis = model_rs.dat_model.psi.copy()
     model_rs.phis = model_rs.dat_model.phi.copy()
     model_rs.npsi = len(model_rs.psis)
@@ -250,18 +250,15 @@ def ex_consistency(
 
     # 0. Use interpolated SF
     t0_pr0=time.time()
-    _sf_, _ig_ = use_intp_sfig(
-        dec_inv_frq,iopt=dec_interp,
-        iplot=False,iwgt=False)
-    uet(time.time()-t0_pr0,'t for pr0')
-    print
+    _sf_, _ig_ = use_intp_sfig(dec_inv_frq,iopt=dec_interp,
+                               iplot=False,iwgt=False)
+    uet(time.time()-t0_pr0,'t for pr0');print
+
     ## swapping axes to comply with what is used
     ## in dat_model.sf
-    _sf_ = _sf_.sf.swapaxes(1,3).swapaxes(2,3)
-    _sf_ = _sf_ *1e6
+    _sf_ = _sf_.sf.transpose(0,3,1,2).copy() * 1e6
 
-
-    # 0.5 Mask DEC where volume fraction
+    # 0.5 Mask DEC where volume fraction is depleted...
     ## model_ngr or model_vfs
     filt = model_ngr==0
     _sf_ = _sf_.transpose(1,0,2,3).copy()
@@ -273,8 +270,9 @@ def ex_consistency(
     model_sfs = model_sfs.transpose(1,0,2,3).copy()
     model_sfs[:,filt]=np.nan
     model_sfs = model_sfs.transpose(1,0,2,3).copy()
+    model_vfs[filt]=np.nan
+    model_ngr[filt]=np.nan
     raw_ehkl[filt]=np.nan
-
 
     filt = (_sf_==0) | (raw_sfs==0)
     _sf_[filt]=np.nan
