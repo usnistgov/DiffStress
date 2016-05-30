@@ -369,9 +369,9 @@ def ex_consistency(
     ## deformation levels
 
     stress = []
-    if verbose or True: print '%8s%8s%8s%8s%8s%8s'%(
-        'S11','S22','S33','S23','S13','S12')
-
+    if verbose or True: print ('%19s '+'%8s%8s%8s%8s%8s%8s'*2)%(
+        '','S11','S22','S33','S23','S13','S12',
+        'dS11','dS22','dS33','dS23','dS13','dS12')
     ################################################
     ## *Serial* Loop over the deformation steps
     ref_psis = model_rs.psis.copy()
@@ -397,7 +397,7 @@ def ex_consistency(
             nstp = 1
             istp = istep
 
-        print 'processing: %2.2i/%2.2i'%(istp,nstp),
+        print '%13s %2.2i/%2.2i'%('processing:',istp,nstp),
         #model_rs.sf = model_sfs[istp].copy()
 
         ## filter signals where any data is nan
@@ -421,9 +421,18 @@ def ex_consistency(
         #-----------------------------------#
         ## find the sigma ...
         s11 = model_rs.dat_model.\
-              flow.sigma[0,0][istp]
+            flow.sigma[0,0][istp]
         s22 = model_rs.dat_model.\
-              flow.sigma[1,1][istp]
+            flow.sigma[1,1][istp]
+        s33 = model_rs.dat_model.\
+            flow.sigma[2,2][istp]
+        s23 = model_rs.dat_model.\
+            flow.sigma[1,2][istp]
+        s13 = model_rs.dat_model.\
+            flow.sigma[0,2][istp]
+        s12 = model_rs.dat_model.\
+            flow.sigma[0,1][istp]
+        stress_wgtavg = np.array([s11,s22,s33,s23,s13,s12])
 
         ## find the stress by fitting
         ## the elastic strains
@@ -434,6 +443,7 @@ def ex_consistency(
 
         if verbose or True:
             for i in xrange(6): print '%+7.1f'%(dsa_sigma[i]),
+            for i in xrange(6): print '%+7.1f'%(dsa_sigma[i]-stress_wgtavg[i]),
             print ''
         stress.append(dsa_sigma)
 

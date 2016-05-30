@@ -1726,14 +1726,10 @@ class ResidualStress:
         self.sigma=np.array(stress)
         self.coeff()
         self.calc_Ei(ivo=ivo)
-        f_array = [ ]
-        for iphi in xrange(self.nphi):
-            for ipsi in xrange(self.npsi):
-                d = self.tdat[iphi,ipsi] \
-                    - self.Ei[iphi,ipsi]
-                if np.isnan(d): d = 0
-                f_array.append(d)
-        return np.array(f_array)
+
+        d = self.tdat -self.Ei
+        d[np.isnan(d)]=0.
+        return d.flatten().copy()
 
     def f_least_weighted(self,stress=[0,0,0,0,0,0],ivo=None,
                          weight=None):
@@ -1749,15 +1745,9 @@ class ResidualStress:
         self.coeff()
         self.calc_Ei(ivo=ivo)
         ## weight Ei by volumes in (phi,psi)
-        f_array = [ ]
-        for iphi in xrange(self.nphi):
-            for ipsi in xrange(self.npsi):
-                d = self.tdat[iphi,ipsi] \
-                    - self.Ei[iphi,ipsi]
-                d = d * weight[iphi,ipsi]
-                if np.isnan(d): d = 0
-                f_array.append(d)
-        return np.array(f_array)
+        d = self.tdat - self.Ei * weight
+        d[np.isnan(d)]=0.
+        return d.flatten().copy()
 
 def psi_reso2(mod=None,ntot=2):
     """
