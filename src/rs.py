@@ -432,9 +432,10 @@ def u_epshkl_geom_inten_vectorize(
     np.random.seed()
     print model_tdats.shape
     print new_sigma.shape
-    return np.random.normal(loc=model_tdats,
-                            size=new_sigma.shape,
-                            scale=new_sigma)
+    perturbed_strain = np.random.normal(loc=model_tdats,
+                                        size=new_sigma.shape,
+                                        scale=new_sigma)
+    return perturbed_strain
 
 def u_epshkl_geom_inten(e, sigma, psi, theta_b, mrd):
     """

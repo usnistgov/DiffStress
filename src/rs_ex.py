@@ -131,6 +131,7 @@ def ex_consistency(
     ird       : Intensity expected for random distribution
     nfrq        None
     """
+    np.seterr(all='ignore')
     import time
     from MP import progress_bar
     uet = progress_bar.update_elapsed_time
