@@ -152,7 +152,7 @@ def ex_consistency(
         f.close()
         print 'log has been saved to ',fn
 
-    from rs import ResidualStress,u_epshkl,\
+    from rs import ResidualStress,u_epshkl,u_epshkl_geom_inten_vectorize,\
         u_epshkl_geom_inten,filter_psi,filter_psi3,\
         psi_reso,psi_reso2,psi_reso3,psi_reso4
 
@@ -321,29 +321,17 @@ def ex_consistency(
     else: model_tdats = model_ehkls.copy()
 
     # 4. Perturb ehkl (common)
+
     if iscatter:
+        t0_perturb=time.time()
         nstp, nphi, npsi = model_ehkls.shape
         tdats = np.zeros((nstp,nphi,npsi))
-        for istp in xrange(nstp):
-            for iphi in xrange(nphi):
-                # ## Previous perturbation rule
-                # tdats[istp,iphi,:] = u_epshkl(
-                #     model_tdats[istp,iphi],
-                #     sigma=sigma)
+        tdats = u_epshkl_geom_inten_vectorize(
+            model_vfs,model_tdats,
+            ird,sigma,model_rs.psis,theta_b)
 
-                ## New perturbation rule
-                if type(theta_b).__name__== 'NoneType':
-                    raise IOError, 'theta_b should be given'
-                for ipsi in xrange(npsi):
-                    ## multitudes of random
-                    mrd = model_vfs[istp,iphi,ipsi]/ird
-                    tdats[istp,iphi,ipsi] = u_epshkl_geom_inten(
-                        e     = model_tdats[istp,iphi,ipsi],
-                        sigma = sigma,
-                        psi   = model_rs.psis[ipsi],
-                        ## need to calculate the below...
-                        theta_b = theta_b,
-                        mrd = mrd)
+        uet(time.time()-t0_perturb,'Time spent for perturbation')
+        print
 
     else: tdats=model_tdats.copy()
 

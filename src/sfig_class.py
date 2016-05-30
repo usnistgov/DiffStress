@@ -126,7 +126,7 @@ class SF:
         if hasattr(self, 'rsq'): self.rsq=rsq[::]
 
     def interp_strain(self,epsilon_vm,
-                      iopt=0):
+                       iopt=0):
         """
         Apply a certain interpolation method
         on the SF with respect to the given VM strain
@@ -145,50 +145,28 @@ class SF:
             =8: zero
             =9: slinear
         """
-        # print 'epsilon_vm:'
-        # print epsilon_vm
         import warnings
-
         self.sf_old = self.sf.copy()
-        # self.flow.get_vm_strain()
-        # self.flow.epsilon_vm #
         self.sf_new = np.zeros(
             (len(epsilon_vm),self.nphi,self.npsi,self.nij))
         xp = self.flow.epsilon_vm.copy()
-        # print 'Strain reference at which sf was measured:'
-        # print xp
         for iphi in xrange(self.nphi):
             for ipsi in xrange(self.npsi):
                 for k in xrange(self.nij):
-                    _y_  = self.sf_old[:,iphi,ipsi,k].copy()
+                    y  = self.sf_old[:,iphi,ipsi,k]
                     ## find non zero not (nan) values
-                    inds = []
-                    if (_y_==0).all():
-                        _y_ = _y_.copy()
-                        _xp_ = xp.copy()
-                        n_avail_dat = 0
-                    else:
-                        for m in xrange(len(_y_)):
-                            if _y_[m]!=0 and not(np.isnan(_y_[m])):
-                                inds.append(m)
-                        n_avail_dat = len(inds)
-                        pass
+                    filt = (y!=0)&~np.isnan(y)
+                    _xp_ = xp[filt].copy()
+                    _y_  = y[filt].copy()
+                    n_avail_dat = len(_y_)
 
-                    if n_avail_dat==0 or n_avail_dat==1:
-                        if k<2:
-                            print 'interpolation is not ',
-                            print 'feasible due to insufficient',
-                            print 'number of data'
-
+                    if n_avail_dat<=1:
                         self.sf_new[:,iphi,ipsi,k] = np.nan
-
-                    elif n_avail_dat>=2:
-                        _y_  = _y_[inds].copy()
-                        _xp_ = xp[inds].copy()
+                    elif n_avail_dat>1:
                         try:
                             self.sf_new[:,iphi,ipsi,k] \
                                 = rs.interpolate(
-                                xs=epsilon_vm.copy(),
+                                xs=epsilon_vm,
                                 xp=_xp_,
                                 fp=_y_,
                                 iopt=iopt)
@@ -197,7 +175,7 @@ class SF:
                             try:
                                 self.sf_new[:,iphi,ipsi,k] \
                                     = rs.interpolate(
-                                    xs=epsilon_vm.copy(),
+                                    xs=epsilon_vm,
                                     xp=_xp_,
                                     fp=_y_,
                                     iopt=1) ## if fail, try assign nearest data
@@ -217,6 +195,99 @@ class SF:
         self.flow = fc()
         self.flow.epsilon_vm = np.array(epsilon_vm)
         self.nstp = len(self.flow.epsilon_vm)
+
+    # def interp_strain(self,epsilon_vm,
+    #                   iopt=0):
+    #     """
+    #     Apply a certain interpolation method
+    #     on the SF with respect to the given VM strain
+
+    #     Arguments
+    #     =========
+    #     epsilon_vm = []
+    #     iopt=0: NN (piece-wise linear interpolation)
+    #         =1: Assign nearest data
+    #         =2: Cubic
+    #         =3: Quadratic
+    #         =4: Linear fit
+    #         =5: Poly2
+    #         =6: poly3
+    #         =7: Place-holder for power law fit
+    #         =8: zero
+    #         =9: slinear
+    #     """
+    #     # print 'epsilon_vm:'
+    #     # print epsilon_vm
+    #     import warnings
+
+    #     self.sf_old = self.sf.copy()
+    #     # self.flow.get_vm_strain()
+    #     # self.flow.epsilon_vm #
+    #     self.sf_new = np.zeros(
+    #         (len(epsilon_vm),self.nphi,self.npsi,self.nij))
+    #     xp = self.flow.epsilon_vm.copy()
+    #     # print 'Strain reference at which sf was measured:'
+    #     # print xp
+    #     for iphi in xrange(self.nphi):
+    #         for ipsi in xrange(self.npsi):
+    #             for k in xrange(self.nij):
+    #                 _y_  = self.sf_old[:,iphi,ipsi,k].copy()
+    #                 ## find non zero not (nan) values
+    #                 inds = []
+    #                 if (_y_==0).all():
+    #                     _y_ = _y_.copy()
+    #                     _xp_ = xp.copy()
+    #                     n_avail_dat = 0
+    #                 else:
+    #                     for m in xrange(len(_y_)):
+    #                         if _y_[m]!=0 and not(np.isnan(_y_[m])):
+    #                             inds.append(m)
+    #                     n_avail_dat = len(inds)
+    #                     pass
+
+    #                 if n_avail_dat==0 or n_avail_dat==1:
+    #                     if k<2:
+    #                         print 'interpolation is not ',
+    #                         print 'feasible due to insufficient',
+    #                         print 'number of data'
+
+    #                     self.sf_new[:,iphi,ipsi,k] = np.nan
+
+    #                 elif n_avail_dat>=2:
+    #                     _y_  = _y_[inds].copy()
+    #                     _xp_ = xp[inds].copy()
+    #                     try:
+    #                         self.sf_new[:,iphi,ipsi,k] \
+    #                             = rs.interpolate(
+    #                             xs=epsilon_vm.copy(),
+    #                             xp=_xp_,
+    #                             fp=_y_,
+    #                             iopt=iopt)
+    #                     except:
+    #                         print 'failed, thus using NN interp'
+    #                         try:
+    #                             self.sf_new[:,iphi,ipsi,k] \
+    #                                 = rs.interpolate(
+    #                                 xs=epsilon_vm.copy(),
+    #                                 xp=_xp_,
+    #                                 fp=_y_,
+    #                                 iopt=1) ## if fail, try assign nearest data
+    #                         except:
+    #                             nans = np.zeros(len(epsilon_vm))
+    #                             nans = np.nan * nans
+    #                             self.sf_new[:,iphi,ipsi] = nans
+
+    #                 else: raise IOError, 'Unexpected case'
+
+    #     if self.sf_new.shape!=(len(epsilon_vm),self.nphi,self.npsi,self.nij):
+    #         raise IOError, 'something wrong'
+
+
+    #     self.sf = self.sf_new.copy()
+    #     # Overwrite the flow? self.nstp also needs change
+    #     self.flow = fc()
+    #     self.flow.epsilon_vm = np.array(epsilon_vm)
+    #     self.nstp = len(self.flow.epsilon_vm)
 
     def interp_psi(self,psi=None,iopt=1):
         """

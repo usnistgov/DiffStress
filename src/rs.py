@@ -414,6 +414,27 @@ def u_epshkl(e,sigma=5e-5):
         a.append(d)
     return a
 
+
+def u_epshkl_geom_inten_vectorize(
+        model_vfs, model_tdats, ird, sigma, psi, theta_b):
+    mrd = model_vfs/ird ## (100,3,8)
+    geom_f = 1./ (1-np.tan(psi)/np.tan(theta_b))  #(8,)
+
+    if (geom_f<0).any():
+        print 'psi:', psi*180/np.pi
+        print 'theta_b:', theta_b*180/np.pi
+        raise IOError, 'geom_f<0'
+
+    val=sigma**2/mrd  ## 100, 3, 8
+    _sigma_=geom_f * np.sqrt(val) #(8,)
+    new_sigma=_sigma_.copy()
+    np.random.seed()
+    print model_tdats.shape
+    print new_sigma.shape
+    return np.random.normal(loc=model_tdats,
+                            size=new_sigma.shape,
+                            scale=new_sigma)
+
 def u_epshkl_geom_inten(e, sigma, psi, theta_b, mrd):
     """
     Perturb the elastic strain as a function of
@@ -1940,7 +1961,7 @@ def filter_psi(mod=None,psimx=None,sin2psimx=None):
 
 
 
-def filter_psi2(obj=None,sin2psi=[],bounds=[0.,1.]):
+def filter_psi2_deprecated(obj=None,sin2psi=[],bounds=[0.,1.]):
     """
     Limit psi values - trim some elements from the obj
     array as to assert only a certain range of psi (sin2psi)
@@ -1956,6 +1977,7 @@ def filter_psi2(obj=None,sin2psi=[],bounds=[0.,1.]):
         val = sin2psi[i]
         if val>=bounds[0] and val<=bounds[1]:
             inds.append(i)
+
     shape = np.array(obj.shape)
     shape[-1] = len(inds)
     new_obj = np.zeros(shape)
@@ -1968,8 +1990,31 @@ def filter_psi2(obj=None,sin2psi=[],bounds=[0.,1.]):
     new_obj = new_obj_t.swapaxes(0,-1)
     return new_obj
 
+
+def filter_psi2(obj=None,sin2psi=[],bounds=[0.,1.]):
+    """
+    Limit psi values - trim some elements from the obj
+    array as to assert only a certain range of psi (sin2psi)
+
+    Arguments
+    =========
+    obj     = None
+    sin2psi =
+    bounds  = [0,  1.]
+    """
+    # inds = []
+    # for i in xrange(len(sin2psi)):
+    #     val = sin2psi[i]
+    #     if val>=bounds[0] and val<=bounds[1]:
+    #         inds.append(i)
+    filt = (sin2psi>=bounds[0])&(sin2psi<=bounds[1])
+    new_obj=obj.T[filt]
+    return new_obj.T
+
 def filter_psi3(sin2psi=[],bounds=[0.,1.],*args):
     rst=[]
+    filt = (sin2psi>=bounds[0])&(sin2psi<=bounds[1])
     for arg in args:
-        rst.append(filter_psi2(arg,sin2psi,bounds))
+        newObj=arg.swapaxes(0,-1)[filt].swapaxes(0,-1).copy()
+        rst.append(newObj)
     return rst
