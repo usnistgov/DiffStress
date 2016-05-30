@@ -255,24 +255,27 @@ def ex_consistency(
     _sf_ = _sf_.sf.swapaxes(1,3).swapaxes(2,3)
     _sf_ = _sf_ *1e6
 
+
     # 0.5 Mask DEC where volume fraction
     ## model_ngr or model_vfs
-    for i in xrange(len(model_vfs)):
-        for j in xrange(len(model_vfs[i])):
-            for k in xrange(len(model_vfs[i][j])):
-                if model_ngr[i,j,k]==0:
-                    _sf_[i,:,j,k]=np.nan
-                    # _ig_[i,j,k]=np.nan
-                    raw_sfs[i,:,j,k]=np.nan
-                    model_sfs[i,:,j,k]=np.nan
-                    raw_ehkl[i,j,k] = np.nan
-                for m in xrange(6):
-                    if _sf_[i,m,j,k]==0 or raw_sfs[i,m,j,k]==0:
-                        # print 'encountered zero sf'
-                        _sf_[i,m,j,k] = np.nan
-                        raw_sfs[i,m,j,k] = np.nan
-                        model_sfs[i,m,j,k] = np.nan
-                        raw_ehkl[i,j,k] = np.nan
+    filt = model_ngr==0
+    _sf_ = _sf_.transpose(1,0,2,3).copy()
+    _sf_[:,filt]=np.nan
+    _sf_ = _sf_.transpose(1,0,2,3).copy()
+    raw_sfs = raw_sfs.transpose(1,0,2,3).copy()
+    raw_sfs[:,filt]=np.nan
+    raw_sfs = raw_sfs.transpose(1,0,2,3).copy()
+    model_sfs = model_sfs.transpose(1,0,2,3).copy()
+    model_sfs[:,filt]=np.nan
+    model_sfs = model_sfs.transpose(1,0,2,3).copy()
+    raw_ehkl[filt]=np.nan
+
+
+    filt = (_sf_==0) | (raw_sfs==0)
+    _sf_[filt]=np.nan
+    raw_sfs[filt]=np.nan
+    model_sfs[filt]=np.nan
+    raw_ehkl[filt[:,0,:,:]]=np.nan
 
     # 1. Limit the range of sin2psi (or psi)
     if type(sin2psimx)!=type(None) or \
