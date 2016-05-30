@@ -1205,44 +1205,28 @@ class ResidualStress:
 
         self.sfm = np.zeros((sfm.shape[0],6,\
                                  sfm.shape[2],sfm.shape[3]))
-        for istp in xrange(len(sfm)):
-            for k in xrange(len(sfm[istp])):
-                for iphi in xrange(len(sfm[istp,k])):
-                    self.sfm[istp,k,iphi,:] \
-                        = sfm[istp,k,iphi,:].copy()
-
+        self.sfm[:len(sfm),:len(sfm[0]),:len(sfm[0][0]),:]=\
+                 sfm[:,:,:,:].copy()
         ## Substitue the upper off-diagonals to the lowers.
         dum_psi = t[8,0,0,0]
         dum = self.sfm[:,3,:,:] # SF_23
         self.sfm[:,3,:,:] = self.sfm[:,5,:,:]
         self.sfm[:,5,:,:] = dum[:,:,:]
 
-
-        for istp in xrange(len(self.sfm)):
-            for k in xrange(len(self.sfm[istp])):
-                for iphi in xrange(len(self.sfm[istp,k])):
-                    x = dum_psi
-                    y = self.sfm[istp,k,iphi,:].copy()
-                    x,y=sort(x,y)
-                    self.sfm[istp,k,iphi,:] = y[:]
-
-        # stress/strain states
-#        dstr=np.loadtxt(fnmod_str,skiprows=1).T
+        inds=np.argsort(dum_psi)
+        self.sfm=self.sfm[:,:,:,inds]
         dstr=rb(fnmod_str,skiprows=1)
         if len(dstr.shape)==1:
             dstr = np.array([dstr]).T
 
         evm,svm,e11,e22,e33,e23,e13,e12,\
             s11,s22,s33,s23,s13,s12 = dstr[:14]
+
         self.strainm_con = np.array([e11,e22,e33,e12,e13,e23])
         self.stressm_con = np.array([s11,s22,s33,s12,s13,s23])
-        self.strainm = [] ; self.stressm = []
-        for ist in xrange(len(self.stepsm)):
-            self.strainm.append(self.strainm_con.T[ist])
-            self.stressm.append(self.stressm_con.T[ist])
 
-        self.strainm=np.array(self.strainm)
-        self.stressm=np.array(self.stressm)
+        self.strainm=self.strainm_con.T[:len(self.stepsm)]
+        self.stressm=self.stressm_con.T[:len(self.stepsm)]
 
         ## Standard data structure both EVPSC data and EXP data:
         self.dat_model = DiffDat(
