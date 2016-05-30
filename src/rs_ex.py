@@ -249,10 +249,12 @@ def ex_consistency(
     sin2psis_init = np.sin(model_rs.psis)**2
 
     # 0. Use interpolated SF
-
+    t0_pr0=time.time()
     _sf_, _ig_ = use_intp_sfig(
         dec_inv_frq,iopt=dec_interp,
         iplot=False,iwgt=False)
+    uet(time.time()-t0_pr0,'t for pr0')
+    print
     ## swapping axes to comply with what is used
     ## in dat_model.sf
     _sf_ = _sf_.sf.swapaxes(1,3).swapaxes(2,3)
@@ -281,6 +283,7 @@ def ex_consistency(
     raw_ehkl[filt[:,0,:,:]]=np.nan
 
     # 1. Limit the range of sin2psi (or psi)
+    t0_pr1=time.time()
     if type(sin2psimx)!=type(None) or \
        type(psimx)!=type(None):
         if type(sin2psimx)!=type(None):
@@ -300,10 +303,13 @@ def ex_consistency(
             sin2psis_init,bounds,
             model_rs.psis.copy())
         model_rs.npsi = len(model_rs.psis)
+    uet(time.time()-t0_pr1, 't for pr1')
+    print
 
     DEC_interp = _sf_.copy()
 
     # 2. Finite number of tiltings
+    t0_pr2=time.time()
     if psi_nbin!=1:
         model_sfs, model_igs, model_vfs, \
             model_ehkls, _sf_ \
@@ -315,13 +321,15 @@ def ex_consistency(
             model_rs.psis.copy(),psi_nbin,
             model_rs.psis.copy())
         model_rs.npsi = len(model_rs.psis)
+    uet(time.time()-t0_pr2,'t for pr2')
+    print
 
     # 3. Assign tdat
     if ig_sub: model_tdats = model_ehkls - model_igs
     else: model_tdats = model_ehkls.copy()
 
-    # 4. Perturb ehkl (common)
 
+    # 4. Perturb ehkl (common)
     if iscatter:
         t0_perturb=time.time()
         nstp, nphi, npsi = model_ehkls.shape

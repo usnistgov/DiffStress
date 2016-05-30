@@ -416,15 +416,23 @@ def use_intp_sfig(ss=2,iopt=0,iplot=False,
     """
     from rs import ResidualStress as RS
     from copy import copy
+    import time
+
 
     ## 0. Read volume fraction and number of grains
+    t0_pr0=time.time()
     vf_dat,ngr_dat = return_vf() ## read vf/ngr
+    print 'pr0:',time.time()-t0_pr0
+
+
 
     ## 1. Read original SF/IG/FLow
+    t0_pr1=time.time()
     RS_model = RS(mod_ext=None,
                   fnmod_ig='igstrain_fbulk_ph1.out',
                   fnmod_sf='igstrain_fbulk_ph1.out',
                   i_ip=1)
+    print 'pr1:',time.time()-t0_pr1
 
     ## assign nan for sf==0
     _SF_   = RS_model.dat_model.sf[::].copy()
@@ -442,8 +450,9 @@ def use_intp_sfig(ss=2,iopt=0,iplot=False,
     ## 2. Create a set of SF/IG/Flow interpolated
     #     at several plastic increments
 
-    ##   2-1. Reduce the SF/IG/FLow nstp accroding to ss
+    ##   2-1. Reduce the SF/IG/Flow nstp accroding to ss
 
+    t0_pr21=time.time()
     if type(ss).__name__=='int':
         SF = _SF_[::ss].copy(); IG = _IG_[::ss].copy()
         Flow.epsilon = Flow.epsilon.swapaxes(
@@ -459,10 +468,12 @@ def use_intp_sfig(ss=2,iopt=0,iplot=False,
         Flow.nstp    = len(ss)
         Flow.get_eqv()
     else: raise IOError, 'Unexpected type for ss'
+    print 't0 pr21:',time.time()-t0_pr21
 
 
     ##   2-2. Create the SF object
     import sfig_class
+    t0_pr221=time.time()
     #      2-2-1. Original SF
     SF0 = _SF_.swapaxes(1,-1).swapaxes(1,2)
     StressFactor0 = sfig_class.SF()
@@ -473,9 +484,11 @@ def use_intp_sfig(ss=2,iopt=0,iplot=False,
     StressFactor0.flow = _Flow_
     StressFactor0.flow.get_eqv()
     StressFactor0.mask_vol()
+    print 't0 pr221:',time.time()-t0_pr221
 
     #      2-2-2. Rearrange SF [stp,nij,nphi,npsi]
     #                      -> [nstp,nphi,nspi,nij]
+    t0_pr222=time.time()
     SF = SF.swapaxes(1,-1).swapaxes(1,2)
     StressFactor = sfig_class.SF()
     StressFactor.add_data(
@@ -484,16 +497,20 @@ def use_intp_sfig(ss=2,iopt=0,iplot=False,
         psi=RS_model.dat_model.psi[::]*180./np.pi)
     StressFactor.flow = Flow
     StressFactor.flow.get_eqv()
+    print 't0 pr222:', time.time()-t0_pr222
     ##     2-2-3. Interpolate them at strains
+    t0_pr223=time.time()
     StressFactor.interp_strain(
         epsilon_vm = _Flow_.epsilon_vm,
         iopt=iopt)
     StressFactor.flow = _Flow_
     StressFactor.flow.get_eqv()
     StressFactor.nstp = StressFactor.flow.nstp
+    print 't0 pr223:', time.time()-t0_pr223
 
     ##   2-3. Create the IG object
     ## IG0 = _IG_.swapaxes(1,-1).swapaxes(1,2)
+    t0_pr23=time.time()
     IG0 = _IG_[::]
     IGStrain0 = sfig_class.IG()
     IGStrain0.add_data(
@@ -503,9 +520,11 @@ def use_intp_sfig(ss=2,iopt=0,iplot=False,
     IGStrain0.flow = _Flow_
     IGStrain0.flow.get_eqv()
     ## IGStrain0.mask_vol()
+    print 't0 pr23:', time.time()-t0_pr23
 
-    #      2-2-2. Rearrange IG [stp,nij,nphi,npsi]
+    #      2-3-2. Rearrange IG [stp,nij,nphi,npsi]
     #                      -> [nstp,nphi,nspi,nij]
+    t0_pr232=time.time()
     IGStrain = sfig_class.IG()
     IGStrain.add_data(
         ig=IG[::],
@@ -513,13 +532,16 @@ def use_intp_sfig(ss=2,iopt=0,iplot=False,
         psi=RS_model.dat_model.psi[::]*180./np.pi)
     IGStrain.flow = Flow
     IGStrain.flow.get_eqv()
-    ##     2-2-3. Interpolate them at strains
+    print 't0 pr232:', time.time()-t0_pr232
+    ##     2-3-3. Interpolate them at strains
+    t0_pr233=time.time()
     IGStrain.interp_strain(
         epsilon_vm = _Flow_.epsilon_vm,
         iopt=iopt)
     IGStrain.flow = _Flow_
     IGStrain.flow.get_eqv()
     IGStrain.nstp = IGStrain.flow.nstp
+    print 't0 pr233:', time.time()-t0_pr233
 
     if iplot:
         StressFactor0.plot()

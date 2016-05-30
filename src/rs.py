@@ -69,6 +69,7 @@ def reader(fn='igstrain_load_ph1.out',isort=False,
     v      = np.zeros((nstp,nphi,npsis))
     steps  = np.zeros((nstp))
     il = 0
+
     for istp in xrange(nstp):
         for iphi in xrange(nphi):
             for ibeta in xrange(npsis/2):
@@ -1823,11 +1824,7 @@ def psi_reso3(obj,psi,ntot=2):
     psi
     ntot
     """
-    sign_sin2psi = []
-    for i in xrange(len(psi)):
-        sign_sin2psi.append(
-            np.sign(psi) \
-            * sin(psi)**2)
+    sign_sin2psi = np.sign(psi) * sin(psi)**2
     # equal distance
     spc  = np.linspace(np.min(sign_sin2psi),
                        np.max(sign_sin2psi),ntot)
@@ -1838,14 +1835,22 @@ def psi_reso3(obj,psi,ntot=2):
     return select_psi(obj, inds)
 
 def select_psi(dat,inds):
+
     array = []
     dum = dat.T
     for i in xrange(len(inds)):
         array.append(dum[inds[i]])
     return np.array(array).T
 
+# def find_nearest(array,value):
+#     return (np.abs(array-value)).argmin()
+
 def find_nearest(array,value):
-    return (np.abs(array-value)).argmin()
+    import math
+    idx = np.searchsorted(array, value, side="left")
+    if idx == len(array) or math.fabs(value - array[idx-1]) < math.fabs(value - array[idx]):
+        return idx-1
+    else: return idx
 
 
 def psi_reso(mod=None,nbin=2):
