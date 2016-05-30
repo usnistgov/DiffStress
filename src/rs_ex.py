@@ -185,9 +185,12 @@ def ex_consistency(
 
     #------------------------------------------------------------#
     ## i_ip = 1: ioption for the model data
+    t0_load=time.time()
     model_rs = ResidualStress(
         mod_ext=mod_ext,fnmod_ig='igstrain_fbulk_ph1.out',
         fnmod_sf='igstrain_fbulk_ph1.out',i_ip=1)
+    uet(time.time()-t0_load,'Time spent for loading model_rs in rs_ex.ex_consistency')
+    print
 
     ## Process the sf/eps0/ehkl/wgt and so forth
     ## according to the parameters given
@@ -382,7 +385,9 @@ def ex_consistency(
 
     # nstp = 3 ## debugging
 
+    dtCalcstr = 0.
     for istp in xrange(nstp):
+        t0_calstr=time.time()
         """
         Dimensions of data arrays for:
         ==============================
@@ -493,6 +498,12 @@ def ex_consistency(
             fs.savefig(f2);fe.savefig(f1);f_er.savefig(f3)
             f1.clf();plt.draw();f2.clf();plt.draw();f3.clf();plt.draw()
             plt.close(f1);plt.close(f2);plt.close(f3);plt.ion()
+
+        dtCalcstr = dtCalcstr + (time.time()-t0_calstr)
+
+    uet(dtCalcstr,'Time spent inside the stress analysis loop')
+    print
+
     # end of the serial loop over deformation steps
     ############################################################
 
