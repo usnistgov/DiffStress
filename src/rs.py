@@ -4,6 +4,7 @@ import numpy as np
 from MP.mat import mech
 from MP import read_blocks
 from lib import write_args
+import time
 
 cos = np.cos; sin = np.sin; pi  = np.pi
 FlowCurve = mech.FlowCurve
@@ -38,19 +39,16 @@ def reader(fn='igstrain_load_ph1.out',isort=False,
 
     ds = open(fn).read()
     d = ds.split('npb')[1]
-    d = rb(fn,skiprows=2)
+    d = np.array(rb(fn,skiprows=2))
+
+    dl_array=np.genfromtxt(dl)
+    print dl_array.shape
 
     steps = np.unique(d[0])
     nstp = len(steps)
 
     ## Find unique phi
-    phis=[]
-    for i in xrange(len(d[1])):
-        pp = d[1][i]
-        if pp in phis: pass
-        else: phis.append(pp)
-
-    phis = np.array(phis)
+    phis=np.unique(np.array(d[1][:]))
     nphi = len(phis)
 
     ## Find unique psis
@@ -63,18 +61,21 @@ def reader(fn='igstrain_load_ph1.out',isort=False,
         if ph!=phis[0]: break
         psis.append(psi1); psis.append(psi2)
 
+
     psis   = np.array(psis); npsis  = len(psis)
     epshkl = np.zeros((nstp,nphi,npsis))
     ngr    = np.zeros((nstp,nphi,npsis))
     v      = np.zeros((nstp,nphi,npsis))
     steps  = np.zeros((nstp))
-    il = 0
 
+
+    t0_load = time.time()
+    il = 0
     for istp in xrange(nstp):
         for iphi in xrange(nphi):
             for ibeta in xrange(npsis/2):
                 il = ibeta + iphi*npsis/2 + nphi*npsis/2*istp
-                dat = map(float,dl[il].split())
+                dat = dl_array[il].copy()
                 steps[istp] = dat[0]
                 psi1, psi2 = dat[3],dat[4]
                 eps1, eps2 = dat[5],dat[6]
@@ -86,7 +87,10 @@ def reader(fn='igstrain_load_ph1.out',isort=False,
                 ngr[istp,iphi,ibeta*2+1] = n2
                 v[istp,iphi,ibeta*2]   = v1
                 v[istp,iphi,ibeta*2+1] = v2
+    print 'seconds spent in rs.raeader', time.time()-t0_load
 
+
+    t0_sort= time.time()
     if isort:
         # phi sort
         ph = phis.copy()
@@ -129,6 +133,8 @@ def reader(fn='igstrain_load_ph1.out',isort=False,
                     v[istp,iphi,:] = vv[:]
             psis=ps
         else:pass
+
+    print 'seconds spent in rs.reader for sorting',time.time()-t0_sort
 
     if icheck:
         plt.figure()
@@ -1102,9 +1108,12 @@ class ResidualStress:
             plt.figure(22).savefig('eps0_PF.pdf')
         elif i_ip==1:
             # read model eps^hkl, eps^0, SF
+            import time
+            t0 = time.time()
             self.readmod(fnmod_epshkl=fnmod_epshkl,
                          fnmod_ig=fnmod_ig,fnmod_sf=fnmod_sf,
                          fnmod_str=fnmod_str)
+            print 'Time spent for rs.readmod:', time.time()-t0
             self.dat_ref = self.dat_model
         elif i_ip==2:
             print 'You are calling a deprecated feature.'
@@ -1133,6 +1142,7 @@ class ResidualStress:
         fnmod_sf     : model-predicted F_{ij}(hkl) file name
         fnmod_str    : model-predicted 'STR_STR.OUT' file name
         """
+        import time
         ## log
         self.log.write('\nself.readmod was called\n')
         self.log.write(' Arguments\n=========\n')
@@ -1144,12 +1154,15 @@ class ResidualStress:
 
         from RS import pepshkl
         from pepshkl import reader2 as reader_sf
+
         from MP.ssort import sh as sort
         # eps^hkl from model
 
         self.log.write('rs.reader reads fnmod_epshkl:%s\n'%
                        fnmod_epshkl)
+        t0 = time.time()
         datm = reader(fnmod_epshkl,isort=True)
+        print 'Time spent for reading fnmod_epshkl in rs.ResidualStress.readmod:', time.time()-t0
 
         self.stepsm = map(int,datm[-1])
         self.psism = datm[0]; self.npsim = len(self.psism)
@@ -1163,60 +1176,46 @@ class ResidualStress:
         ehklm_sorted = np.zeros((len(self.stepsm),self.nphim,self.npsim))
 
         # ig strain from model
-        if fnmod_ig!=None:
-            #eps0m should be in dimension of: (nstp,nphi,nspi)
-            try:
-                self.eps0m = reader(fn=fnmod_ig,isort=True)[2]
-            except:
-                self.log.write('\n****************************')
-                self.log.write('*******************************\n')
-                self.log.write('This file is not readable by')
-                self.log.write(' rs.reader \n')
-                self.log.write('attempt to use pepshkl.reader2\n')
-                self.log.write('\n****************************')
-                self.log.write('*******************************\n')
-                t,dum = reader_sf(fn=fnmod_ig,iopt=1)
-                # t[0] ! ehkl
-                # t[1] ! e (macro)
-                # t[2] ! ehkle    (ehkl - emacro)
-                # t[3] ! fhkl
-                # t[4] ! fbulk    (f bulk?)
-                # t[5] ! ige       e(hkl) - f_hkl*Sij
-                # t[6] ! Sij
-                # t[7] ! phi
-                # t[8] ! psi
-                # t[2] ![nst,nsf, nphi, npsi]
-                self.log.write('IG strain defined ')
-                self.log.write('as e(hkl) - f_hkl*S(ij)\n')
-                self.eps0m=t[5][:,0,:,:]
-            else:
-                self.log.write('\n****************************')
-                self.log.write('*******************************\n')
-                self.log.write('Used rs.reader to read %s\n'%fnmod_ig)
-                self.log.write('\n****************************')
-                self.log.write('*******************************\n')
-
+        if fnmod_ig[:17]!='igstrain_fbulk_ph':
+            print 'fnmod_ig should be igstrain_fubulk_ph?.out'
+            print 'other cases are deprecated.'
+            raise IOError,'choose proper file'
+        elif fnmod_ig[:17]=='igstrain_fbulk_ph':
+            import read_igstrain
+            t = read_igstrain.reader(fn=fnmod_ig,isort=True)
+            self.eps0m = t[5,:,0,:,:]## ig strain measured for F11 is used.
         elif fnmod_ig==None:
             self.log.write('fnmod_ig was not given:\n')
             self.log.write('all zero array for self.eps0m.\n')
             self.eps0m = np.zeros(self.ehklm.shape)
 
-        # stress factor from model
-        t, usf = reader_sf(fn=fnmod_sf)
-        sfm = t[3] # [istp,k,phi,psi] {fhkl} Stress Factor
 
-        self.sfm = np.zeros((sfm.shape[0],6,\
-                                 sfm.shape[2],sfm.shape[3]))
-        self.sfm[:len(sfm),:len(sfm[0]),:len(sfm[0][0]),:]=\
-                 sfm[:,:,:,:].copy()
-        ## Substitue the upper off-diagonals to the lowers.
-        dum_psi = t[8,0,0,0]
+        if fnmod_sf==fnmod_ig: sfm = t[6,:,:,:,:]
+        else:
+            print 'use igstrain_fbulk_ph?.out for stress factor'
+            raise IOError
+
+        print 'sfm shape:', sfm.shape
+
+        ## Returned sfm may not be in the full-dimension
+        ## up to 6th component - I often need F11,F22 and
+        ## that's enough for balanced biaxial tests.
+        sfm_shape = sfm.shape
+        self.sfm = np.zeros((sfm_shape[0],6,\
+                             sfm_shape[2],sfm_shape[3]))
+        self.sfm[:,:len(sfm[0]),:,:]\
+            =sfm[:,:,:,:].copy()
+
+
+        ## Substitute the upper off-diagonals to the lowers.
+
         dum = self.sfm[:,3,:,:] # SF_23
         self.sfm[:,3,:,:] = self.sfm[:,5,:,:]
         self.sfm[:,5,:,:] = dum[:,:,:]
 
-        inds=np.argsort(dum_psi)
-        self.sfm=self.sfm[:,:,:,inds]
+        # dum_psi = t[1,0,0,0,:].copy()
+        # inds=np.argsort(dum_psi)
+        # self.sfm=self.sfm[:,:,:,inds]
         dstr=rb(fnmod_str,skiprows=1)
         if len(dstr.shape)==1:
             dstr = np.array([dstr]).T
