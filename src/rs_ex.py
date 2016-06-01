@@ -98,6 +98,47 @@ def proc_half(model_ngr,_sf_,raw_sfs,model_sfs,
     raw_ehkl[filt[:,0,:,:]]=np.nan
     return _sf_,raw_sfs,model_sfs,model_vfs,model_ngr,raw_ehkl
 
+
+def calc_stress(
+        istp,
+        _sf_,
+        model_rs,
+        model_igs,
+        model_ehkls,
+        tdats,
+        ref_psis,wgt):
+    """
+    Calculate stress - the core part of ex_consistency after
+    process the 'raw' data.
+    """
+    ## masking can be improved by being
+    ## specific on phi axis -> require fix in RS.rs
+    inds = []
+    for ipsi in xrange(len(ref_psis)):
+        if not(np.isnan(_sf_[istp,0:2,:,ipsi]).any()):
+            inds.append(ipsi)
+    model_rs.sf  = _sf_[istp][:,:,inds]
+    model_rs.psis = ref_psis[inds]
+    model_rs.npsi = len(model_rs.psis)
+    model_rs.eps0 = model_igs[istp][:,inds]
+    model_rs.ehkl = model_ehkls[istp][:,inds]
+    model_rs.tdat = tdats[istp][:,inds]
+
+    #-----------------------------------#
+    ## find the sigma ...
+    sij_wv = model_rs.dat_model.flow.sigma[:,:,istp]
+    stress_wgtavg = np.array(
+        [sij_wv[0,0],sij_wv[1,1],sij_wv[2,2],sij_wv[1,2],
+         sij_wv[0,2],sij_wv[0,1]])
+    ## find the stress
+    dsa_sigma = model_rs.find_sigma(
+        ivo=[0,1],init_guess=stress_wgtavg,
+        weight = wgt) # None
+    for i in xrange(6): print '%+7.1f'%(dsa_sigma[i]),
+    for i in xrange(6): print '%+7.1f'%(dsa_sigma[i]-stress_wgtavg[i]),
+    print ''
+    return dsa_sigma
+
 def ex_consistency(
         ifig=50,nxphi=3,exp_ref=[],exp_lab=[],mod_ext=None,
         mod_ref='STR_STR.OUT',sin2psimx=None,iscatter=False,
@@ -169,6 +210,11 @@ def ex_consistency(
     np.seterr(all='ignore')
     import time
     from MP import progress_bar
+    from rs import ResidualStress,\
+        u_epshkl_geom_inten_vectorize,\
+        filter_psi3,psi_reso4
+    from mst_ex import  return_vf
+    from MP.mat import mech # mech is a module
     uet = progress_bar.update_elapsed_time
     t0 = time.time()
     if ilog:
@@ -187,12 +233,6 @@ def ex_consistency(
             ird=ird,theta_b=theta_b)
         f.close()
         print 'log has been saved to ',fn
-
-    from rs import ResidualStress,\
-        u_epshkl_geom_inten_vectorize,\
-        filter_psi3,psi_reso4
-    from mst_ex import  return_vf
-    from MP.mat import mech # mech is a module
 
     #------------------------------------------------------------#
     ## i_ip = 1: ioption for the model data
@@ -330,33 +370,7 @@ def ex_consistency(
     if len(flow_weight.epsilon_vm)<5: lc='k.'
     else:                             lc='k-'
 
-    if iplot:
-        from matplotlib import pyplot as plt
-        from matplotlib.backends.backend_pdf import PdfPages
-        from MP.lib import mpl_lib,axes_label
-        plt.ioff()
-        wide_fig     = mpl_lib.wide_fig
-        fancy_legend = mpl_lib.fancy_legend
-        ## Collection of figures at various plastic strains
-        fe   = PdfPages('all_ehkl_fits_%s_%s.pdf'%(hkl,path))
-        fs   = PdfPages('all_stress_factors_%s_%s.pdf'%(hkl,path))
-        f_er = PdfPages('all_Ei-ehkl-e0_%s_%s.pdf'%(hkl,path))
-        fig1 = wide_fig(ifig,nw=2,nh=1,left=0.2,uw=3.5,
-                        w0=0,w1=0.3,right=0,iarange=True)
 
-        fig_vm = plt.figure(figsize=(3.5,3.5))
-        ax_vm = fig_vm.add_subplot(111)
-
-        ## ax1: Equivalent Stress/Strain
-        ## ax2: Stress path in the plane stress space (RD/TD)
-        ax1 = fig1.axes[0]; ax2 = fig1.axes[1]
-        for a in [ax1,ax_vm]:
-            a.plot(
-                flow_weight.epsilon_vm,
-                flow_weight.sigma_vm,
-                lc,label=r'$\langle \sigma^c \rangle$',
-                alpha=1.0)
-            axes_label.__eqv__(a,ft=10)
 
     ## plot all stress factors at individual
     ## deformation levels
@@ -370,132 +384,99 @@ def ex_consistency(
     ref_psis = model_rs.psis.copy()
     nstp = model_rs.dat_model.nstp
 
-    # nstp = 3 ## debugging
-
+    ## Main loop
+    ## -------------------------------------------------- ##
     dtCalcstr = 0.
     for istp in xrange(nstp):
         t0_calstr=time.time()
-        """
-        Dimensions of data arrays for:
-        ==============================
-        sf     (nstp, k, nphi, npsi)
-        ig     (nstp, nphi, npsi)
-        ehkl   (nstp, nphi, npsi)
-        strain (nstp, 6)
-        vf     (nstp, nphi, npsi)
-        """
         if type(nfrq).__name__=='int':
-            if istp % nfrq !=0:
-                continue
-
+            if istp % nfrq !=0: continue
         if iplot==False and type(istep)!=type(None):
-            nstp = 1
-            istp = istep
+            ## exit by conducting only for the given step
+            nstp = 1; istp = istep
 
         print '%13s %2.2i/%2.2i'%('processing:',istp,nstp),
-
-        ref = _sf_[istp].copy()
-        inds = []
-
-        ## masking can be improved by being
-        ## specific on phi axis -> require fix in RS.rs
-        for ipsi in xrange(len(ref_psis)):
-            if not(np.isnan(ref[0:2,:,ipsi]).any()):
-                inds.append(ipsi)
-
-        model_rs.sf  = _sf_[istp][:,:,inds]
-        model_rs.psis = ref_psis[inds]
-        model_rs.npsi = len(model_rs.psis)
-        model_rs.eps0 = model_igs[istp][:,inds]
-        model_rs.ehkl = model_ehkls[istp][:,inds]
-        model_rs.tdat = tdats[istp][:,inds]
-
-        #-----------------------------------#
-        ## find the sigma ...
-        s11 = model_rs.dat_model.\
-            flow.sigma[0,0][istp]
-        s22 = model_rs.dat_model.\
-            flow.sigma[1,1][istp]
-        s33 = model_rs.dat_model.\
-            flow.sigma[2,2][istp]
-        s23 = model_rs.dat_model.\
-            flow.sigma[1,2][istp]
-        s13 = model_rs.dat_model.\
-            flow.sigma[0,2][istp]
-        s12 = model_rs.dat_model.\
-            flow.sigma[0,1][istp]
-        stress_wgtavg = np.array([s11,s22,s33,s23,s13,s12])
-
-        ## find the stress by fitting
-        ## the elastic strains
-        dsa_sigma = model_rs.find_sigma(
-            ivo=[0,1],
-            init_guess=[0,0,0,0,0,0],#[s11,s22,0,0,0,0],
-            weight = wgt) # None
-
-        if verbose or True:
-            for i in xrange(6): print '%+7.1f'%(dsa_sigma[i]),
-            for i in xrange(6): print '%+7.1f'%(dsa_sigma[i]-stress_wgtavg[i]),
-            print ''
+        dsa_sigma = calc_stress(
+            istp,_sf_,model_rs,model_igs,
+            model_ehkls,tdats,
+            ref_psis,wgt)
         stress.append(dsa_sigma)
 
+        if iplot and istp==0:
+            from matplotlib import pyplot as plt
+            from matplotlib.backends.backend_pdf import PdfPages
+            from MP.lib import mpl_lib,axes_label
+            plt.ioff()
+            wide_fig     = mpl_lib.wide_fig
+            fancy_legend = mpl_lib.fancy_legend
+            ## Collection of figures at various plastic strains
+            fe   = PdfPages('all_ehkl_fits_%s_%s.pdf'%(hkl,path))
+            fs   = PdfPages('all_stress_factors_%s_%s.pdf'%(hkl,path))
+            f_er = PdfPages('all_Ei-ehkl-e0_%s_%s.pdf'%(hkl,path))
+            fig1 = wide_fig(ifig,nw=2,nh=1,left=0.2,uw=3.5,
+                            w0=0,w1=0.3,right=0,iarange=True)
 
+            fig_vm = plt.figure(figsize=(3.5,3.5))
+            ax_vm = fig_vm.add_subplot(111)
 
+            ## ax1: Equivalent Stress/Strain
+            ## ax2: Stress path in the plane stress space (RD/TD)
+            ax1 = fig1.axes[0]; ax2 = fig1.axes[1]
+            for a in [ax1,ax_vm]:
+                a.plot(
+                    flow_weight.epsilon_vm,
+                    flow_weight.sigma_vm,
+                    lc,label=r'$\langle \sigma^c \rangle$',
+                    alpha=1.0)
+                axes_label.__eqv__(a,ft=10)
         if iplot:
             a=raw_sfs[istp,:2,:,:]
             b=dsa_sigma[:2]
             full_Ei = np.tensordot(a,b,axes=[0,0])
 
-        if type(istep)!=type(None) and iplot==False:
-            return model_rs, s11,s22, dsa_sigma[0],dsa_sigma[1],\
-                raw_psis.copy(),\
-                raw_vfs[istp].copy(),raw_sfs[istp].copy(),\
-                full_Ei.copy(),\
-                DEC_interp[istp].copy()
+            if type(istep)!=type(None):
+                return model_rs, s11,s22, dsa_sigma[0],dsa_sigma[1],\
+                    raw_psis.copy(),\
+                    raw_vfs[istp].copy(),raw_sfs[istp].copy(),\
+                    full_Ei.copy(),\
+                    DEC_interp[istp].copy()
 
-        #-----------------------------------#
-        if istp==0: ileg=True
-        else:       ileg=True #False
+            #-----------------------------------#
+            if istp==0: ileg=True
+            else:       ileg=True #False
 
-        if (istep!=None and istp==istep) or\
-           (istep==None and istp==nstp-1)\
-           and iplot:
-            fig2,fig3,fig4=__model_fit_plot__(
-                model_rs,ifig=ifig+istp*2+10,
-                istp=istp, nxphi=nxphi,stress_wgt=None,
-                ivo=None,hkl=hkl,ileg=ileg,iwind=iwind,
-                wdeg=wdeg)
-        elif iplot:
-            plt.ioff()
-            f1,f2,f3=__model_fit_plot__(
-                model_rs,ifig=ifig+istp*2+10,
-                ## stress_wgt: the mechanical stress.
-                ## will be used as a reference line
-                istp=istp,nxphi=nxphi,stress_wgt=[s11,s22,0,0,0,0],
-                wgt=raw_vfs[istp].copy(),wgt_psi=raw_psis,
-                full_Ei = full_Ei,
-                full_DEC = raw_sfs[istp].copy(),
-                DEC_interp = DEC_interp[istp].copy(),
-                ivo=[0,1],hkl=hkl,ileg=ileg,iwind=False,
-                ipsi_opt=ipsi_opt)
-            fs.savefig(f2);fe.savefig(f1);f_er.savefig(f3)
-            f1.clf();plt.draw();f2.clf();plt.draw();f3.clf();plt.draw()
-            plt.close(f1);plt.close(f2);plt.close(f3);plt.ion()
-
+            if (istep!=None and istp==istep) or\
+               (istep==None and istp==nstp-1):
+               fig2,fig3,fig4=__model_fit_plot__(
+                   model_rs,ifig=ifig+istp*2+10,
+                   istp=istp, nxphi=nxphi,stress_wgt=None,
+                   ivo=None,hkl=hkl,ileg=ileg,iwind=iwind,
+                   wdeg=wdeg)
+            else:
+                plt.ioff()
+                f1,f2,f3=__model_fit_plot__(
+                    model_rs,ifig=ifig+istp*2+10,
+                    ## stress_wgt: the mechanical stress.
+                    ## will be used as a reference line
+                    istp=istp,nxphi=nxphi,stress_wgt=[s11,s22,0,0,0,0],
+                    wgt=raw_vfs[istp].copy(),wgt_psi=raw_psis,
+                    full_Ei = full_Ei,
+                    full_DEC = raw_sfs[istp].copy(),
+                    DEC_interp = DEC_interp[istp].copy(),
+                    ivo=[0,1],hkl=hkl,ileg=ileg,iwind=False,
+                    ipsi_opt=ipsi_opt)
+                fs.savefig(f2);fe.savefig(f1);f_er.savefig(f3)
+                f1.clf();plt.draw();f2.clf();plt.draw();f3.clf();plt.draw()
+                plt.close(f1);plt.close(f2);plt.close(f3);plt.ion()
         dtCalcstr = dtCalcstr + (time.time()-t0_calstr)
-
-    uet(dtCalcstr,'Time spent inside the stress analysis loop')
-    print
-
+    uet(dtCalcstr,'Time spent inside the stress analysis loop');print
     # end of the serial loop over deformation steps
     ############################################################
 
     if iplot: fe.close(); fs.close(); f_er.close()
-
     stress   = np.array(stress).T # diffraction stress
     flow_dsa = mech.FlowCurve(name='Diffraction Stress')
     flow_dsa.get_6stress(stress)
-
     if type(nfrq).__name__=='NoneType':
         flow_dsa.get_33strain(model_rs.dat_model.flow.epsilon)
     elif type(nfrq).__name__=='int':
@@ -503,7 +484,6 @@ def ex_consistency(
 
     flow_dsa.get_eqv()
     sigma_wgt = flow_weight.sigma
-
     ## Various plots
     if iplot:
         for a in [ax1, ax_vm]:
@@ -552,9 +532,7 @@ def ex_consistency(
                 except: pass
         except: pass
 
-    uet(time.time()-t0)
-    print
-
+    uet(time.time()-t0);print
     return model_rs, flow_weight, flow_dsa
 
 
