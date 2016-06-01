@@ -1143,6 +1143,7 @@ class ResidualStress:
         fnmod_str    : model-predicted 'STR_STR.OUT' file name
         """
         import time
+        import read_igstrain
         ## log
         self.log.write('\nself.readmod was called\n')
         self.log.write(' Arguments\n=========\n')
@@ -1161,7 +1162,10 @@ class ResidualStress:
         self.log.write('rs.reader reads fnmod_epshkl:%s\n'%
                        fnmod_epshkl)
         t0 = time.time()
-        datm = reader(fnmod_epshkl,isort=True)
+
+        import read_igstrain
+        datm = read_igstrain.reader_ehkl(fnmod_epshkl,isort=True)
+
         print 'Time spent for reading fnmod_epshkl in rs.ResidualStress.readmod:', time.time()-t0
 
         self.stepsm = map(int,datm[-1])
@@ -1181,7 +1185,7 @@ class ResidualStress:
             print 'other cases are deprecated.'
             raise IOError,'choose proper file'
         elif fnmod_ig[:17]=='igstrain_fbulk_ph':
-            import read_igstrain
+
             t = read_igstrain.reader(fn=fnmod_ig,isort=True)
             self.eps0m = t[5,:,0,:,:]## ig strain measured for F11 is used.
         elif fnmod_ig==None:
