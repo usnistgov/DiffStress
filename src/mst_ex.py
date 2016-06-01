@@ -59,12 +59,13 @@ def main_plot_flow_all(
         fn = fns[i]
         strain_path = fn.split('_')[0]
         untargz(fn)
-        model_rs, fwgt, fdsa \
+        rst \
             = rs_ex.ex_consistency(
                 sin2psimx=sin2psimx,
                 psi_nbin=psi_nbin,
                 hkl=hkl,iplot=iplot_rs,
                 pmargin=pmargin,path=path)
+        model_rs, fwgt, fdsa = rst[0],rst[1],rst[2]
         fwgt.get_eqv(); fdsa.get_eqv()
 
         e = find_err(fwgt,fdsa)
@@ -842,7 +843,7 @@ def wrap_func(
     """
     from RS.rs_ex import ex_consistency as func
 
-    myrs, flow_weight, flow_dsa = func(
+    rst = func(
         sigma=sigma,
         dec_inv_frq=dec_inv_frq,
         sin2psimx=bounds[1],
@@ -857,6 +858,7 @@ def wrap_func(
         ilog=True,
         iplot=False, # iplot=True
     )
+    myrs, flow_weight, flow_dsa = rst[0], rst[1], rst[2]
 
     ## My objects that quantify the propagated
     ## error to stress.

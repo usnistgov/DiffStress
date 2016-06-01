@@ -883,6 +883,7 @@ def sf_scan(fn='sf_ph1.out',npair=1):
                 figs.axes[k].plot(s[k], e[100])
                 figs.axes[k].plot(s[k], e[200])
 
+
 def stress_plot(ext=['311','211','220','200'],ifig=1,nphi=3,istp=2,sin2psimx=None):
     """
     Plot results on various hkl
@@ -913,8 +914,9 @@ def stress_plot(ext=['311','211','220','200'],ifig=1,nphi=3,istp=2,sin2psimx=Non
 
     for i in xrange(len(ext)):
         # weighted flow, flow based on diffraction analysis
-        diff, flow_w, flow_d = ex_consistency(iplot=False,mod_ext=ext[i],
-                                              sin2psimx=sin2psimx)
+        rst = ex_consistency(iplot=False,mod_ext=ext[i],
+                             sin2psimx=sin2psimx)
+        diff, flow_w, flow_d = rst[0],rst[1],rst[2]
         diffs.append(diffs)
         f_w.append(flow_w)
         f_d.append(flow_d)
