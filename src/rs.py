@@ -1163,7 +1163,6 @@ class ResidualStress:
                        fnmod_epshkl)
         t0 = time.time()
 
-        import read_igstrain
         datm = read_igstrain.reader_ehkl(fnmod_epshkl,isort=True)
 
         print 'Time spent for reading fnmod_epshkl in rs.ResidualStress.readmod:', time.time()-t0
@@ -1185,7 +1184,6 @@ class ResidualStress:
             print 'other cases are deprecated.'
             raise IOError,'choose proper file'
         elif fnmod_ig[:17]=='igstrain_fbulk_ph':
-
             t = read_igstrain.reader(fn=fnmod_ig,isort=True)
             self.eps0m = t[5,:,0,:,:]## ig strain measured for F11 is used.
         elif fnmod_ig==None:

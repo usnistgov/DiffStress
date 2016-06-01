@@ -37,6 +37,7 @@ def reader_ehkl(fn='int_els_ph1.out',isort=True):
     24 eps12     18
     """
     import time
+    t0 = time.time()
 
     with open(fn,'r') as fo:
         fo.readline()
@@ -126,13 +127,8 @@ def reader_ehkl(fn='int_els_ph1.out',isort=True):
         psis = psis[ind]
 
 
-    t0 = time.time()
+
     print 'elpased time:',time.time()-t0
-
-
-    print steps
-
-    ## return
     return psis, phis, dat_c[:,:,:,3], dat_c[:,:,:,5],\
         dat_c[:,:,:,6], steps
 
