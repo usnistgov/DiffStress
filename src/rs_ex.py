@@ -135,6 +135,7 @@ def ex_consistency(
     ird       : Intensity expected for random distribution
     nfrq        None
     """
+    np.seterr(all='ignore')
     import time
     from MP import progress_bar
     uet = progress_bar.update_elapsed_time
@@ -156,7 +157,7 @@ def ex_consistency(
         f.close()
         print 'log has been saved to ',fn
 
-    from rs import ResidualStress,u_epshkl,\
+    from rs import ResidualStress,u_epshkl,u_epshkl_geom_inten_vectorize,\
         u_epshkl_geom_inten,filter_psi,filter_psi3,\
         psi_reso,psi_reso2,psi_reso3,psi_reso4
 
@@ -189,9 +190,12 @@ def ex_consistency(
 
     #------------------------------------------------------------#
     ## i_ip = 1: ioption for the model data
+    t0_load=time.time()
     model_rs = ResidualStress(
         mod_ext=mod_ext,fnmod_ig='igstrain_fbulk_ph1.out',
         fnmod_sf='igstrain_fbulk_ph1.out',i_ip=1)
+    uet(time.time()-t0_load,'Time spent for loading model_rs in rs_ex.ex_consistency')
+    print
 
     ## Process the sf/eps0/ehkl/wgt and so forth
     ## according to the parameters given
@@ -236,13 +240,13 @@ def ex_consistency(
     # 4. Perturb ehkl (common)
     # 5. Filter based on vf?
 
-    ## Unstaged but the 'raw' arrays
+    ## Unstaged but the 'raw' arrays (not used for actual calculation)
     raw_psis = model_rs.dat_model.psi.copy()
     raw_vfs  = model_vfs.copy()
     raw_ehkl = np.copy(model_rs.dat_model.ehkl)
     raw_sfs  = model_sfs.copy()
 
-    ## staged arrays for stress estimation
+    ## staged arrays for stress estimation (used for actual calcultion)
     model_rs.psis = model_rs.dat_model.psi.copy()
     model_rs.phis = model_rs.dat_model.phi.copy()
     model_rs.npsi = len(model_rs.psis)
@@ -250,38 +254,39 @@ def ex_consistency(
     sin2psis_init = np.sin(model_rs.psis)**2
 
     # 0. Use interpolated SF
+    t0_pr0=time.time()
+    _sf_, _ig_ = use_intp_sfig(dec_inv_frq,iopt=dec_interp,
+                               iplot=False,iwgt=False)
+    uet(time.time()-t0_pr0,'t for pr0');print
 
-    _sf_, _ig_ = use_intp_sfig(
-        dec_inv_frq,iopt=dec_interp,
-        iplot=False,iwgt=False)
     ## swapping axes to comply with what is used
     ## in dat_model.sf
-    _sf_ = _sf_.sf.swapaxes(1,3).swapaxes(2,3)
-    _sf_ = _sf_ *1e6
+    _sf_ = _sf_.sf.transpose(0,3,1,2).copy() * 1e6
 
-    # 0.5 Mask DEC where volume fraction
+    # 0.5 Mask DEC where volume fraction is depleted...
     ## model_ngr or model_vfs
+    filt = model_ngr==0
+    _sf_ = _sf_.transpose(1,0,2,3).copy()
+    _sf_[:,filt]=np.nan
+    _sf_ = _sf_.transpose(1,0,2,3).copy()
+    raw_sfs = raw_sfs.transpose(1,0,2,3).copy()
+    raw_sfs[:,filt]=np.nan
+    raw_sfs = raw_sfs.transpose(1,0,2,3).copy()
+    model_sfs = model_sfs.transpose(1,0,2,3).copy()
+    model_sfs[:,filt]=np.nan
+    model_sfs = model_sfs.transpose(1,0,2,3).copy()
+    model_vfs[filt]=np.nan
+    model_ngr[filt]=np.nan
+    raw_ehkl[filt]=np.nan
 
-
-    ## Assign np.nan if model_ngr == 0
-    for i in xrange(len(model_vfs)):
-        for j in xrange(len(model_vfs[i])):
-            for k in xrange(len(model_vfs[i][j])):
-                if model_ngr[i,j,k]==0:
-                    _sf_[i,:,j,k]=np.nan
-                    # _ig_[i,j,k]=np.nan
-                    raw_sfs[i,:,j,k]=np.nan
-                    model_sfs[i,:,j,k]=np.nan
-                    raw_ehkl[i,j,k] = np.nan
-                for m in xrange(6):
-                    if _sf_[i,m,j,k]==0 or raw_sfs[i,m,j,k]==0:
-                        # print 'encountered zero sf'
-                        _sf_[i,m,j,k] = np.nan
-                        raw_sfs[i,m,j,k] = np.nan
-                        model_sfs[i,m,j,k] = np.nan
-                        raw_ehkl[i,j,k] = np.nan
+    filt = (_sf_==0) | (raw_sfs==0)
+    _sf_[filt]=np.nan
+    raw_sfs[filt]=np.nan
+    model_sfs[filt]=np.nan
+    raw_ehkl[filt[:,0,:,:]]=np.nan
 
     # 1. Limit the range of sin2psi (or psi)
+    t0_pr1=time.time()
     if type(sin2psimx)!=type(None) or \
        type(psimx)!=type(None):
         if type(sin2psimx)!=type(None):
@@ -301,10 +306,13 @@ def ex_consistency(
             sin2psis_init,bounds,
             model_rs.psis.copy())
         model_rs.npsi = len(model_rs.psis)
+    uet(time.time()-t0_pr1, 't for pr1')
+    print
 
     DEC_interp = _sf_.copy()
 
     # 2. Finite number of tiltings
+    t0_pr2=time.time()
     if psi_nbin!=1:
         model_sfs, model_igs, model_vfs, \
             model_ehkls, _sf_ \
@@ -316,35 +324,25 @@ def ex_consistency(
             model_rs.psis.copy(),psi_nbin,
             model_rs.psis.copy())
         model_rs.npsi = len(model_rs.psis)
+    uet(time.time()-t0_pr2,'t for pr2')
+    print
 
     # 3. Assign tdat
     if ig_sub: model_tdats = model_ehkls - model_igs
     else: model_tdats = model_ehkls.copy()
 
+
     # 4. Perturb ehkl (common)
     if iscatter:
+        t0_perturb=time.time()
         nstp, nphi, npsi = model_ehkls.shape
         tdats = np.zeros((nstp,nphi,npsi))
-        for istp in xrange(nstp):
-            for iphi in xrange(nphi):
-                # ## Previous perturbation rule
-                # tdats[istp,iphi,:] = u_epshkl(
-                #     model_tdats[istp,iphi],
-                #     sigma=sigma)
+        tdats = u_epshkl_geom_inten_vectorize(
+            model_vfs,model_tdats,
+            ird,sigma,model_rs.psis,theta_b)
 
-                ## New perturbation rule
-                if type(theta_b).__name__== 'NoneType':
-                    raise IOError, 'theta_b should be given'
-                for ipsi in xrange(npsi):
-                    ## multitudes of random
-                    mrd = model_vfs[istp,iphi,ipsi]/ird
-                    tdats[istp,iphi,ipsi] = u_epshkl_geom_inten(
-                        e     = model_tdats[istp,iphi,ipsi],
-                        sigma = sigma,
-                        psi   = model_rs.psis[ipsi],
-                        ## need to calculate the below...
-                        theta_b = theta_b,
-                        mrd = mrd)
+        uet(time.time()-t0_perturb,'Time spent for perturbation')
+        print
 
     else: tdats=model_tdats.copy()
 
@@ -376,9 +374,9 @@ def ex_consistency(
     ## deformation levels
 
     stress = []
-    if verbose or True: print '%8s%8s%8s%8s%8s%8s'%(
-        'S11','S22','S33','S23','S13','S12')
-
+    if verbose or True: print ('%19s '+'%8s%8s%8s%8s%8s%8s'*2)%(
+        '','S11','S22','S33','S23','S13','S12',
+        'dS11','dS22','dS33','dS23','dS13','dS12')
     ################################################
     ## *Serial* Loop over the deformation steps
     ref_psis = model_rs.psis.copy()
@@ -386,7 +384,9 @@ def ex_consistency(
 
     # nstp = 3 ## debugging
 
+    dtCalcstr = 0.
     for istp in xrange(nstp):
+        t0_calstr=time.time()
         """
         Dimensions of data arrays for:
         ==============================
@@ -404,7 +404,7 @@ def ex_consistency(
             nstp = 1
             istp = istep
 
-        print 'processing: %2.2i/%2.2i'%(istp,nstp),
+        print '%13s %2.2i/%2.2i'%('processing:',istp,nstp),
         #model_rs.sf = model_sfs[istp].copy()
 
         ## filter signals where any data is nan
@@ -428,9 +428,18 @@ def ex_consistency(
         #-----------------------------------#
         ## find the sigma ...
         s11 = model_rs.dat_model.\
-              flow.sigma[0,0][istp]
+            flow.sigma[0,0][istp]
         s22 = model_rs.dat_model.\
-              flow.sigma[1,1][istp]
+            flow.sigma[1,1][istp]
+        s33 = model_rs.dat_model.\
+            flow.sigma[2,2][istp]
+        s23 = model_rs.dat_model.\
+            flow.sigma[1,2][istp]
+        s13 = model_rs.dat_model.\
+            flow.sigma[0,2][istp]
+        s12 = model_rs.dat_model.\
+            flow.sigma[0,1][istp]
+        stress_wgtavg = np.array([s11,s22,s33,s23,s13,s12])
 
         ## find the stress by fitting
         ## the elastic strains
@@ -441,6 +450,7 @@ def ex_consistency(
 
         if verbose or True:
             for i in xrange(6): print '%+7.1f'%(dsa_sigma[i]),
+            for i in xrange(6): print '%+7.1f'%(dsa_sigma[i]-stress_wgtavg[i]),
             print ''
         stress.append(dsa_sigma)
 
@@ -487,6 +497,12 @@ def ex_consistency(
             fs.savefig(f2);fe.savefig(f1);f_er.savefig(f3)
             f1.clf();plt.draw();f2.clf();plt.draw();f3.clf();plt.draw()
             plt.close(f1);plt.close(f2);plt.close(f3);plt.ion()
+
+        dtCalcstr = dtCalcstr + (time.time()-t0_calstr)
+
+    uet(dtCalcstr,'Time spent inside the stress analysis loop')
+    print
+
     # end of the serial loop over deformation steps
     ############################################################
 

@@ -69,6 +69,7 @@ def reader(fn='igstrain_load_ph1.out',isort=False,
     v      = np.zeros((nstp,nphi,npsis))
     steps  = np.zeros((nstp))
     il = 0
+
     for istp in xrange(nstp):
         for iphi in xrange(nphi):
             for ibeta in xrange(npsis/2):
@@ -413,6 +414,28 @@ def u_epshkl(e,sigma=5e-5):
         d = u_gaussian(e[i],sigma)
         a.append(d)
     return a
+
+
+def u_epshkl_geom_inten_vectorize(
+        model_vfs, model_tdats, ird, sigma, psi, theta_b):
+    mrd = model_vfs/ird ## (100,3,8)
+    geom_f = 1./ (1-np.tan(psi)/np.tan(theta_b))  #(8,)
+
+    if (geom_f<0).any():
+        print 'psi:', psi*180/np.pi
+        print 'theta_b:', theta_b*180/np.pi
+        raise IOError, 'geom_f<0'
+
+    val=sigma**2/mrd  ## 100, 3, 8
+    _sigma_=geom_f * np.sqrt(val) #(8,)
+    new_sigma=_sigma_.copy()
+    np.random.seed()
+    print model_tdats.shape
+    print new_sigma.shape
+    perturbed_strain = np.random.normal(loc=model_tdats,
+                                        size=new_sigma.shape,
+                                        scale=new_sigma)
+    return perturbed_strain
 
 def u_epshkl_geom_inten(e, sigma, psi, theta_b, mrd):
     """
@@ -1184,44 +1207,28 @@ class ResidualStress:
 
         self.sfm = np.zeros((sfm.shape[0],6,\
                                  sfm.shape[2],sfm.shape[3]))
-        for istp in xrange(len(sfm)):
-            for k in xrange(len(sfm[istp])):
-                for iphi in xrange(len(sfm[istp,k])):
-                    self.sfm[istp,k,iphi,:] \
-                        = sfm[istp,k,iphi,:].copy()
-
+        self.sfm[:len(sfm),:len(sfm[0]),:len(sfm[0][0]),:]=\
+                 sfm[:,:,:,:].copy()
         ## Substitue the upper off-diagonals to the lowers.
         dum_psi = t[8,0,0,0]
         dum = self.sfm[:,3,:,:] # SF_23
         self.sfm[:,3,:,:] = self.sfm[:,5,:,:]
         self.sfm[:,5,:,:] = dum[:,:,:]
 
-
-        for istp in xrange(len(self.sfm)):
-            for k in xrange(len(self.sfm[istp])):
-                for iphi in xrange(len(self.sfm[istp,k])):
-                    x = dum_psi
-                    y = self.sfm[istp,k,iphi,:].copy()
-                    x,y=sort(x,y)
-                    self.sfm[istp,k,iphi,:] = y[:]
-
-        # stress/strain states
-#        dstr=np.loadtxt(fnmod_str,skiprows=1).T
+        inds=np.argsort(dum_psi)
+        self.sfm=self.sfm[:,:,:,inds]
         dstr=rb(fnmod_str,skiprows=1)
         if len(dstr.shape)==1:
             dstr = np.array([dstr]).T
 
         evm,svm,e11,e22,e33,e23,e13,e12,\
             s11,s22,s33,s23,s13,s12 = dstr[:14]
+
         self.strainm_con = np.array([e11,e22,e33,e12,e13,e23])
         self.stressm_con = np.array([s11,s22,s33,s12,s13,s23])
-        self.strainm = [] ; self.stressm = []
-        for ist in xrange(len(self.stepsm)):
-            self.strainm.append(self.strainm_con.T[ist])
-            self.stressm.append(self.stressm_con.T[ist])
 
-        self.strainm=np.array(self.strainm)
-        self.stressm=np.array(self.stressm)
+        self.strainm=self.strainm_con.T[:len(self.stepsm)]
+        self.stressm=self.stressm_con.T[:len(self.stepsm)]
 
         ## Standard data structure both EVPSC data and EXP data:
         self.dat_model = DiffDat(
@@ -1735,15 +1742,10 @@ class ResidualStress:
         self.sigma=np.array(stress)
         self.coeff()
         self.calc_Ei(ivo=ivo)
-        f_array=self.tdat[:,:] - self.Ei[:,:,]
-        f_array[np.isnan(f_array)]=0.
-        # for iphi in xrange(self.nphi):
-        #     for ipsi in xrange(self.npsi):
-        #         d = self.tdat[iphi,ipsi] \
-        #             - self.Ei[iphi,ipsi]
-        #         if np.isnan(d): d = 0
-        #         f_array.append(d)
-        # return np.array(f_array)
+
+        d = self.tdat -self.Ei
+        d[np.isnan(d)]=0.
+        return d.flatten().copy()
 
     def f_least_weighted(self,stress=[0,0,0,0,0,0],ivo=None,
                          weight=None):
@@ -1759,20 +1761,9 @@ class ResidualStress:
         self.coeff()
         self.calc_Ei(ivo=ivo)
         ## weight Ei by volumes in (phi,psi)
-
-        f_array = (self.tdat - self.Ei) * self.weight
-        f_array[np.isnan(f_array)] = 0.
-        return f_array
-
-        # f_array = [ ]
-        # for iphi in xrange(self.nphi):
-        #     for ipsi in xrange(self.npsi):
-        #         d = self.tdat[iphi,ipsi] \
-        #             - self.Ei[iphi,ipsi]
-        #         d = d * weight[iphi,ipsi]
-        #         if np.isnan(d): d = 0
-        #         f_array.append(d)
-        # return np.array(f_array)
+        d = self.tdat - self.Ei * weight
+        d[np.isnan(d)]=0.
+        return d.flatten().copy()
 
 def psi_reso2(mod=None,ntot=2):
     """
@@ -1843,11 +1834,7 @@ def psi_reso3(obj,psi,ntot=2):
     psi
     ntot
     """
-    sign_sin2psi = []
-    for i in xrange(len(psi)):
-        sign_sin2psi.append(
-            np.sign(psi) \
-            * sin(psi)**2)
+    sign_sin2psi = np.sign(psi) * sin(psi)**2
     # equal distance
     spc  = np.linspace(np.min(sign_sin2psi),
                        np.max(sign_sin2psi),ntot)
@@ -1858,14 +1845,22 @@ def psi_reso3(obj,psi,ntot=2):
     return select_psi(obj, inds)
 
 def select_psi(dat,inds):
+
     array = []
     dum = dat.T
     for i in xrange(len(inds)):
         array.append(dum[inds[i]])
     return np.array(array).T
 
+# def find_nearest(array,value):
+#     return (np.abs(array-value)).argmin()
+
 def find_nearest(array,value):
-    return (np.abs(array-value)).argmin()
+    import math
+    idx = np.searchsorted(array, value, side="left")
+    if idx == len(array) or math.fabs(value - array[idx-1]) < math.fabs(value - array[idx]):
+        return idx-1
+    else: return idx
 
 
 def psi_reso(mod=None,nbin=2):
@@ -1965,7 +1960,7 @@ def filter_psi(mod=None,psimx=None,sin2psimx=None):
 
 
 
-def filter_psi2(obj=None,sin2psi=[],bounds=[0.,1.]):
+def filter_psi2_deprecated(obj=None,sin2psi=[],bounds=[0.,1.]):
     """
     Limit psi values - trim some elements from the obj
     array as to assert only a certain range of psi (sin2psi)
@@ -1981,6 +1976,7 @@ def filter_psi2(obj=None,sin2psi=[],bounds=[0.,1.]):
         val = sin2psi[i]
         if val>=bounds[0] and val<=bounds[1]:
             inds.append(i)
+
     shape = np.array(obj.shape)
     shape[-1] = len(inds)
     new_obj = np.zeros(shape)
@@ -1993,8 +1989,31 @@ def filter_psi2(obj=None,sin2psi=[],bounds=[0.,1.]):
     new_obj = new_obj_t.swapaxes(0,-1)
     return new_obj
 
+
+def filter_psi2(obj=None,sin2psi=[],bounds=[0.,1.]):
+    """
+    Limit psi values - trim some elements from the obj
+    array as to assert only a certain range of psi (sin2psi)
+
+    Arguments
+    =========
+    obj     = None
+    sin2psi =
+    bounds  = [0,  1.]
+    """
+    # inds = []
+    # for i in xrange(len(sin2psi)):
+    #     val = sin2psi[i]
+    #     if val>=bounds[0] and val<=bounds[1]:
+    #         inds.append(i)
+    filt = (sin2psi>=bounds[0])&(sin2psi<=bounds[1])
+    new_obj=obj.T[filt]
+    return new_obj.T
+
 def filter_psi3(sin2psi=[],bounds=[0.,1.],*args):
     rst=[]
+    filt = (sin2psi>=bounds[0])&(sin2psi<=bounds[1])
     for arg in args:
-        rst.append(filter_psi2(arg,sin2psi,bounds))
+        newObj=arg.swapaxes(0,-1)[filt].swapaxes(0,-1).copy()
+        rst.append(newObj)
     return rst
