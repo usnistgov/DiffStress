@@ -344,6 +344,28 @@ def ex_consistency(
     if ig_sub: model_tdats = model_ehkls - model_igs
     else     : model_tdats = model_ehkls.copy()
 
+
+
+    ## 3.5 - save data if required in order to reuse
+    ## the processed (analyzed) data for Monte Carlo
+    ## calculation
+    ## list of items to be saved
+
+    ## model_vfs, model_tdats, model_rs
+    ## _sf_, model_igs, model_ehkls
+
+    ## pickle the data
+    import MP.lib.temp
+    import pickle
+    filename_pickle=MP.lib.temp.gen_tempfile(prefix='dsa-data',ext='pck')
+    with open(filename_pickle,'wb') as fo:
+        pickle.dump(model_vfs,fo)
+        pickle.dump(model_tdats,fo)
+        pickle.dump(_sf_,fo)
+        pickle.dump(model_igs,fo)
+        pickle.dump(model_ehkls,fo)
+        pickle.dump(model_rs,fo)
+
     ## 4. Perturb tdat, i.e., ehkl (common)
     if iscatter:
         t0_perturb=time.time()
@@ -370,13 +392,11 @@ def ex_consistency(
     if len(flow_weight.epsilon_vm)<5: lc='k.'
     else:                             lc='k-'
 
-
-
     ## plot all stress factors at individual
     ## deformation levels
 
     stress = []
-    if verbose or True: print ('%19s '+'%8s%8s%8s%8s%8s%8s'*2)%(
+    print ('%19s '+'%8s%8s%8s%8s%8s%8s'*2)%(
         '','S11','S22','S33','S23','S13','S12',
         'dS11','dS22','dS33','dS23','dS13','dS12')
     ################################################
@@ -401,6 +421,7 @@ def ex_consistency(
             model_ehkls,tdats,
             ref_psis,wgt)
         stress.append(dsa_sigma)
+
 
         if iplot and istp==0:
             from matplotlib import pyplot as plt

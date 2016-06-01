@@ -1016,20 +1016,20 @@ class ResidualStress:
         from time import asctime
         from os import getcwd
 
-        self.log = open('rs.log','w') ###mktemp(dir=getcwd()
-        self.log.write('\nLog file from '+\
-                       'rs.ResidualStress\n')
-        write_args(
-            f=self.log,ihead=False,time=asctime(),
-            mod_ext=mod_ext,
-            fnmod_epshkl=fnmod_epshkl,
-            fnmod_ig=fnmod_ig,
-            fnmod_sf=fnmod_sf,
-            fnmod_str=fnmod_str,
-            fnexp_ehkl=fnexp_ehkl,
-            fnexp_sf=fnexp_sf,
-            exppath=exppath,
-            fnPF=fnPF)
+        # self.log = open('rs.log','w') ###mktemp(dir=getcwd()
+        # self.log.write('\nLog file from '+\
+        #                'rs.ResidualStress\n')
+        # write_args(
+        #     f=self.log,ihead=False,time=asctime(),
+        #     mod_ext=mod_ext,
+        #     fnmod_epshkl=fnmod_epshkl,
+        #     fnmod_ig=fnmod_ig,
+        #     fnmod_sf=fnmod_sf,
+        #     fnmod_str=fnmod_str,
+        #     fnexp_ehkl=fnexp_ehkl,
+        #     fnexp_sf=fnexp_sf,
+        #     exppath=exppath,
+        #     fnPF=fnPF)
 
         if mod_ext!=None:
             print "mod_ext <%s> is given"%mod_ext
@@ -1134,21 +1134,21 @@ class ResidualStress:
         fnmod_str    : model-predicted 'STR_STR.OUT' file name
         """
         ## log
-        self.log.write('\nself.readmod was called\n')
-        self.log.write(' Arguments\n=========\n')
-        write_args(f=self.log,ihead=False,
-                   fnmod_epshkl=fnmod_epshkl,
-                   fnmod_ig=fnmod_ig,
-                   fnmod_sf=fnmod_sf,
-                   fnmod_str=fnmod_str)
+        # self.log.write('\nself.readmod was called\n')
+        # self.log.write(' Arguments\n=========\n')
+        # write_args(f=self.log,ihead=False,
+        #            fnmod_epshkl=fnmod_epshkl,
+        #            fnmod_ig=fnmod_ig,
+        #            fnmod_sf=fnmod_sf,
+        #            fnmod_str=fnmod_str)
 
         from RS import pepshkl
         from pepshkl import reader2 as reader_sf
         from MP.ssort import sh as sort
         # eps^hkl from model
 
-        self.log.write('rs.reader reads fnmod_epshkl:%s\n'%
-                       fnmod_epshkl)
+        # self.log.write('rs.reader reads fnmod_epshkl:%s\n'%
+        #                fnmod_epshkl)
         ##
         import read_igstrain
         datm = read_igstrain.reader_ehkl(fnmod_epshkl,isort=True)
