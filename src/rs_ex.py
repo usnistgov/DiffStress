@@ -157,44 +157,24 @@ def ex_consistency(
         f.close()
         print 'log has been saved to ',fn
 
-    from rs import ResidualStress,u_epshkl,u_epshkl_geom_inten_vectorize,\
-        u_epshkl_geom_inten,filter_psi,filter_psi3,\
-        psi_reso,psi_reso2,psi_reso3,psi_reso4
-
+    from rs import ResidualStress,\
+        u_epshkl_geom_inten_vectorize,\
+        filter_psi3,psi_reso4
     from mst_ex import use_intp_sfig, return_vf
     from MP.mat import mech # mech is a module
 
-    FlowCurve = mech.FlowCurve
 
-    if iplot:
-        from matplotlib import pyplot as plt
-        from matplotlib.backends.backend_pdf import PdfPages
-        from MP.lib import mpl_lib,axes_label
-        plt.ioff()
-        wide_fig     = mpl_lib.wide_fig
-        fancy_legend = mpl_lib.fancy_legend
-        ## Collection of figures at various plastic strains
-        fe   = PdfPages('all_ehkl_fits_%s_%s.pdf'%(hkl,path))
-        fs   = PdfPages('all_stress_factors_%s_%s.pdf'%(hkl,path))
-        f_er = PdfPages('all_Ei-ehkl-e0_%s_%s.pdf'%(hkl,path))
-        fig1 = wide_fig(ifig,nw=2,nh=1,left=0.2,uw=3.5,
-                        w0=0,w1=0.3,right=0,iarange=True)
-
-        fig_vm = plt.figure(figsize=(3.5,3.5))
-        ax_vm = fig_vm.add_subplot(111)
-
-        ## ax1: Equivalent Stress/Strain
-        ## ax2: Stress path in the plane stress space (RD/TD)
-        ax1 = fig1.axes[0]; ax2 = fig1.axes[1]
-        pass
 
     #------------------------------------------------------------#
     ## i_ip = 1: ioption for the model data
     t0_load=time.time()
     model_rs = ResidualStress(
-        mod_ext=mod_ext,fnmod_ig='igstrain_fbulk_ph1.out',
-        fnmod_sf='igstrain_fbulk_ph1.out',i_ip=1)
-    uet(time.time()-t0_load,'Time spent for loading model_rs in rs_ex.ex_consistency')
+        mod_ext=mod_ext,
+        fnmod_ig='igstrain_fbulk_ph1.out',
+        fnmod_sf='igstrain_fbulk_ph1.out',
+        i_ip=1)
+    uet(time.time()-t0_load,
+        'Time spent for loading model_rs in rs_ex.ex_consistency')
     print
 
     ## Process the sf/eps0/ehkl/wgt and so forth
@@ -211,7 +191,6 @@ def ex_consistency(
     'model_ehkl'
     And eventually to 'model_tdats' inside the loop
     """
-
     ## SF/IG/ehkl
     model_ehkls = np.copy(model_rs.dat_model.ehkl)
     if isf_ext and iig_ext:
@@ -232,13 +211,13 @@ def ex_consistency(
     ## the least-sq estimator
     if not(iwgt): wgt = None # overwrite wgt
 
-    # Apply process
-    # 0. Use of interpolated SF?
-    # 1. Limit the range of sin2psi (or psi)
-    # 2. Finite number of tiltings
-    # 3. Assign tdat
-    # 4. Perturb ehkl (common)
-    # 5. Filter based on vf?
+    ## Apply data-analysis
+    ## 0. Use of 'interpolated' SF
+    ## 1. Limit the range of sin2psi (or psi)
+    ## 2. Finite number of tiltings
+    ## 3. Assign tdat (subtracting ig strain or not)
+    ## 4. Perturb ehkl (common)
+    ## 5. Filter based on vf?
 
     ## Unstaged but the 'raw' arrays (not used for actual calculation)
     raw_psis = model_rs.dat_model.psi.copy()
@@ -253,8 +232,8 @@ def ex_consistency(
     model_rs.nphi = len(model_rs.phis)
     sin2psis_init = np.sin(model_rs.psis)**2
 
-    # 0. Use interpolated SF
-    t0_pr0=time.time()
+    ## 0. Use interpolated SF
+    t0_pr0 = time.time()
     _sf_, _ig_ = use_intp_sfig(dec_inv_frq,iopt=dec_interp,
                                iplot=False,iwgt=False)
     uet(time.time()-t0_pr0,'t for pr0');print
@@ -263,7 +242,7 @@ def ex_consistency(
     ## in dat_model.sf
     _sf_ = _sf_.sf.transpose(0,3,1,2).copy() * 1e6
 
-    # 0.5 Mask DEC where volume fraction is depleted...
+    ## 0.5 Mask DEC where volume fraction is depleted...
     ## model_ngr or model_vfs
     filt = model_ngr==0
     _sf_ = _sf_.transpose(1,0,2,3).copy()
@@ -285,7 +264,7 @@ def ex_consistency(
     model_sfs[filt]=np.nan
     raw_ehkl[filt[:,0,:,:]]=np.nan
 
-    # 1. Limit the range of sin2psi (or psi)
+    ## 1. Limit the range of sin2psi (or psi)
     t0_pr1=time.time()
     if type(sin2psimx)!=type(None) or \
        type(psimx)!=type(None):
@@ -297,9 +276,9 @@ def ex_consistency(
         raw_sfs,model_sfs,model_igs,model_vfs,\
             model_ehkls,raw_psis,_sf_,raw_vfs\
             = filter_psi3(
-                sin2psis_init,bounds,
-                raw_sfs,model_sfs,model_igs,model_vfs,
-                model_ehkls,raw_psis,_sf_,raw_vfs)
+            sin2psis_init,bounds,
+            raw_sfs,model_sfs,model_igs,model_vfs,
+            model_ehkls,raw_psis,_sf_,raw_vfs)
 
         ## reduce the psis in model_rs
         model_rs.psis, = filter_psi3(
@@ -311,7 +290,7 @@ def ex_consistency(
 
     DEC_interp = _sf_.copy()
 
-    # 2. Finite number of tiltings
+    ## 2. Finite number of tiltings
     t0_pr2=time.time()
     if psi_nbin!=1:
         model_sfs, model_igs, model_vfs, \
@@ -327,32 +306,29 @@ def ex_consistency(
     uet(time.time()-t0_pr2,'t for pr2')
     print
 
-    # 3. Assign tdat
+    ## 3. Assign tdat
     if ig_sub: model_tdats = model_ehkls - model_igs
-    else: model_tdats = model_ehkls.copy()
+    else     : model_tdats = model_ehkls.copy()
 
-
-    # 4. Perturb ehkl (common)
+    ## 4. Perturb tdat, i.e., ehkl (common)
     if iscatter:
         t0_perturb=time.time()
         nstp, nphi, npsi = model_ehkls.shape
-        tdats = np.zeros((nstp,nphi,npsi))
         tdats = u_epshkl_geom_inten_vectorize(
             model_vfs,model_tdats,
             ird,sigma,model_rs.psis,theta_b)
-
         uet(time.time()-t0_perturb,'Time spent for perturbation')
         print
-
     else: tdats=model_tdats.copy()
 
     ## end of data process
     #------------------------------------------------------------#
 
     if mod_ext==None: mod_ref='STR_STR.OUT'
-    else: mod_ref='%s.%s'%(mod_ref.split('.')[0],
-    mod_ext)
+    else            : mod_ref='%s.%s'%(mod_ref.split('.')[0],
+                                       mod_ext)
 
+    FlowCurve = mech.FlowCurve
     flow_weight = FlowCurve(name='Model weighted')
     flow_weight.get_model(fn=mod_ref)
     ## calc Von Mises stress/strain
@@ -362,6 +338,25 @@ def ex_consistency(
     else:                             lc='k-'
 
     if iplot:
+        from matplotlib import pyplot as plt
+        from matplotlib.backends.backend_pdf import PdfPages
+        from MP.lib import mpl_lib,axes_label
+        plt.ioff()
+        wide_fig     = mpl_lib.wide_fig
+        fancy_legend = mpl_lib.fancy_legend
+        ## Collection of figures at various plastic strains
+        fe   = PdfPages('all_ehkl_fits_%s_%s.pdf'%(hkl,path))
+        fs   = PdfPages('all_stress_factors_%s_%s.pdf'%(hkl,path))
+        f_er = PdfPages('all_Ei-ehkl-e0_%s_%s.pdf'%(hkl,path))
+        fig1 = wide_fig(ifig,nw=2,nh=1,left=0.2,uw=3.5,
+                        w0=0,w1=0.3,right=0,iarange=True)
+
+        fig_vm = plt.figure(figsize=(3.5,3.5))
+        ax_vm = fig_vm.add_subplot(111)
+
+        ## ax1: Equivalent Stress/Strain
+        ## ax2: Stress path in the plane stress space (RD/TD)
+        ax1 = fig1.axes[0]; ax2 = fig1.axes[1]
         for a in [ax1,ax_vm]:
             a.plot(
                 flow_weight.epsilon_vm,
@@ -405,15 +400,12 @@ def ex_consistency(
             istp = istep
 
         print '%13s %2.2i/%2.2i'%('processing:',istp,nstp),
-        #model_rs.sf = model_sfs[istp].copy()
 
-        ## filter signals where any data is nan
         ref = _sf_[istp].copy()
         inds = []
 
         ## masking can be improved by being
         ## specific on phi axis -> require fix in RS.rs
-        # for iphi in xrange(len(ref[0])):
         for ipsi in xrange(len(ref_psis)):
             if not(np.isnan(ref[0:2,:,ipsi]).any()):
                 inds.append(ipsi)
@@ -454,13 +446,17 @@ def ex_consistency(
             print ''
         stress.append(dsa_sigma)
 
-        full_Ei = np.zeros((model_rs.nphi,len(raw_psis)))
-        for iphi in xrange(model_rs.nphi):
-            for ipsi in xrange(len(raw_psis)):
-                for k in xrange(2):
-                    full_Ei[iphi,ipsi] \
-                        = full_Ei[iphi,ipsi]+\
-                        raw_sfs[istp,k,iphi,ipsi]*dsa_sigma[k]
+        if iplot:
+            # full_Ei = np.zeros((model_rs.nphi,len(raw_psis)))
+            # for iphi in xrange(model_rs.nphi):
+            #     for ipsi in xrange(len(raw_psis)):
+            #         for k in xrange(2):
+            #             full_Ei[iphi,ipsi] \
+            #                 = full_Ei[iphi,ipsi]+\
+            #                 raw_sfs[istp,k,iphi,ipsi]*dsa_sigma[k]
+            a=raw_sfs[istp,:2,:,:]
+            b=dsa_sigma[:2]
+            full_Ei = np.tensordot(a,b,axes=[0,0])
 
         if type(istep)!=type(None) and iplot==False:
             return model_rs, s11,s22, dsa_sigma[0],dsa_sigma[1],\
