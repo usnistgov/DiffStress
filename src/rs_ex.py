@@ -6,6 +6,10 @@ which will be used for Monte Carlo experiments to estimate
 the uncertainty in the stress measurements
 """
 
+import matplotlib as mpl
+mpl.use('Agg') ## In case X-window is not available.
+
+
 import numpy as np
 from numpy import pi, sin, cos
 from lib import write_args

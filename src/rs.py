@@ -1719,10 +1719,14 @@ class ResidualStress:
         self.coeff()
         self.calc_Di() # initial estimation of d0c
 
-        f_array = []
-        for iphi in xrange(self.nphi):
-            for ipsi in xrange(self.npsi):
-                f_array.append(self.tdat[iphi,ipsi] - self.Di[iphi,ipsi])
+        f_array = self.tdat - self.Di
+        f_array[np.isnan(f_array)]=0.
+
+        # f_array = []
+        # for iphi in xrange(self.nphi):
+        #     for ipsi in xrange(self.npsi):
+        #         f_array.append(self.tdat[iphi,ipsi] - self.Di[iphi,ipsi])
+
         return np.array(f_array)
 
     def f_least(self,stress=[0,0,0,0,0,0],ivo=None):
@@ -1730,6 +1734,11 @@ class ResidualStress:
         1. Assign y to self.Ei
         2. f_array = exp_dat - f(stress, y)
         3. return f_array
+
+        Arguments
+        ---------
+        stress
+        ivo
         """
         self.sigma=np.array(stress)
         self.coeff()
