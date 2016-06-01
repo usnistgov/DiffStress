@@ -1149,7 +1149,10 @@ class ResidualStress:
 
         self.log.write('rs.reader reads fnmod_epshkl:%s\n'%
                        fnmod_epshkl)
-        datm = reader(fnmod_epshkl,isort=True)
+        ##
+        import read_igstrain
+        datm = read_igstrain.reader_ehkl(fnmod_epshkl,isort=True)
+        # datm = reader(fnmod_epshkl,isort=True)
 
         self.stepsm = map(int,datm[-1])
         self.psism = datm[0]; self.npsim = len(self.psism)
@@ -1162,61 +1165,25 @@ class ResidualStress:
         ngr = datm[3]; vf = datm[4]
         ehklm_sorted = np.zeros((len(self.stepsm),self.nphim,self.npsim))
 
-        # ig strain from model
-        if fnmod_ig!=None:
-            #eps0m should be in dimension of: (nstp,nphi,nspi)
-            try:
-                self.eps0m = reader(fn=fnmod_ig,isort=True)[2]
-            except:
-                self.log.write('\n****************************')
-                self.log.write('*******************************\n')
-                self.log.write('This file is not readable by')
-                self.log.write(' rs.reader \n')
-                self.log.write('attempt to use pepshkl.reader2\n')
-                self.log.write('\n****************************')
-                self.log.write('*******************************\n')
-                t,dum = reader_sf(fn=fnmod_ig,iopt=1)
-                # t[0] ! ehkl
-                # t[1] ! e (macro)
-                # t[2] ! ehkle    (ehkl - emacro)
-                # t[3] ! fhkl
-                # t[4] ! fbulk    (f bulk?)
-                # t[5] ! ige       e(hkl) - f_hkl*Sij
-                # t[6] ! Sij
-                # t[7] ! phi
-                # t[8] ! psi
-                # t[2] ![nst,nsf, nphi, npsi]
-                self.log.write('IG strain defined ')
-                self.log.write('as e(hkl) - f_hkl*S(ij)\n')
-                self.eps0m=t[5][:,0,:,:]
-            else:
-                self.log.write('\n****************************')
-                self.log.write('*******************************\n')
-                self.log.write('Used rs.reader to read %s\n'%fnmod_ig)
-                self.log.write('\n****************************')
-                self.log.write('*******************************\n')
+        if fnmod_sf!=fnmod_ig:
+            raise IOError, 'fnmod_sf and fnmod_ig is assumed as equivalent'
+        rst = read_igstrain.reader_ig(fnmod_ig,True)
+        sfm = rst[6].copy()
+        ige = rst[8].copy()
+        shp = sfm.shape
+        self.sfm = np.zeros((shp[0],6,shp[2],shp[3]))
+        self.eps0m = ige[:,0,:,:]
+        self.sfm[:,:shp[1],:,:]=sfm[:,:shp[1],:,:]
 
-        elif fnmod_ig==None:
-            self.log.write('fnmod_ig was not given:\n')
-            self.log.write('all zero array for self.eps0m.\n')
-            self.eps0m = np.zeros(self.ehklm.shape)
 
-        # stress factor from model
-        t, usf = reader_sf(fn=fnmod_sf)
-        sfm = t[3] # [istp,k,phi,psi] {fhkl} Stress Factor
-
-        self.sfm = np.zeros((sfm.shape[0],6,\
-                                 sfm.shape[2],sfm.shape[3]))
-        self.sfm[:len(sfm),:len(sfm[0]),:len(sfm[0][0]),:]=\
-                 sfm[:,:,:,:].copy()
         ## Substitue the upper off-diagonals to the lowers.
-        dum_psi = t[8,0,0,0]
-        dum = self.sfm[:,3,:,:] # SF_23
-        self.sfm[:,3,:,:] = self.sfm[:,5,:,:]
-        self.sfm[:,5,:,:] = dum[:,:,:]
+        # dum_psi = t[8,0,0,0]
+        dum = self.sfm[:,3,:,:].copy() # SF_23
+        self.sfm[:,3,:,:] = self.sfm[:,5,:,:].copy()
+        self.sfm[:,5,:,:] = dum[:,:,:].copy()
 
-        inds=np.argsort(dum_psi)
-        self.sfm=self.sfm[:,:,:,inds]
+        # inds=np.argsort(dum_psi)
+        # self.sfm=self.sfm[:,:,:,inds]
         dstr=rb(fnmod_str,skiprows=1)
         if len(dstr.shape)==1:
             dstr = np.array([dstr]).T
