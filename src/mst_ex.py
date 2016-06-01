@@ -425,8 +425,6 @@ def use_intp_sfig(ss=2,iopt=0,iplot=False,
     vf_dat,ngr_dat = return_vf() ## read vf/ngr
     print 'pr0:',time.time()-t0_pr0
 
-
-
     ## 1. Read original SF/IG/FLow
     t0_pr1=time.time()
     RS_model = RS(mod_ext=None,

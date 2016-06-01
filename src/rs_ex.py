@@ -67,6 +67,37 @@ def ex(ifig=50,
     plt.show()
     return stress
 
+def proc0(dec_inv_frq,dec_interp):
+    from mst_ex import use_intp_sfig, return_vf
+    _sf_, _ig_ = use_intp_sfig(dec_inv_frq,iopt=dec_interp,
+                               iplot=False,iwgt=False)
+    _sf_ = _sf_.sf.transpose(0,3,1,2).copy() * 1e6
+    return _sf_, _ig_
+
+
+def proc_half(model_ngr,_sf_,raw_sfs,model_sfs,
+              model_vfs,raw_ehkl):
+    filt = model_ngr==0
+    _sf_ = _sf_.transpose(1,0,2,3).copy()
+    _sf_[:,filt]=np.nan
+    _sf_ = _sf_.transpose(1,0,2,3).copy()
+    raw_sfs = raw_sfs.transpose(1,0,2,3).copy()
+    raw_sfs[:,filt]=np.nan
+    raw_sfs = raw_sfs.transpose(1,0,2,3).copy()
+    model_sfs = model_sfs.transpose(1,0,2,3).copy()
+    model_sfs[:,filt]=np.nan
+    model_sfs = model_sfs.transpose(1,0,2,3).copy()
+    model_vfs[filt]=np.nan
+    model_ngr[filt]=np.nan
+    raw_ehkl[filt]=np.nan
+
+    filt = (_sf_==0) | (raw_sfs==0)
+    _sf_[filt]=np.nan
+    raw_sfs[filt]=np.nan
+    model_sfs[filt]=np.nan
+    raw_ehkl[filt[:,0,:,:]]=np.nan
+    return _sf_,raw_sfs,model_sfs,model_vfs,model_ngr,raw_ehkl
+
 def ex_consistency(
         ifig=50,nxphi=3,exp_ref=[],exp_lab=[],mod_ext=None,
         mod_ref='STR_STR.OUT',sin2psimx=None,iscatter=False,
@@ -160,7 +191,7 @@ def ex_consistency(
     from rs import ResidualStress,\
         u_epshkl_geom_inten_vectorize,\
         filter_psi3,psi_reso4
-    from mst_ex import use_intp_sfig, return_vf
+    from mst_ex import  return_vf
     from MP.mat import mech # mech is a module
 
     #------------------------------------------------------------#
@@ -231,78 +262,43 @@ def ex_consistency(
     sin2psis_init = np.sin(model_rs.psis)**2
 
     ## 0. Use interpolated SF
-    t0_pr0 = time.time()
-    _sf_, _ig_ = use_intp_sfig(dec_inv_frq,iopt=dec_interp,
-                               iplot=False,iwgt=False)
-    uet(time.time()-t0_pr0,'t for pr0');print
-
-    ## swapping axes to comply with what is used
-    ## in dat_model.sf
-    _sf_ = _sf_.sf.transpose(0,3,1,2).copy() * 1e6
+    _sf_, _ig_ = proc0(dec_inv_frq,dec_interp)
 
     ## 0.5 Mask DEC where volume fraction is depleted...
     ## model_ngr or model_vfs
-    filt = model_ngr==0
-    _sf_ = _sf_.transpose(1,0,2,3).copy()
-    _sf_[:,filt]=np.nan
-    _sf_ = _sf_.transpose(1,0,2,3).copy()
-    raw_sfs = raw_sfs.transpose(1,0,2,3).copy()
-    raw_sfs[:,filt]=np.nan
-    raw_sfs = raw_sfs.transpose(1,0,2,3).copy()
-    model_sfs = model_sfs.transpose(1,0,2,3).copy()
-    model_sfs[:,filt]=np.nan
-    model_sfs = model_sfs.transpose(1,0,2,3).copy()
-    model_vfs[filt]=np.nan
-    model_ngr[filt]=np.nan
-    raw_ehkl[filt]=np.nan
-
-    filt = (_sf_==0) | (raw_sfs==0)
-    _sf_[filt]=np.nan
-    raw_sfs[filt]=np.nan
-    model_sfs[filt]=np.nan
-    raw_ehkl[filt[:,0,:,:]]=np.nan
+    _sf_,raw_sfs,model_sfs,model_vfs,model_ngr,raw_ehkl\
+        =proc_half(model_ngr,_sf_,raw_sfs,model_sfs,
+                   model_vfs,raw_ehkl)
 
     ## 1. Limit the range of sin2psi (or psi)
     t0_pr1=time.time()
-    if type(sin2psimx)!=type(None) or \
-       type(psimx)!=type(None):
-        if type(sin2psimx)!=type(None):
-            bounds=[0., sin2psimx]
-        elif type(psimx)!=type(None):
-            bounds=[0.,np.sin(psimx*np.pi/180.)**2]
-
+    if type(sin2psimx)!=type(None) or type(psimx)!=type(None):
+        if type(sin2psimx)!=type(None): bounds=[0., sin2psimx]
+        elif type(psimx)!=type(None): bounds=[0.,np.sin(psimx*np.pi/180.)**2]
         raw_sfs,model_sfs,model_igs,model_vfs,\
             model_ehkls,raw_psis,_sf_,raw_vfs\
-            = filter_psi3(
-            sin2psis_init,bounds,
-            raw_sfs,model_sfs,model_igs,model_vfs,
-            model_ehkls,raw_psis,_sf_,raw_vfs)
+            = filter_psi3(sin2psis_init,bounds,
+                          raw_sfs,model_sfs,model_igs,model_vfs,
+                          model_ehkls,raw_psis,_sf_,raw_vfs)
 
         ## reduce the psis in model_rs
-        model_rs.psis, = filter_psi3(
-            sin2psis_init,bounds,
-            model_rs.psis.copy())
+        model_rs.psis, = filter_psi3(sin2psis_init,bounds,
+                                     model_rs.psis.copy())
         model_rs.npsi = len(model_rs.psis)
-    uet(time.time()-t0_pr1, 't for pr1')
-    print
-
+    uet(time.time()-t0_pr1, 't for pr1');print
     DEC_interp = _sf_.copy()
 
     ## 2. Finite number of tiltings
     t0_pr2=time.time()
     if psi_nbin!=1:
-        model_sfs, model_igs, model_vfs, \
-            model_ehkls, _sf_ \
-            = psi_reso4(
-                model_rs.psis, psi_nbin,
-                model_sfs,model_igs,
-                model_vfs,model_ehkls,_sf_)
-        model_rs.psis, = psi_reso4(
-            model_rs.psis.copy(),psi_nbin,
-            model_rs.psis.copy())
+        model_sfs, model_igs, model_vfs,model_ehkls, _sf_ \
+            = psi_reso4(model_rs.psis, psi_nbin,
+                        model_sfs,model_igs,
+                        model_vfs,model_ehkls,_sf_)
+        model_rs.psis, = psi_reso4(model_rs.psis.copy(),psi_nbin,
+                                   model_rs.psis.copy())
         model_rs.npsi = len(model_rs.psis)
-    uet(time.time()-t0_pr2,'t for pr2')
-    print
+    uet(time.time()-t0_pr2,'t for pr2');print
 
     ## 3. Assign tdat
     if ig_sub: model_tdats = model_ehkls - model_igs
@@ -326,8 +322,7 @@ def ex_consistency(
     else            : mod_ref='%s.%s'%(mod_ref.split('.')[0],
                                        mod_ext)
 
-    FlowCurve = mech.FlowCurve
-    flow_weight = FlowCurve(name='Model weighted')
+    flow_weight = mech.FlowCurve(name='Model weighted')
     flow_weight.get_model(fn=mod_ref)
     ## calc Von Mises stress/strain
     flow_weight.get_eqv()
@@ -498,7 +493,7 @@ def ex_consistency(
     if iplot: fe.close(); fs.close(); f_er.close()
 
     stress   = np.array(stress).T # diffraction stress
-    flow_dsa = FlowCurve(name='Diffraction Stress')
+    flow_dsa = mech.FlowCurve(name='Diffraction Stress')
     flow_dsa.get_6stress(stress)
 
     if type(nfrq).__name__=='NoneType':
