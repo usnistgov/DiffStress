@@ -1581,21 +1581,11 @@ class ResidualStress:
 
         ivo = None
         """
-        self.Ei = np.zeros((self.nphi,self.npsi))
-        ## self.Ei[iphi,ipsi] = 0
-        for iphi in xrange(self.nphi):
-            for ipsi in xrange(self.npsi):
-                for k in xrange(6): # six components
-                    # once ivo is given, optimization runs only
-                    # for the given ivo components
-                    if ivo==None or (ivo!=None and k in ivo):
-                        if not(np.isnan(
-                                self.cffs[k,iphi,ipsi])):
-                            self.Ei[iphi,ipsi] \
-                                = self.Ei[iphi,ipsi] \
-                                + self.cffs[k,iphi,ipsi] \
-                                * self.sigma[k]
-
+        cffs = self.cffs.copy()
+        cffs[np.isnan(cffs)]=0.
+        a=cffs.copy()
+        b=self.sigma
+        self.Ei = np.tensordot(a,b,axes=[0,0])
 
     def calc_Di(self,d0c=None,d0=None):
         """
@@ -1606,15 +1596,7 @@ class ResidualStress:
         d0c = None
         d0  = None
         """
-        self.Di = np.zeros((self.nphi, self.npsi))
-        for iphi in xrange(self.nphi):
-            for ipsi in xrange(self.npsi):
-                self.Di[iphi,ipsi] = 0
-                for k in xrange(6):
-                    self.Di[iphi,ipsi] = \
-                        self.Di[iphi,ipsi] \
-                        + self.cffs[k,iphi,ipsi]\
-                        * self.sigma[k]
+        self.Di = np.tensordot(self.cffs,self.sigma,axes=[0,0])
         if d0c==None and d0==None:
             d0_avg = np.average(self.Di[::])
             self.Di[iphi,ipsi] = self.Di[iphi,ipsi] * d0_avg + d0_avg
@@ -1687,12 +1669,6 @@ class ResidualStress:
 
         f_array = self.tdat - self.Di
         f_array[np.isnan(f_array)]=0.
-
-        # f_array = []
-        # for iphi in xrange(self.nphi):
-        #     for ipsi in xrange(self.npsi):
-        #         f_array.append(self.tdat[iphi,ipsi] - self.Di[iphi,ipsi])
-
         return np.array(f_array)
 
     def f_least(self,stress=[0,0,0,0,0,0],ivo=None):

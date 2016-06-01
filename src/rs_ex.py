@@ -163,8 +163,6 @@ def ex_consistency(
     from mst_ex import use_intp_sfig, return_vf
     from MP.mat import mech # mech is a module
 
-
-
     #------------------------------------------------------------#
     ## i_ip = 1: ioption for the model data
     t0_load=time.time()
@@ -446,14 +444,9 @@ def ex_consistency(
             print ''
         stress.append(dsa_sigma)
 
+
+
         if iplot:
-            # full_Ei = np.zeros((model_rs.nphi,len(raw_psis)))
-            # for iphi in xrange(model_rs.nphi):
-            #     for ipsi in xrange(len(raw_psis)):
-            #         for k in xrange(2):
-            #             full_Ei[iphi,ipsi] \
-            #                 = full_Ei[iphi,ipsi]+\
-            #                 raw_sfs[istp,k,iphi,ipsi]*dsa_sigma[k]
             a=raw_sfs[istp,:2,:,:]
             b=dsa_sigma[:2]
             full_Ei = np.tensordot(a,b,axes=[0,0])
