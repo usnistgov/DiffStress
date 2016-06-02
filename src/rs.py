@@ -1702,6 +1702,8 @@ class ResidualStress:
         self.coeff()
         self.calc_Ei(ivo=ivo)
         ## weight Ei by volumes in (phi,psi)
+        if self.Ei.shape!=weight.shape:
+            raise IOError, 'shape mismatch'
         d = self.tdat - self.Ei * weight
         d[np.isnan(d)]=0.
         return d.flatten().copy()

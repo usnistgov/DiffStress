@@ -261,7 +261,7 @@ def ex_consistency(
         print 'log has been saved to ',fn
 
     #------------------------------------------------------------#
-    if not(iwgt): wgt = None # overwrite wgt
+
 
     if type(fnPickle).__name__=='NoneType':
         ## i_ip = 1: ioption for the model data
@@ -438,6 +438,13 @@ def ex_consistency(
 
     ## Main loop
     ## -------------------------------------------------- ##
+    if iwgt:
+        ## weight the objective function in the
+        ## least-square method to analyze the diffraction stress.
+        wgt = model_vfs.copy()
+    elif not(iwgt):
+        wgt = None # overwrite wgt
+
     dtCalcstr = 0.
     for istp in xrange(nstp):
         t0_calstr=time.time()
