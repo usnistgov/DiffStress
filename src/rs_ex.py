@@ -301,7 +301,6 @@ def ex_consistency(
         ## whether or not vf would be used as weights in
         ## the least-sq estimator
 
-
         ## Apply data-analysis
         ## 0. Use of 'interpolated' SF
         ## 1. Limit the range of sin2psi (or psi)
@@ -455,7 +454,6 @@ def ex_consistency(
             ref_psis,wgt)
         stress.append(dsa_sigma)
 
-
         if iplot and istp==0:
             from matplotlib import pyplot as plt
             from matplotlib.backends.backend_pdf import PdfPages
@@ -547,7 +545,6 @@ def ex_consistency(
             f = exp_ref[i]; lab = exp_lab[i]
             edat = np.loadtxt(f).T
             ax1.plot(edat[0],edat[1],'-',lw=2,label=lab)
-            ## ax1.set_ylim(0.,800)
 
         for a in [ax1,ax_vm]:
             fancy_legend(a,size=10,nscat=1)
@@ -559,8 +556,6 @@ def ex_consistency(
         npoints = len(sigma_wgt[0,0])
         wgtx = sigma_wgt[0,0];      wgty = sigma_wgt[1,1]
         dsax = flow_dsa.sigma[0,0]; dsay = flow_dsa.sigma[1,1]
-        # for i in xrange(npoints):
-        #     ax2.plot([wgtx[i],dsax[i]],[wgty[i],dsay[i]],'k-',alpha=0.2)
 
         ax2.set_ylim(-100,700); ax2.set_xlim(-100,700)
         ax2.set_aspect('equal')
@@ -573,11 +568,8 @@ def ex_consistency(
 
         ## save figures
         fig1.savefig('flow_%s_%s.pdf'%(hkl,path))
-        fig_vm.savefig('all_flow_vm.pdf',  bbox_inches='tight')
-        fig_vm.savefig('all_flow_vm.ps',  bbox_inches='tight')
-        ## fig2.savefig('ehkl_%s_fit_%s.pdf'%(hkl,path))
-        ## fig3.savefig('sf_%s_%s.pdf'%(hkl,path))
-        ## fig4.savefig('ehkl_fit_err_%s_%s.pdf'%(hkl,path))
+        fig_vm.savefig('all_flow_vm.pdf', bbox_inches='tight')
+        fig_vm.savefig('all_flow_vm.ps', bbox_inches='tight')
         # close figures
         try:
             figs=[fig1,fig2,fig3,fig4]
@@ -691,7 +683,6 @@ def __model_fit_plot__(
         ax.plot(x,y,'k.',label=label)
         if iwind:
             raise IOError, 'iwind is not stable'
-            xerr = []
             for i in xrange(len(psis)):
                 X = psis[i]*180./np.pi; Y = y[i]
                 pl, lu, s2l, s2u = sin2psi_wind(
