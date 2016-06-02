@@ -450,7 +450,7 @@ def u_epshkl_geom_inten_vectorize(
 
     val=sigma**2/mrd  ## 100, 3, 8
     _sigma_=geom_f * np.sqrt(val) #(8,)
-    chi=_sigma_.copy()
+    chi=1./_sigma_.copy()
     np.random.seed()
     perturbed_strain = np.random.normal(loc=model_tdats,
                                         size=chi.shape,
@@ -1714,6 +1714,12 @@ class ResidualStress:
                          weight=None):
         """
         For weighted linear least square method
+
+        Arguments
+        ---------
+        stress=[0,0,0,0,0,0]
+        ivo   = None or array
+        weight = None
         """
         if type(weight)==type(None):
             raise IOError, "Argument weight should be given"
