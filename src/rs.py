@@ -430,8 +430,6 @@ def u_epshkl_geom_inten_vectorize(
     _sigma_=geom_f * np.sqrt(val) #(8,)
     new_sigma=_sigma_.copy()
     np.random.seed()
-    print model_tdats.shape
-    print new_sigma.shape
     perturbed_strain = np.random.normal(loc=model_tdats,
                                         size=new_sigma.shape,
                                         scale=new_sigma)

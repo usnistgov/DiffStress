@@ -831,12 +831,12 @@ def wrap_func(
         dec_inv_frq,
         dec_interp,
         bounds,
+        iwgt,
         nbins,
         bragg,
         ird,
         nfrq,
         fnPickle):
-
     """
     Wrap ex_consistency and return x, y
 
@@ -849,6 +849,7 @@ def wrap_func(
         dec_inv_frq=dec_inv_frq,
         sin2psimx=bounds[1],
         psi_nbin=nbins,
+        iwgt=iwgt,
         dec_interp=dec_interp,
         theta_b=bragg,
         ird=ird,
@@ -958,6 +959,8 @@ def influence_of_cnts_stats(
     NCPU        : The number of CPU cores allowed to run
     """
     from RS.rs_ex import ex_consistency as func
+    import multiprocessing
+    from multiprocessing import Pool
 
     if iplot:
         import matplotlib.pyplot as plt
@@ -975,13 +978,16 @@ def influence_of_cnts_stats(
     rst=func(
         sin2psimx=bounds[1],
         iscatter=False,
-        sigma=sigmas[0],
+        sigma=10e-5,
         psi_nbin=nbins,
         ig_sub=True,
+        iwgt=False,
+        ilog=True,
         iplot=False, # iplot=True
         dec_inv_frq=ss,
         dec_interp=intp_opt,
         nfrq=nfrq)
+
     myrs,flow_raw,flow2 = rst[0],rst[1],rst[2]
     print '\n\n**************'
     print 'test completed'
@@ -990,8 +996,7 @@ def influence_of_cnts_stats(
     Y_all = np.zeros((len(sigmas), nsample, flow2.nstp))
     M = []
     ls=['-+','-s','-o','-d','-t']
-    import multiprocessing
-    from multiprocessing import Pool
+
     if NCPU==0: NCPU = multiprocessing.cpu_count()
     print 'NCPU: %i'%NCPU
     pool = Pool(processes = NCPU)
@@ -1007,15 +1012,16 @@ def influence_of_cnts_stats(
                     ss,
                     intp_opt,
                     bounds,
+                    iwgt,
                     nbins,
                     bragg,
                     ird,nfrq,None),))
+
     ## close/join/terminate
     pool.close(); pool.join(); pool.terminate()
     fnPickles=[]
     for i in xrange(len(sigmas)):
         fnPickles.append(results[i].get())
-
 
     pool = Pool(processes = NCPU)
     ## function is now wrap_func
@@ -1031,9 +1037,11 @@ def influence_of_cnts_stats(
                         ss,
                         intp_opt,
                         bounds,
+                        iwgt,
                         nbins,
                         bragg,
-                        ird,nfrq,fnPickles[i])))
+                        ird,nfrq,
+                        fnPickles[i])))
 
     ## close/join/terminate
     pool.close(); pool.join(); pool.terminate()

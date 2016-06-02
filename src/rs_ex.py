@@ -485,6 +485,8 @@ def ex_consistency(
             a=raw_sfs[istp,:2,:,:]
             b=dsa_sigma[:2]
             full_Ei = np.tensordot(a,b,axes=[0,0])
+            s11 = model_rs.dat_model.flow.sigma[0,0,istp]
+            s22 = model_rs.dat_model.flow.sigma[1,1,istp]
 
             if type(istep)!=type(None):
                 return model_rs, s11,s22, dsa_sigma[0],dsa_sigma[1],\
