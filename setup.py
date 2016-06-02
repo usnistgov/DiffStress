@@ -4,6 +4,9 @@ setup(name='ResidualStress',
       description='A python pack to perform the residual stress analysis',
       author='Youngung Jeong',
       author_email='youngung.jeong@gmail.com',
-      packages=['RS'],
-      package_dir={'RS':'src'}
+      packages=['RS','RS.montecarlo'],
+      package_dir={
+        'RS':'src',
+        'RS.motecarlo':'src/montecarlo'
+        }
       )
