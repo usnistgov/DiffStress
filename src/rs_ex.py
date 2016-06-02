@@ -449,8 +449,8 @@ def ex_consistency(
     if iwgt:
         ## weight the objective function in the
         ## least-square method to analyze the diffraction stress.
-        # wgt = model_vfs.copy()
-        wgt = chi.copy() ## standard deviation
+        wgt = model_vfs.copy()
+        # wgt = chi.copy() ## standard deviation
     elif not(iwgt):
         wgt = None # overwrite wgt
 
