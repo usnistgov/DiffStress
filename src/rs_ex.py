@@ -75,9 +75,11 @@ def proc0(dec_inv_frq,dec_interp):
     return _sf_, _ig_
 
 
-def proc_half(model_ngr,_sf_,raw_sfs,model_sfs,
-              model_vfs,raw_ehkl):
-    filt = model_ngr==0
+def proc_half(
+        model_ngr,_sf_,raw_sfs,model_sfs,
+        model_vfs,raw_ehkl):
+
+    filt = (model_ngr==0) | (model_vfs==0)
     _sf_ = _sf_.transpose(1,0,2,3).copy()
     _sf_[:,filt]=np.nan
     _sf_ = _sf_.transpose(1,0,2,3).copy()
@@ -117,12 +119,14 @@ def calc_stress(
     for ipsi in xrange(len(ref_psis)):
         if not(np.isnan(_sf_[istp,0:2,:,ipsi]).any()):
             inds.append(ipsi)
+
     model_rs.sf  = _sf_[istp][:,:,inds]
     model_rs.psis = ref_psis[inds]
     model_rs.npsi = len(model_rs.psis)
     model_rs.eps0 = model_igs[istp][:,inds]
     model_rs.ehkl = model_ehkls[istp][:,inds]
     model_rs.tdat = tdats[istp][:,inds]
+    wgt_filtered  = wgt[:,inds]
 
     #-----------------------------------#
     ## find the sigma ...
@@ -131,9 +135,14 @@ def calc_stress(
         [sij_wv[0,0],sij_wv[1,1],sij_wv[2,2],sij_wv[1,2],
          sij_wv[0,2],sij_wv[0,1]])
     ## find the stress
+    # print 'wgt:'
+    # print wgt
+    # print wgt.shape
+    # print model_rs.tdat.shape
     dsa_sigma = model_rs.find_sigma(
         ivo=[0,1],init_guess=stress_wgtavg,
-        weight = wgt) # None
+        weight = wgt_filtered) # None
+
     for i in xrange(6): print '%+7.1f'%(dsa_sigma[i]),
     for i in xrange(6): print '%+7.1f'%(dsa_sigma[i]-stress_wgtavg[i]),
     print ''
@@ -458,7 +467,7 @@ def ex_consistency(
         dsa_sigma = calc_stress(
             istp,_sf_,model_rs,model_igs,
             model_ehkls,tdats,
-            ref_psis,wgt)
+            ref_psis,wgt[istp,:,:])
         stress.append(dsa_sigma)
 
         if iplot and istp==0:
@@ -500,7 +509,7 @@ def ex_consistency(
                     raw_psis.copy(),\
                     raw_vfs[istp].copy(),raw_sfs[istp].copy(),\
                     full_Ei.copy(),\
-                    DEC_interp[istp].copy()
+                    DEC_interp[istp].copy(), model_vfs, tdats, _sf_
 
             #-----------------------------------#
             if istp==0: ileg=True

@@ -1696,6 +1696,8 @@ class ResidualStress:
         if type(weight)==type(None):
             raise IOError, "Argument weight should be given"
         if np.shape(weight)!=(self.nphi,self.npsi):
+            print 'weight shape         :', weight.shape
+            print '(self.nphi, self.npsi)', (self.nphi, self.npsi)
             raise IOError, "Argument weight is not compatible"
 
         self.sigma=np.array(stress)
@@ -1703,8 +1705,8 @@ class ResidualStress:
         self.calc_Ei(ivo=ivo)
         ## weight Ei by volumes in (phi,psi)
         if self.Ei.shape!=weight.shape:
-            raise IOError, 'shape mismatch'
-        d = self.tdat - self.Ei * weight
+            raise IOError, 'shape mismatch between '
+        d = (self.tdat - self.Ei) * weight
         d[np.isnan(d)]=0.
         return d.flatten().copy()
 
