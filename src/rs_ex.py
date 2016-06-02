@@ -248,7 +248,7 @@ def ex_consistency(
          return model_rs, flow_weight, flow_dsa
     """
     np.seterr(all='ignore')
-    import time, pickle
+    import time, pickle, MP.lib.temp
     from MP import progress_bar
     from rs import ResidualStress,\
         u_epshkl_geom_inten_vectorize,\
@@ -275,8 +275,6 @@ def ex_consistency(
         print 'log has been saved to ',fn
 
     #------------------------------------------------------------#
-
-
     if type(fnPickle).__name__=='NoneType':
         ## i_ip = 1: ioption for the model data
         t0_load=time.time()
@@ -388,11 +386,8 @@ def ex_consistency(
         ## _sf_, model_igs, model_ehkls
 
         ## pickle the data
-        import MP.lib.temp
-
-
-
-        filename_pickle=MP.lib.temp.gen_tempfile(prefix='dsa-data',ext='pck')
+        filename_pickle=MP.lib.temp.gen_tempfile(
+            prefix='dsa-data',ext='pck')
         with open(filename_pickle,'wb') as fo:
             print model_vfs.shape ## (100,3,3)
             print _sf_.shape      ## (100,6,3,3)
@@ -402,12 +397,8 @@ def ex_consistency(
             pickle.dump(model_igs,fo)
             pickle.dump(model_ehkls,fo)
             pickle.dump(model_rs,fo)
-            pass
-        pass
 
     elif type(fnPickle).__name__=='str':
-
-
         with open(fnPickle,'rb') as fo:
             model_vfs = pickle.load(fo)
             model_tdats=pickle.load(fo)
@@ -415,14 +406,12 @@ def ex_consistency(
             model_igs = pickle.load(fo)
             model_ehkls = pickle.load(fo)
             model_rs=pickle.load(fo)
-            pass
-        pass
 
     ## 4. Perturb tdat, i.e., ehkl (performed regardless of fnPickle)
     if iscatter:
         t0_perturb=time.time()
         nstp, nphi, npsi = model_ehkls.shape
-        tdats = u_epshkl_geom_inten_vectorize(
+        tdats, chi = u_epshkl_geom_inten_vectorize(
             model_vfs,model_tdats,
             ird,sigma,model_rs.psis,theta_b)
         uet(time.time()-t0_perturb,'Time spent for perturbation')
@@ -431,7 +420,6 @@ def ex_consistency(
 
     ## end of data process
     #------------------------------------------------------------#
-
     if mod_ext==None: mod_ref='STR_STR.OUT'
     else            : mod_ref='%s.%s'%(mod_ref.split('.')[0],
                                        mod_ext)
@@ -461,7 +449,8 @@ def ex_consistency(
     if iwgt:
         ## weight the objective function in the
         ## least-square method to analyze the diffraction stress.
-        wgt = model_vfs.copy()
+        # wgt = model_vfs.copy()
+        wgt = chi.copy() ## standard deviation
     elif not(iwgt):
         wgt = None # overwrite wgt
 
@@ -494,7 +483,6 @@ def ex_consistency(
             f_er = PdfPages('all_Ei-ehkl-e0_%s_%s.pdf'%(hkl,path))
             fig1 = wide_fig(ifig,nw=2,nh=1,left=0.2,uw=3.5,
                             w0=0,w1=0.3,right=0,iarange=True)
-
             fig_vm = plt.figure(figsize=(3.5,3.5))
             ax_vm = fig_vm.add_subplot(111)
 

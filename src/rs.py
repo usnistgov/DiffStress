@@ -418,6 +418,28 @@ def u_epshkl(e,sigma=5e-5):
 
 def u_epshkl_geom_inten_vectorize(
         model_vfs, model_tdats, ird, sigma, psi, theta_b):
+    """
+    Vectorized version of u_epshkl_geom_inten
+
+    Perturb the elastic strain as a function of
+    1) counting statistics error (sigma)
+    2) tilting (psi) angle and bragg angle
+    3) mrd (multitudes of random distribution)
+
+    Arguments
+    ---------
+    model_vfs     : Grain volume fractions in diffraction conditions
+    model_tdats   : epshkl without perturbation
+    ird           : volume fraction expected from a random texture
+    sigma         : counting stat error (standard deviation)
+    psi           : tilting angles
+    theta_b       : Bragg angle
+
+    Returns
+    -------
+    perturbed_strain (perturbed epshkl)
+    chi              (standard deviation that accounts all of the factors)
+    """
     mrd = model_vfs/ird ## (100,3,8)
     geom_f = 1./ (1-np.tan(psi)/np.tan(theta_b))  #(8,)
 
@@ -428,12 +450,12 @@ def u_epshkl_geom_inten_vectorize(
 
     val=sigma**2/mrd  ## 100, 3, 8
     _sigma_=geom_f * np.sqrt(val) #(8,)
-    new_sigma=_sigma_.copy()
+    chi=_sigma_.copy()
     np.random.seed()
     perturbed_strain = np.random.normal(loc=model_tdats,
-                                        size=new_sigma.shape,
-                                        scale=new_sigma)
-    return perturbed_strain
+                                        size=chi.shape,
+                                        scale=chi)
+    return perturbed_strain, chi
 
 def u_epshkl_geom_inten(e, sigma, psi, theta_b, mrd):
     """
