@@ -116,6 +116,8 @@ def calc_stress(
     ## masking can be improved by being
     ## specific on phi axis -> require fix in RS.rs
     inds = []
+    ## if there's nan along phi axes for the given step,
+    ## do not use that psi tiltings in stress analysis.
     for ipsi in xrange(len(ref_psis)):
         if not(np.isnan(_sf_[istp,0:2,:,ipsi]).any()):
             inds.append(ipsi)
@@ -126,7 +128,10 @@ def calc_stress(
     model_rs.eps0 = model_igs[istp][:,inds]
     model_rs.ehkl = model_ehkls[istp][:,inds]
     model_rs.tdat = tdats[istp][:,inds]
-    wgt_filtered  = wgt[:,inds]
+    if type(wgt).__name__!='NoneType':
+        wgt_filtered  = wgt[istp][:,inds]
+    else:
+        wgt_filtered  = None
 
     #-----------------------------------#
     ## find the sigma ...
@@ -331,31 +336,31 @@ def ex_consistency(
         model_rs.nphi = len(model_rs.phis)
         sin2psis_init = np.sin(model_rs.psis)**2
 
-        ## 0. Use interpolated SF
+        ## 0. Use interpolated SF -- filling the gap between strain increments / psis windows
         _sf_, _ig_ = proc0(dec_inv_frq,dec_interp)
 
-        ## 0.5 Mask DEC where volume fraction is depleted...
-        ## model_ngr or model_vfs
+        ## 0.5 Mask DEC, raw_sfs, model-sfs, and model volume fraction and nomber of grains,
+        ## and eps_hkl,  where volume fraction is depleted...
         _sf_,raw_sfs,model_sfs,model_vfs,model_ngr,raw_ehkl\
-            =proc_half(model_ngr,_sf_,raw_sfs,model_sfs,
-                       model_vfs,raw_ehkl)
+            = proc_half(model_ngr,_sf_,raw_sfs,model_sfs,
+                        model_vfs,raw_ehkl)
 
         ## 1. Limit the range of sin2psi (or psi)
-        t0_pr1=time.time()
         if type(sin2psimx)!=type(None) or type(psimx)!=type(None):
             if type(sin2psimx)!=type(None): bounds=[0., sin2psimx]
-            elif type(psimx)!=type(None): bounds=[0.,np.sin(psimx*np.pi/180.)**2]
+            elif type(psimx)!=type(None):   bounds=[0.,np.sin(psimx*np.pi/180.)**2]
             raw_sfs,model_sfs,model_igs,model_vfs,\
                 model_ehkls,raw_psis,_sf_,raw_vfs\
                 = filter_psi3(sin2psis_init,bounds,
                               raw_sfs,model_sfs,model_igs,model_vfs,
                               model_ehkls,raw_psis,_sf_,raw_vfs)
 
+
             ## reduce the psis in model_rs
             model_rs.psis, = filter_psi3(sin2psis_init,bounds,
                                          model_rs.psis.copy())
             model_rs.npsi = len(model_rs.psis)
-        uet(time.time()-t0_pr1, 't for pr1');print
+
         DEC_interp = _sf_.copy()
 
         ## 2. Finite number of tiltings
@@ -385,8 +390,12 @@ def ex_consistency(
         ## pickle the data
         import MP.lib.temp
 
+
+
         filename_pickle=MP.lib.temp.gen_tempfile(prefix='dsa-data',ext='pck')
         with open(filename_pickle,'wb') as fo:
+            print model_vfs.shape ## (100,3,3)
+            print _sf_.shape      ## (100,6,3,3)
             pickle.dump(model_vfs,fo)
             pickle.dump(model_tdats,fo)
             pickle.dump(_sf_,fo)
@@ -397,6 +406,8 @@ def ex_consistency(
         pass
 
     elif type(fnPickle).__name__=='str':
+
+
         with open(fnPickle,'rb') as fo:
             model_vfs = pickle.load(fo)
             model_tdats=pickle.load(fo)
@@ -467,7 +478,7 @@ def ex_consistency(
         dsa_sigma = calc_stress(
             istp,_sf_,model_rs,model_igs,
             model_ehkls,tdats,
-            ref_psis,wgt[istp,:,:])
+            ref_psis,wgt)
         stress.append(dsa_sigma)
 
         if iplot and istp==0:
