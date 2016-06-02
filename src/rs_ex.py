@@ -146,7 +146,8 @@ def ex_consistency(
         hkl=None,iplot=True,iwind=False,wdeg=2,ipsi_opt=1,
         fn_sff=None,pmargin=None,path='',sf_ext=None,ig_ext=None,
         vf_ext=None,iwgt=False,verbose=False,ilog=True,
-        dec_inv_frq=1,dec_interp=1,theta_b=None,ird=1.,nfrq=None):
+        dec_inv_frq=1,dec_interp=1,theta_b=None,ird=1.,nfrq=None,
+        fnPickle=None):
     """
     Consistency check between 'weighted average' stress and
     the stress obtained following the stress analysis method
@@ -195,6 +196,8 @@ def ex_consistency(
              2: psi
     istep     : If other than None, analysis is carried out
                 only for the given istep
+    fnPickle=None
+        if given (not None), read 'data' from the given file name
 
     ----------------------------------------
     ## debugging options
@@ -206,9 +209,32 @@ def ex_consistency(
     theta_b   : None (Bragg's angle) (given in radian)
     ird       : Intensity expected for random distribution
     nfrq        None
+
+    Returns
+    -------
+    if istep is given, perform the task for that specific step number
+                       and returns
+        model_rs,
+        s11,
+        s22,
+        dsa_sigma[0],
+        dsa_sigma[1],
+        raw_psis,
+        raw_vfs[istp],
+        raw_sfs[istp],
+        full_Ei,
+        DEC_interp[istp]
+
+    Otherwise, return the results after perform the task for all given steps
+    In this case, the returned results are dependent on the
+    argument fnPickle.
+    if type(fnPickle).__name__=='NoneType':
+         return model_rs, flow_weight, flow_dsa, filename_pickle
+    else:
+         return model_rs, flow_weight, flow_dsa
     """
     np.seterr(all='ignore')
-    import time
+    import time, pickle
     from MP import progress_bar
     from rs import ResidualStress,\
         u_epshkl_geom_inten_vectorize,\
@@ -230,143 +256,150 @@ def ex_consistency(
             pmargin=pmargin,path=path,sf_ext=sf_ext,
             ig_ext=ig_ext,vf_ext=vf_ext,iwgt=iwgt,
             verbose=verbose,ilog=ilog,nfrq=nfrq,
-            ird=ird,theta_b=theta_b)
+            ird=ird,theta_b=theta_b,fnPickle=fnPickle)
         f.close()
         print 'log has been saved to ',fn
 
     #------------------------------------------------------------#
-    ## i_ip = 1: ioption for the model data
-    t0_load=time.time()
-    model_rs = ResidualStress(
-        mod_ext=mod_ext,
-        fnmod_ig='igstrain_fbulk_ph1.out',
-        fnmod_sf='igstrain_fbulk_ph1.out',
-        i_ip=1)
-    uet(time.time()-t0_load,
-        'Time spent for loading model_rs in rs_ex.ex_consistency')
-    print
-
-    ## Process the sf/eps0/ehkl/wgt and so forth
-    ## according to the parameters given
-    ivf_ext=True; isf_ext=True; iig_ext=True
-    if type(sf_ext)==type(None):isf_ext=False
-    if type(ig_ext)==type(None):iig_ext=False
-    if type(vf_ext)==type(None):ivf_ext=False
-
-    """
-    ## final data should be saved to
-    'model_sfs'
-    'model_igs'
-    'model_ehkl'
-    And eventually to 'model_tdats' inside the loop
-    """
-    ## SF/IG/ehkl
-    model_ehkls = np.copy(model_rs.dat_model.ehkl)
-    if isf_ext and iig_ext:
-        model_sfs = sf_ext.copy()
-        model_igs = ig_ext.copy()
-    elif isf_ext!=iig_ext:
-        raise IOError, 'isf_ext should equal to iig_ext'
-    ## if isf_ext False and isf_ext False
-    else:
-        model_sfs = model_rs.dat_model.sf.copy()
-        model_igs = model_rs.dat_model.ig.copy()
-
-    ## VF
-    if not(ivf_ext): model_vfs, model_ngr = return_vf()
-    else: model_vfs = vf_ext.copy()
-
-    ## whether or not vf would be used as weights in
-    ## the least-sq estimator
     if not(iwgt): wgt = None # overwrite wgt
 
-    ## Apply data-analysis
-    ## 0. Use of 'interpolated' SF
-    ## 1. Limit the range of sin2psi (or psi)
-    ## 2. Finite number of tiltings
-    ## 3. Assign tdat (subtracting ig strain or not)
-    ## 4. Perturb ehkl (common)
-    ## 5. Filter based on vf?
+    if type(fnPickle).__name__=='NoneType':
+        ## i_ip = 1: ioption for the model data
+        t0_load=time.time()
+        model_rs = ResidualStress(
+            mod_ext=mod_ext,
+            fnmod_ig='igstrain_fbulk_ph1.out',
+            fnmod_sf='igstrain_fbulk_ph1.out',
+            i_ip=1)
+        uet(time.time()-t0_load,
+            'Time spent for loading model_rs in rs_ex.ex_consistency')
+        print
 
-    ## Unstaged but the 'raw' arrays (not used for actual calculation)
-    raw_psis = model_rs.dat_model.psi.copy()
-    raw_vfs  = model_vfs.copy()
-    raw_ehkl = np.copy(model_rs.dat_model.ehkl)
-    raw_sfs  = model_sfs.copy()
+        ## Process the sf/eps0/ehkl/wgt and so forth
+        ## according to the parameters given
+        ivf_ext=True; isf_ext=True; iig_ext=True
+        if type(sf_ext)==type(None):isf_ext=False
+        if type(ig_ext)==type(None):iig_ext=False
+        if type(vf_ext)==type(None):ivf_ext=False
 
-    ## staged arrays for stress estimation (used for actual calcultion)
-    model_rs.psis = model_rs.dat_model.psi.copy()
-    model_rs.phis = model_rs.dat_model.phi.copy()
-    model_rs.npsi = len(model_rs.psis)
-    model_rs.nphi = len(model_rs.phis)
-    sin2psis_init = np.sin(model_rs.psis)**2
+        ## SF/IG/ehkl
+        model_ehkls = np.copy(model_rs.dat_model.ehkl)
+        if isf_ext and iig_ext:
+            model_sfs = sf_ext.copy()
+            model_igs = ig_ext.copy()
+        elif isf_ext!=iig_ext:
+            raise IOError, 'isf_ext should equal to iig_ext'
+        ## if isf_ext False and isf_ext False
+        else:
+            model_sfs = model_rs.dat_model.sf.copy()
+            model_igs = model_rs.dat_model.ig.copy()
 
-    ## 0. Use interpolated SF
-    _sf_, _ig_ = proc0(dec_inv_frq,dec_interp)
+        ## VF
+        if not(ivf_ext): model_vfs, model_ngr = return_vf()
+        else: model_vfs = vf_ext.copy()
 
-    ## 0.5 Mask DEC where volume fraction is depleted...
-    ## model_ngr or model_vfs
-    _sf_,raw_sfs,model_sfs,model_vfs,model_ngr,raw_ehkl\
-        =proc_half(model_ngr,_sf_,raw_sfs,model_sfs,
-                   model_vfs,raw_ehkl)
+        ## whether or not vf would be used as weights in
+        ## the least-sq estimator
 
-    ## 1. Limit the range of sin2psi (or psi)
-    t0_pr1=time.time()
-    if type(sin2psimx)!=type(None) or type(psimx)!=type(None):
-        if type(sin2psimx)!=type(None): bounds=[0., sin2psimx]
-        elif type(psimx)!=type(None): bounds=[0.,np.sin(psimx*np.pi/180.)**2]
-        raw_sfs,model_sfs,model_igs,model_vfs,\
-            model_ehkls,raw_psis,_sf_,raw_vfs\
-            = filter_psi3(sin2psis_init,bounds,
-                          raw_sfs,model_sfs,model_igs,model_vfs,
-                          model_ehkls,raw_psis,_sf_,raw_vfs)
 
-        ## reduce the psis in model_rs
-        model_rs.psis, = filter_psi3(sin2psis_init,bounds,
-                                     model_rs.psis.copy())
+        ## Apply data-analysis
+        ## 0. Use of 'interpolated' SF
+        ## 1. Limit the range of sin2psi (or psi)
+        ## 2. Finite number of tiltings
+        ## 3. Assign tdat (subtracting ig strain or not)
+        ## 4. Perturb ehkl (common)
+        ## 5. Filter based on vf?
+
+        ## Unstaged but the 'raw' arrays (not used for actual calculation)
+        raw_psis = model_rs.dat_model.psi.copy()
+        raw_vfs  = model_vfs.copy()
+        raw_ehkl = np.copy(model_rs.dat_model.ehkl)
+        raw_sfs  = model_sfs.copy()
+
+        ## staged arrays for stress estimation (used for actual calcultion)
+        model_rs.psis = model_rs.dat_model.psi.copy()
+        model_rs.phis = model_rs.dat_model.phi.copy()
         model_rs.npsi = len(model_rs.psis)
-    uet(time.time()-t0_pr1, 't for pr1');print
-    DEC_interp = _sf_.copy()
+        model_rs.nphi = len(model_rs.phis)
+        sin2psis_init = np.sin(model_rs.psis)**2
 
-    ## 2. Finite number of tiltings
-    t0_pr2=time.time()
-    if psi_nbin!=1:
-        model_sfs, model_igs, model_vfs,model_ehkls, _sf_ \
-            = psi_reso4(model_rs.psis, psi_nbin,
-                        model_sfs,model_igs,
-                        model_vfs,model_ehkls,_sf_)
-        model_rs.psis, = psi_reso4(model_rs.psis.copy(),psi_nbin,
-                                   model_rs.psis.copy())
-        model_rs.npsi = len(model_rs.psis)
-    uet(time.time()-t0_pr2,'t for pr2');print
+        ## 0. Use interpolated SF
+        _sf_, _ig_ = proc0(dec_inv_frq,dec_interp)
 
-    ## 3. Assign tdat
-    if ig_sub: model_tdats = model_ehkls - model_igs
-    else     : model_tdats = model_ehkls.copy()
+        ## 0.5 Mask DEC where volume fraction is depleted...
+        ## model_ngr or model_vfs
+        _sf_,raw_sfs,model_sfs,model_vfs,model_ngr,raw_ehkl\
+            =proc_half(model_ngr,_sf_,raw_sfs,model_sfs,
+                       model_vfs,raw_ehkl)
 
+        ## 1. Limit the range of sin2psi (or psi)
+        t0_pr1=time.time()
+        if type(sin2psimx)!=type(None) or type(psimx)!=type(None):
+            if type(sin2psimx)!=type(None): bounds=[0., sin2psimx]
+            elif type(psimx)!=type(None): bounds=[0.,np.sin(psimx*np.pi/180.)**2]
+            raw_sfs,model_sfs,model_igs,model_vfs,\
+                model_ehkls,raw_psis,_sf_,raw_vfs\
+                = filter_psi3(sin2psis_init,bounds,
+                              raw_sfs,model_sfs,model_igs,model_vfs,
+                              model_ehkls,raw_psis,_sf_,raw_vfs)
 
+            ## reduce the psis in model_rs
+            model_rs.psis, = filter_psi3(sin2psis_init,bounds,
+                                         model_rs.psis.copy())
+            model_rs.npsi = len(model_rs.psis)
+        uet(time.time()-t0_pr1, 't for pr1');print
+        DEC_interp = _sf_.copy()
 
-    ## 3.5 - save data if required in order to reuse
-    ## the processed (analyzed) data for Monte Carlo
-    ## calculation
-    ## list of items to be saved
+        ## 2. Finite number of tiltings
+        t0_pr2=time.time()
+        if psi_nbin!=1:
+            model_sfs, model_igs, model_vfs,model_ehkls, _sf_ \
+                = psi_reso4(model_rs.psis, psi_nbin,
+                            model_sfs,model_igs,
+                            model_vfs,model_ehkls,_sf_)
+            model_rs.psis, = psi_reso4(model_rs.psis.copy(),psi_nbin,
+                                       model_rs.psis.copy())
+            model_rs.npsi = len(model_rs.psis)
+        uet(time.time()-t0_pr2,'t for pr2');print
 
-    ## model_vfs, model_tdats, model_rs
-    ## _sf_, model_igs, model_ehkls
+        ## 3. Assign tdat
+        if ig_sub: model_tdats = model_ehkls - model_igs
+        else     : model_tdats = model_ehkls.copy()
 
-    ## pickle the data
-    import MP.lib.temp
-    import pickle
-    filename_pickle=MP.lib.temp.gen_tempfile(prefix='dsa-data',ext='pck')
-    with open(filename_pickle,'wb') as fo:
-        pickle.dump(model_vfs,fo)
-        pickle.dump(model_tdats,fo)
-        pickle.dump(_sf_,fo)
-        pickle.dump(model_igs,fo)
-        pickle.dump(model_ehkls,fo)
-        pickle.dump(model_rs,fo)
+        ## 3.5 - save data if required in order to reuse
+        ## the processed (analyzed) data for Monte Carlo
+        ## calculation
+        ## list of items to be saved
 
-    ## 4. Perturb tdat, i.e., ehkl (common)
+        ## model_vfs, model_tdats, model_rs
+        ## _sf_, model_igs, model_ehkls
+
+        ## pickle the data
+        import MP.lib.temp
+
+        filename_pickle=MP.lib.temp.gen_tempfile(prefix='dsa-data',ext='pck')
+        with open(filename_pickle,'wb') as fo:
+            pickle.dump(model_vfs,fo)
+            pickle.dump(model_tdats,fo)
+            pickle.dump(_sf_,fo)
+            pickle.dump(model_igs,fo)
+            pickle.dump(model_ehkls,fo)
+            pickle.dump(model_rs,fo)
+            pass
+        pass
+
+    elif type(fnPickle).__name__=='str':
+        with open(fnPickle,'rb') as fo:
+            model_vfs = pickle.load(fo)
+            model_tdats=pickle.load(fo)
+            _sf_=pickle.load(fo)
+            model_igs = pickle.load(fo)
+            model_ehkls = pickle.load(fo)
+            model_rs=pickle.load(fo)
+            pass
+        pass
+
+    ## 4. Perturb tdat, i.e., ehkl (performed regardless of fnPickle)
     if iscatter:
         t0_perturb=time.time()
         nstp, nphi, npsi = model_ehkls.shape
@@ -554,8 +587,10 @@ def ex_consistency(
         except: pass
 
     uet(time.time()-t0);print
-    return model_rs, flow_weight, flow_dsa
-
+    if type(fnPickle).__name__=='NoneType':
+        return model_rs, flow_weight, flow_dsa, filename_pickle
+    else:
+        return model_rs, flow_weight, flow_dsa
 
 def __model_fit_plot__(
         container,ifig,istp,nxphi=None,hkl=None,

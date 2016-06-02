@@ -834,7 +834,8 @@ def wrap_func(
         nbins,
         bragg,
         ird,
-        nfrq):
+        nfrq,
+        fnPickle):
 
     """
     Wrap ex_consistency and return x, y
@@ -852,13 +853,18 @@ def wrap_func(
         theta_b=bragg,
         ird=ird,
         nfrq=nfrq,
+        fnPickle=fnPickle,
 
         iscatter=True,
         ig_sub=True,
         ilog=True,
         iplot=False, # iplot=True
     )
+
+    if type(fnPickle).__name__=='NoneType':
+        return rst[-1] ## the newly created pickle's file name
     myrs, flow_weight, flow_dsa = rst[0], rst[1], rst[2]
+
 
     ## My objects that quantify the propagated
     ## error to stress.
@@ -966,7 +972,7 @@ def influence_of_cnts_stats(
     print '\n\n****************'
     print 'test run started'
     print '****************\n\n'
-    myrs,flow_raw,flow2 =func(
+    rst=func(
         sin2psimx=bounds[1],
         iscatter=False,
         sigma=sigmas[0],
@@ -976,6 +982,7 @@ def influence_of_cnts_stats(
         dec_inv_frq=ss,
         dec_interp=intp_opt,
         nfrq=nfrq)
+    myrs,flow_raw,flow2 = rst[0],rst[1],rst[2]
     print '\n\n**************'
     print 'test completed'
     print '**************\n\n'
@@ -989,6 +996,28 @@ def influence_of_cnts_stats(
     print 'NCPU: %i'%NCPU
     pool = Pool(processes = NCPU)
 
+    ## generate pickle files first.
+    results = []
+    for i in xrange(len(sigmas)):
+        results.append(
+            pool.apply_async(
+                wrap_func,
+                args=(
+                    sigmas[i],
+                    ss,
+                    intp_opt,
+                    bounds,
+                    nbins,
+                    bragg,
+                    ird,nfrq,None),))
+    ## close/join/terminate
+    pool.close(); pool.join(); pool.terminate()
+    fnPickles=[]
+    for i in xrange(len(sigmas)):
+        fnPickles.append(results[i].get())
+
+
+    pool = Pool(processes = NCPU)
     ## function is now wrap_func
     results = []
     for i in xrange(len(sigmas)):
@@ -1004,12 +1033,10 @@ def influence_of_cnts_stats(
                         bounds,
                         nbins,
                         bragg,
-                        ird,nfrq),))
+                        ird,nfrq,fnPickles[i])))
 
-    ## close/join
-    pool.close(); pool.join()
-    ## terminate
-    pool.terminate()
+    ## close/join/terminate
+    pool.close(); pool.join(); pool.terminate()
 
     ## below is to post-process the results
     for i in xrange(len(sigmas)):
