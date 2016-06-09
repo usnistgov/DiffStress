@@ -253,7 +253,7 @@ def ex_consistency(
     from rs import ResidualStress,\
         u_epshkl_geom_inten_vectorize,\
         filter_psi3,psi_reso4
-    from mst_ex import  return_vf
+    from mst_ex import return_vf
     from MP.mat import mech # mech is a module
     uet = progress_bar.update_elapsed_time
     t0 = time.time()
@@ -397,6 +397,13 @@ def ex_consistency(
             pickle.dump(model_igs,fo)
             pickle.dump(model_ehkls,fo)
             pickle.dump(model_rs,fo)
+            ## raw data
+            pickle.dump(raw_psis,fo)
+            pickle.dump(raw_vfs,fo)
+            pickle.dump(raw_ehkl,fo)
+            pickle.dump(raw_sfs,fo)
+            pickle.dump(_sf_,fo)
+            pickle.dump(_ig_,fo)
 
     elif type(fnPickle).__name__=='str':
         with open(fnPickle,'rb') as fo:
@@ -406,6 +413,13 @@ def ex_consistency(
             model_igs = pickle.load(fo)
             model_ehkls = pickle.load(fo)
             model_rs=pickle.load(fo)
+            ## raw data
+            raw_psis = pickle.load(fo)
+            raw_vfs  = pickle.load(fo)
+            raw_ehkl = pickle.load(fo)
+            raw_sfs  = pickle.load(fo)
+            raw_intp_sf = pickle.load(fo)
+            raw_inpt_ig = pickle.load(fo)
 
     ## 4. Perturb tdat, i.e., ehkl (performed regardless of fnPickle)
     if iscatter:
@@ -450,7 +464,12 @@ def ex_consistency(
         ## weight the objective function in the
         ## least-square method to analyze the diffraction stress.
         wgt = model_vfs.copy()
-        # wgt = chi.copy() ## standard deviation
+        # wgt = chi.copy() ## standard deviation considering all the factors
+        # var = chi**2 ## variance = std**2
+
+        ## Welzel et. al. suggested the use of 'inverse' of standard deviations
+        ## i.e., wgt = 1./chi
+        wgt = 1./chi.copy()
     elif not(iwgt):
         wgt = None # overwrite wgt
 

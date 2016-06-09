@@ -438,24 +438,158 @@ def u_epshkl_geom_inten_vectorize(
     Returns
     -------
     perturbed_strain (perturbed epshkl)
-    chi              (standard deviation that accounts all of the factors)
+    chi              (standard deviation that accounts for all of the factors considered.)
     """
-    mrd = model_vfs/ird ## (100,3,8)
-    geom_f = 1./ (1-np.tan(psi)/np.tan(theta_b))  #(8,)
+    mrd = model_vfs/ird ## ## nstp,nphi,npsi
+    geom_f = 1./ (1-np.tan(np.abs(psi))/np.tan(theta_b))  #(npsi,)
 
     if (geom_f<0).any():
         print 'psi:', psi*180/np.pi
         print 'theta_b:', theta_b*180/np.pi
         raise IOError, 'geom_f<0'
 
-    val=sigma**2/mrd  ## 100, 3, 8
-    _sigma_=geom_f * np.sqrt(val) #(8,)
-    chi=1./_sigma_.copy()
+    val=sigma**2/mrd  ## nstp,nphi,npsi
+    _sigma_=geom_f * np.sqrt(val) #(nspi,)
+    chi = _sigma_[::].copy() ## nstp,nphi,npsi
     np.random.seed()
     perturbed_strain = np.random.normal(loc=model_tdats,
                                         size=chi.shape,
                                         scale=chi)
     return perturbed_strain, chi
+
+def test_u_epshkl_geom_inten_vectorize(fnPickle=None):
+    """
+    Test if chi from u_epshkl_geom_inten_vectorize is correctly
+    determined. Also, visualize it...
+
+    Argument
+    --------
+    fnPickle : pickle filename to be used, if any
+    """
+    import rs_ex,pickle,time
+    ird=0.182
+    theta_b = 78.2*np.pi/180.
+    sigma = 25e-6
+    # Create an ensemble if fnPickle is none.
+    if type(fnPickle).__name__=='NoneType':
+        psi_nbin = 1 ## only to fill all psi range smoothly.
+        ## case with a realistic psi_nbin is performed at the end of
+        ## the current function...
+        rst = rs_ex.ex_consistency(psimx=65, iscatter=True,
+                                   sigma=sigma,psi_nbin=1,ig_sub=True,
+                                   iplot=False,theta_b=theta_b,
+                                   ird=ird,fnPickle=None,nfrq=99)
+        fnPickle=rst[3]
+
+    ## load the ensemble from the pickle file
+    with open(fnPickle,'rb') as fo:
+        model_vfs = pickle.load(fo)
+        model_tdats=pickle.load(fo)
+        _sf_=pickle.load(fo)
+        model_igs = pickle.load(fo)
+        model_ehkls = pickle.load(fo)
+        model_rs=pickle.load(fo)
+        raw_psis = pickle.load(fo)
+        raw_vfs  = pickle.load(fo)
+        raw_ehkl = pickle.load(fo)
+        raw_sfs  = pickle.load(fo)
+        raw_intp_sf = pickle.load(fo)
+        raw_inpt_ig = pickle.load(fo)
+
+    print 'Reuse the data by loading from the pickle'
+    print 'fnPickle:', fnPickle
+
+    ## test begins here.
+    nstp, nphi, npsi = model_ehkls.shape
+    tdats, chi = u_epshkl_geom_inten_vectorize(
+        model_vfs,model_tdats,
+        ird,sigma,model_rs.psis,theta_b)
+
+
+    print chi.shape; print tdats.shape
+
+    ## plotting
+    import matplotlib.pyplot as plt
+    import lib
+    from MP.lib import mpl_lib, axes_label
+    sin2psi_opt = lib.sin2psi_opt
+    wide_fig     = mpl_lib.wide_fig
+    fancy_legend = mpl_lib.fancy_legend
+    rm_lab       = mpl_lib.rm_lab
+    tune_x_lim   = mpl_lib.tune_x_lim
+    tune_xy_lim  = mpl_lib.tune_xy_lim
+    deco         = axes_label.__deco__
+
+    fig = wide_fig(
+        ifig=None,nw=nphi,w0=0.00,ws=0.5,w1=0.0,uw=3.0,
+        left=0.15,right=0.25,nh=1,h0=0.2,h1=0,
+        down=0.08,up=0.10,iarange=True)
+
+    x  = model_rs.psis
+    x  = np.sign(x)*np.sin(x)**2
+    istp = 30
+    phis = model_rs.phis
+    psi_nbin = 9
+    for iphi in xrange(3):
+        ax=fig.axes[iphi]
+        ax.set_title(r'$\phi=%3.1f^\circ$'%(phis[iphi]*180/pi))
+        y_raw = model_tdats[istp,iphi,:] * 1e6
+        y  = tdats[istp,iphi,:] * 1e6
+        dy = chi[istp,iphi,:] *1e6
+
+        X,Y = psi_reso4(model_rs.psis.copy(),psi_nbin,x.copy(),y.copy())
+
+        ax.plot(X[::], Y[::],'k.',zorder=100)
+        ax.plot(x,y_raw ,'k-',lw=0.4)
+        ax.fill_between(x,y_raw-dy,y_raw+dy,
+                        color='gray',alpha=0.5)
+        ## mu +/- two sigma gives 95% confidence..
+        # ax.fill_between(x,y_raw-dy*2,y_raw+dy*2,
+        #                 color='gray',alpha=0.5)
+
+        deco(ax=ax,iopt=0,hkl='211',ipsi_opt=1)
+        fig.axes[iphi].set_ylim(-1500,1500)
+        fig.axes[iphi].set_yticks(np.linspace(-1500,1500.01,3))
+
+    for iphi in xrange(2):
+        rm_lab(fig.axes[iphi+1], axis='y')
+        rm_lab(fig.axes[iphi+1], axis='x')
+
+    fig.savefig('sigma_%2.2i_demon.pdf'%(int(sigma*1e6)),bbox_to_inches='tight')
+    fig.savefig('sigma_%2.2i_demon.ps'%(int(sigma*1e6)),bbox_to_inches='tight')
+
+
+    ## the same condition but with a realistic psi_nbin
+    rst = rs_ex.ex_consistency(psimx=65, iscatter=True,
+                               sigma=sigma,psi_nbin=psi_nbin,
+                               ig_sub=True,
+                               iplot=False,theta_b=theta_b,
+                               ird=ird,fnPickle=None,nfrq=9)
+
+    ## flow stress strain curve?
+    fig = plt.figure(figsize=(7,3));
+    ax1=fig.add_subplot(121); ax2=fig.add_subplot(122)
+    model_rs.dat_model.flow.get_eqv()
+    y=model_rs.dat_model.flow.sigma_vm
+    x=model_rs.dat_model.flow.epsilon_vm
+    ax1.plot(x,y,'-k',label=r'$\langle\sigma^c\rangle$')
+    ax2.plot(model_rs.dat_model.flow.sigma[0,0],model_rs.dat_model.flow.sigma[1,1],'k-')
+
+    flow_dsa = rst[2]
+    nstp = 1
+    ax1.plot(flow_dsa.epsilon_vm[::nstp],flow_dsa.sigma_vm[::nstp],'k+',label=r'$\sigma^d$')
+    ax2.plot(flow_dsa.sigma[0,0][::nstp],flow_dsa.sigma[1,1][::nstp],'k+')
+    ax1.set_xlabel(r'Equivalent strain $\bar{\mathrm{E}}$')
+    ax1.set_ylabel(r'Equivalent stress $\bar{\mathrm{\Sigma}}$ [MPa]')
+    ax2.set_xlabel(r'$\bar{\mathrm{\Sigma}}_{11}$ [MPa]')
+    ax2.set_ylabel(r'$\bar{\mathrm{\Sigma}}_{22}$ [MPa]')
+    ax1.legend(loc='lower right')
+    ax1.set_ylim(0.,)
+    ax2.set_ylim(0.,700)
+    ax2.set_xlim(0.,700)
+    fig.tight_layout()
+    fig.savefig('sigma_%2.2i_flow_demon.pdf'%(int(sigma*1e6)),bbox_to_inches='tight')
+    fig.savefig('sigma_%2.2i_flow_demon.ps'%(int(sigma*1e6)),bbox_to_inches='tight')
 
 def u_epshkl_geom_inten(e, sigma, psi, theta_b, mrd):
     """
@@ -1807,33 +1941,34 @@ def psi_reso3(obj,psi,ntot=2):
     psi
     ntot
     """
-    sign_sin2psi = np.sign(psi) * sin(psi)**2
+    sign_sin2psi = np.sign(psi) * (sin(psi)**2)
     # equal distance
     spc  = np.linspace(np.min(sign_sin2psi),
                        np.max(sign_sin2psi),ntot)
     inds = []
     for i in xrange(len(spc)):
-        inds.append(find_nearest(
-            sign_sin2psi,spc[i]))
+        ind = find_nearest(
+            sign_sin2psi,spc[i])
+        inds.append(ind)
+        # print 'ind:',ind
     return select_psi(obj, inds)
 
 def select_psi(dat,inds):
-
     array = []
     dum = dat.T
     for i in xrange(len(inds)):
         array.append(dum[inds[i]])
     return np.array(array).T
 
-# def find_nearest(array,value):
-#     return (np.abs(array-value)).argmin()
-
 def find_nearest(array,value):
-    import math
-    idx = np.searchsorted(array, value, side="left")
-    if idx == len(array) or math.fabs(value - array[idx-1]) < math.fabs(value - array[idx]):
-        return idx-1
-    else: return idx
+    return (np.abs(array-value)).argmin()
+
+# def find_nearest(array,value):
+#     import math
+#     idx = np.searchsorted(array, value, side="left")
+#     if idx == len(array) or math.fabs(value - array[idx-1]) < math.fabs(value - array[idx]):
+#         return idx-1
+#     else: return idx
 
 
 def psi_reso(mod=None,nbin=2):
