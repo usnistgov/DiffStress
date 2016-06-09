@@ -506,8 +506,6 @@ def test_u_epshkl_geom_inten_vectorize(fnPickle=None):
         ird,sigma,model_rs.psis,theta_b)
 
 
-    print chi.shape; print tdats.shape
-
     ## plotting
     import matplotlib.pyplot as plt
     import lib
@@ -590,6 +588,42 @@ def test_u_epshkl_geom_inten_vectorize(fnPickle=None):
     fig.tight_layout()
     fig.savefig('sigma_%2.2i_flow_demon.pdf'%(int(sigma*1e6)),bbox_to_inches='tight')
     fig.savefig('sigma_%2.2i_flow_demon.ps'%(int(sigma*1e6)),bbox_to_inches='tight')
+
+
+
+    ## below is the case when no scatter
+    fig.clf()
+    plt.close(fig)
+    fig = wide_fig(
+        ifig=10,nw=nphi,w0=0.00,ws=0.5,w1=0.0,uw=3.0,
+        left=0.15,right=0.25,nh=1,h0=0.2,h1=0,
+        down=0.08,up=0.10,iarange=True)
+
+    x  = model_rs.psis
+    x  = np.sign(x)*np.sin(x)**2
+    istp = 30
+    phis = model_rs.phis
+    psi_nbin = 9
+    for iphi in xrange(3):
+        ax=fig.axes[iphi]
+        ax.set_title(r'$\phi=%3.1f^\circ$'%(phis[iphi]*180/pi))
+        y = model_tdats[istp,iphi,:] * 1e6
+        X,Y = psi_reso4(model_rs.psis.copy(),psi_nbin,x.copy(),y.copy())
+
+        ax.plot(X[::], Y[::],'k.',zorder=100)
+        ax.plot(x,y ,'k-',lw=0.4)
+
+        deco(ax=ax,iopt=0,hkl='211',ipsi_opt=1)
+        fig.axes[iphi].set_ylim(-1500,1500)
+        fig.axes[iphi].set_yticks(np.linspace(-1500,1500.01,3))
+
+    for iphi in xrange(2):
+        rm_lab(fig.axes[iphi+1], axis='y')
+        rm_lab(fig.axes[iphi+1], axis='x')
+
+    fig.savefig('sigma_00_demon.pdf',bbox_to_inches='tight')
+    fig.savefig('sigma_00_demon.ps',bbox_to_inches='tight')
+
 
 def u_epshkl_geom_inten(e, sigma, psi, theta_b, mrd):
     """
