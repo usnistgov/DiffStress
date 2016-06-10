@@ -159,7 +159,7 @@ def ex_consistency(
         sigma=5e-5,psimx=None,psi_nbin=1,ig_sub=True,istep=None,
         hkl=None,iplot=True,iwind=False,wdeg=2,ipsi_opt=1,
         fn_sff=None,pmargin=None,path='',sf_ext=None,ig_ext=None,
-        vf_ext=None,iwgt=False,verbose=False,ilog=True,
+        vf_ext=None,iwgt=0,verbose=False,ilog=True,
         dec_inv_frq=1,dec_interp=1,theta_b=None,ird=1.,nfrq=None,
         fnPickle=None):
     """
@@ -184,6 +184,11 @@ def ex_consistency(
     iscatter (False) : introducing a random scattering of 'ehkl'
     sigma     : Level of standard deviation in the Gaussian distribution
                 used to 'perturb' the lattice strain.
+    iwgt      : weighting option used in the objective function
+             0: no weighting factor
+             1: weighting factor is the inverse of actual std
+                used in the Gaussian perturbation
+             2: weighting factor is the volume fractions of grains
 
     #2. tilting angle restriction/treatments
     sin2psimx : limiting the maximum sin2psi values, with which
@@ -425,7 +430,7 @@ def ex_consistency(
     if iscatter:
         t0_perturb=time.time()
         nstp, nphi, npsi = model_ehkls.shape
-        tdats, chi = u_epshkl_geom_inten_vectorize(
+        tdats, stdGauss = u_epshkl_geom_inten_vectorize(
             model_vfs,model_tdats,
             ird,sigma,model_rs.psis,theta_b)
         uet(time.time()-t0_perturb,'Time spent for perturbation')
@@ -460,18 +465,19 @@ def ex_consistency(
 
     ## Main loop
     ## -------------------------------------------------- ##
-    if iwgt:
-        ## weight the objective function in the
+    ## weighting factor in the objective function
+    ## is determined here.
+    if iwgt==0:
+        wgt = None
+    elif iwgt==1:
+        ## Welzel et. al. suggested to use the 'inverse' of
+        ## standard deviations
+        wgt = 1./stdGauss.copy()
+    elif iwgt==2:
         ## least-square method to analyze the diffraction stress.
         wgt = model_vfs.copy()
-        # wgt = chi.copy() ## standard deviation considering all the factors
-        # var = chi**2 ## variance = std**2
-
-        ## Welzel et. al. suggested the use of 'inverse' of standard deviations
-        ## i.e., wgt = 1./chi
-        wgt = 1./chi.copy()
-    elif not(iwgt):
-        wgt = None # overwrite wgt
+    else:
+        raise IOError, 'iwgt should be integer among 0, 1, 2'
 
     dtCalcstr = 0.
     for istp in xrange(nstp):

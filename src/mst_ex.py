@@ -385,7 +385,7 @@ def plot_sf_psis(
             aig.set_ylim(-0.002,0.002)
 
 def use_intp_sfig(ss=2,iopt=0,iplot=False,
-                  iwgt=False):
+                  iwgt=0):
     """
     Use "interpolated" SF/IG strains
     to calculate the influence of 'interpolation'
@@ -413,7 +413,7 @@ def use_intp_sfig(ss=2,iopt=0,iplot=False,
         =9: slinear
 
     iplot = False
-    iwgt  = False
+    iwgt  = 0
            (if True, assign np.nan if sf==0)
     """
     from rs import ResidualStress as RS
@@ -438,7 +438,7 @@ def use_intp_sfig(ss=2,iopt=0,iplot=False,
     _SF_   = RS_model.dat_model.sf[::].copy()
     _IG_   = RS_model.dat_model.ig[::].copy()
 
-    if iwgt:
+    if iwgt==0:
         _SF_[_SF_==0]=np.nan
         _IG_[_IG_==0]=np.nan
 
@@ -556,7 +556,7 @@ def use_intp_sfig(ss=2,iopt=0,iplot=False,
 def influence_of_intp(ss=2,bounds=[0,0.5],
                       psi_nbin=13,iplot=False,
                       hkl=None,
-                      iscatter=False,iwgt=False,
+                      iscatter=False,iwgt=0,
                       sigma=5e-5,
                       intp_opt=0):
     """
@@ -571,7 +571,7 @@ def influence_of_intp(ss=2,bounds=[0,0.5],
     iplot    = False
     hkl      = None
     iscatter = False
-    iwgt     = False
+    iwgt     = 0, 1, 2
     sigma    = 5e-5
     intp_opt = 0
     """
@@ -590,7 +590,7 @@ def influence_of_intp(ss=2,bounds=[0,0.5],
     ## Use the reduced set over the consistency check
     sf, ig = use_intp_sfig(
         ss=ss,iopt=intp_opt,iplot=False,
-        iwgt=False)
+        iwgt=0)
 
     sf_ext = sf.sf.swapaxes(1,-1).swapaxes(-2,-1)[::]*1e6
     ig_ext = ig.ig[::]
@@ -679,7 +679,7 @@ def influence_of_nbin(
         nbins = [11, 19, 25, 51],
         iscatter=False,
         sigma=1e-5,
-        iwgt=False,
+        iwgt=0,
         intp_opt=0,
         iplot=False,):
 
@@ -692,7 +692,7 @@ def influence_of_nbin(
     bounds = [0.0, 0.5]
     nbins = [11, 19, 25, 51]
     iscatter = False
-    iwgt     = False
+    iwgt     = 0,
     intp_opt = 0   (Interpolation option)
     iplot    = False
     """
@@ -740,7 +740,7 @@ def influence_of_nbin_scatter(
     nbins=[10,10], ## main arg
     iscatter=True,
     nsample=1,
-    iwgt=False,
+    iwgt=0,
     intp_opt=0,
     iplot=False,):
 
@@ -757,7 +757,7 @@ def influence_of_nbin_scatter(
     nbins    = [10,10]
     iscatter = True
     nsample  = 1
-    iwgt     = False
+    iwgt     = 0
     intp_opt = 0
     iplot    = False
     """
@@ -896,7 +896,7 @@ def influence_of_cnts_stats(
         bounds=[0.,0.5],
         ss=3,
         nbins=10,
-        iwgt=False,
+        iwgt=0,
         nsample=4,
         intp_opt=0,
         iplot=False,
@@ -939,7 +939,7 @@ def influence_of_cnts_stats(
     ss          : Sampling frequency in DECs
     nbins       : How many tilting angles in
                   diffraction
-    iwgt        : Do we weight (E-e) by peak intensity?
+    iwgt        : 0, 1, 2  - defines the weigting factor in the objective function
     nsample     : The number of ensembles
     intp_opt    : DEC interpolation method
     iplot       : Flag for plotting
@@ -981,7 +981,7 @@ def influence_of_cnts_stats(
         sigma=10e-5,
         psi_nbin=nbins,
         ig_sub=True,
-        iwgt=False,
+        iwgt=0,
         ilog=True,
         iplot=False, # iplot=True
         dec_inv_frq=ss,
@@ -1119,7 +1119,7 @@ def influence_of_intp_extp(
         ss=1,
         bounds=[0.,0.5],
         nbins=13,
-        sigmas=[1e-5],iwgt=False,
+        sigmas=[1e-5],iwgt=0,
         nsample=5):
     """
     Influence of choice of interpolation/extrapolation
