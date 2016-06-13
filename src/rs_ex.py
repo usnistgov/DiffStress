@@ -153,6 +153,7 @@ def calc_stress(
     print ''
     return dsa_sigma
 
+
 def ex_consistency(
         ifig=50,nxphi=3,exp_ref=[],exp_lab=[],mod_ext=None,
         mod_ref='STR_STR.OUT',sin2psimx=None,iscatter=False,
@@ -545,7 +546,7 @@ def ex_consistency(
                    model_rs,ifig=ifig+istp*2+10,
                    istp=istp, nxphi=nxphi,stress_wgt=None,
                    ivo=None,hkl=hkl,ileg=ileg,iwind=iwind,
-                   wdeg=wdeg)
+                   wdeg=wdeg,s_cse=sigma,theta_b=theta_b,ird=ird)
             else:
                 plt.ioff()
                 f1,f2,f3=__model_fit_plot__(
@@ -558,7 +559,7 @@ def ex_consistency(
                     full_DEC = raw_sfs[istp].copy(),
                     DEC_interp = DEC_interp[istp].copy(),
                     ivo=[0,1],hkl=hkl,ileg=ileg,iwind=False,
-                    ipsi_opt=ipsi_opt)
+                    ipsi_opt=ipsi_opt,s_cse=sigma,theta_b=theta_b,ird=ird)
                 fs.savefig(f2);fe.savefig(f1);f_er.savefig(f3)
                 f1.clf();plt.draw();f2.clf();plt.draw();f3.clf();plt.draw()
                 plt.close(f1);plt.close(f2);plt.close(f3);plt.ion()
@@ -634,12 +635,13 @@ def __model_fit_plot__(
         stress_wgt=None,ivo=None,fig=None,figs=None,fige=None,
         c1='r',c2='b',m1='--',m2='-',isf=[True,True],
         ileg=True,iwind=False,wdeg=2,
-        ipsi_opt=0):
+        ipsi_opt=0,s_cse=0.,theta_b=78.2*3.14/180., ird=0.182):
     """
     Plot container's analyzed data
     """
     from MP.lib import mpl_lib, axes_label
     import lib; sin2psi_wind = lib.sin2psi_bounds
+
     sin2psi_opt = lib.sin2psi_opt
     wide_fig     = mpl_lib.wide_fig
     fancy_legend = mpl_lib.fancy_legend
@@ -736,8 +738,9 @@ def __model_fit_plot__(
         elif type(hkl)!=type(None) and ileg: label='$E_{i} - \varepsilon^{\{%s\}}-\varepsilon^{\{%s\}}_0$'%(hkl,hkl)
         elif ileg!=True: label = None
 
-        if ivf: av.plot(xv,vf[iphi],'k-',lw=2,
-                        alpha=0.4)
+        if ivf:
+            av.plot(xv,vf[iphi],'k--',lw=2,
+                    alpha=0.4)
 
         ae.plot(x,Ei[iphi]*1e6-y,c2+m2,label=label)
         deco(ax=ax,iopt=0,hkl=hkl,ipsi_opt=ipsi_opt)
@@ -849,20 +852,76 @@ def __model_fit_plot__(
                     bbox_to_anchor=(1.4,1))
 
 
-    for iax in xrange(len(axes)):
-        axes[iax].set_ylim(-1500,)
+    # for iax in xrange(len(axes)):
+    #     axes[iax].set_ylim(-2000,1500)
 
     for iax in xrange(len(axes)):
-        axes[iax].set_ylim(-1500,)
+        axes[iax].set_ylim(-2000,1500)
         if ivf:
-            axesv[iax].set_ylim(0,0.30)
+            axesv[iax].set_ylim(0,0.60)
 
     tune_x_lim(fig.axes,axis='x')
     tune_x_lim(axes,    axis='y')
     tune_xy_lim(ax_er           )
     if ivf: tune_x_lim(axesv,   axis='y')
-
     tune_x_lim(axesf,   axis='y')
+
+
+
+    ##--------------------------------------------------------------
+    ## Experimenta block to add standard deviation spread to figures
+    ## Insertion of this block may significantly increase the
+    ## computationation time.
+    from rs import u_epshkl_geom_inten_vectorize
+    import pickle, time
+    # rst = ex_consistency(psimx=max(psis), iscatter=True,
+    #                      sigma=s_cse,psi_nbin=1,ig_sub=True,
+    #                      iplot=False,theta_b=theta_b,
+    #                      ird=ird,fnPickle=None,nfrq=99)
+    ## should be obtained from rs.test_u_epshkl_geom_inten_vectorize
+
+    ## this pickle file should be
+    ## prepared seperately.
+    fnPickle='/tmp/ynj/dsa-data-9ecb41-.pck'
+
+    ## load the ensemble from the pickle file
+    with open(fnPickle,'rb') as fo:
+        model_vfs   = pickle.load(fo)
+        model_tdats = pickle.load(fo)
+        _sf_        = pickle.load(fo)
+        model_igs   = pickle.load(fo)
+        model_ehkls = pickle.load(fo)
+        model_rs    = pickle.load(fo)
+        raw_psis    = pickle.load(fo)
+        raw_vfs     = pickle.load(fo)
+        raw_ehkl    = pickle.load(fo)
+        raw_sfs     = pickle.load(fo)
+        raw_intp_sf = pickle.load(fo)
+        raw_inpt_ig = pickle.load(fo)
+
+    nstp, nphi, npsi = model_ehkls.shape
+    tdats, chi = u_epshkl_geom_inten_vectorize(
+        model_vfs,model_tdats,
+        ird,s_cse,model_rs.psis,theta_b)
+
+    x  = model_rs.psis
+    x  = np.sign(x)*np.sin(x)**2
+    phis = model_rs.phis
+    psi_nbin = 9
+    for iphi in xrange(3):
+        ax = axes[iphi]
+        y_raw = model_tdats[istp,iphi,:] * 1e6
+        y  = tdats[istp,iphi,:] * 1e6
+        dy = chi[istp,iphi,:] *1e6
+        # ax.fill_between(x,y_raw-dy*2,y_raw+dy*2,
+        #                 color='gray',alpha=0.50,zorder=-1)
+        ## mu +/- two sigma gives 95% confidence..
+        # ax.fill_between(x,y_raw-dy*2,y_raw+dy*2,
+        #                 color='gray',alpha=0.5)
+
+    ## end of the experiment blocks --------------------------
+    ##------------------------------------------------------------
+
 
     ## remove redundant axis labels
     for i in xrange(len(axes)-1):

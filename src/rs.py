@@ -510,7 +510,6 @@ def test_u_epshkl_geom_inten_vectorize(fnPickle=None):
     import matplotlib.pyplot as plt
     import lib
     from MP.lib import mpl_lib, axes_label
-    sin2psi_opt = lib.sin2psi_opt
     wide_fig     = mpl_lib.wide_fig
     fancy_legend = mpl_lib.fancy_legend
     rm_lab       = mpl_lib.rm_lab
