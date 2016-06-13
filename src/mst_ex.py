@@ -981,7 +981,7 @@ def influence_of_cnts_stats(
         sigma=10e-5,
         psi_nbin=nbins,
         ig_sub=True,
-        iwgt=0,
+        iwgt=iwgt,
         ilog=True,
         iplot=False, # iplot=True
         dec_inv_frq=ss,
