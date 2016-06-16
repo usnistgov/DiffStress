@@ -377,10 +377,14 @@ def main(path='../dat/BB/',
     ifix_d0
     d0_ref=1.17025
     iwgt=False
+
+
+    Returns
+    -------
+    mystress
     """
     from MP.mat import mech
-    from MP.lib import axes_label
-    from MP.lib import mpl_lib
+    from MP.lib import axes_label, mpl_lib
     import matplotlib as mpl
     import matplotlib.pyplot as plt
     from matplotlib.backends.backend_pdf import PdfPages
@@ -587,6 +591,8 @@ def main(path='../dat/BB/',
     axes_label.__plane__(ax=figs.axes[1],ft=10,iopt=1)
     RS_graphs.savefig(plt.gcf())
     RS_graphs.close()
+
+    mystress.Eis = Eis
     if not(ishow): plt.close('all')
     plt.ion()
     return mystress

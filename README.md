@@ -34,6 +34,21 @@ obtained stress by conducting Monte Carlo virtual experiments.
 Application
 ===========
 
+- Stress analysis from d-spacings
+
+DiffStress can analyze the d-spacings collected in the form of Proto X-ray system.
+One can obtain a fitting result in various orientation and nicely illustrate the 
+goodness of fit. Below is an example of an interstitial-free steel, that shows the
+undulation in d-spacing vs. sin2psi curve. With using experimental DECs obtained
+at various orientation, one can obtain stress by least-square method.
+The intensity can be used to 'estimate' the size (or height) of the diffraction peaks.
+
+
+![image of IF stee diffraction](https://github.com/usnistgov/DiffStress/blob/dev/images/protoEx.png)
+
+
+- Monte Carlo experiments for uncertainty estimation
+
 DiffStress comes with a feature that allows the Monte Carlo experiment
 to quantify uncertainties present in flow-stress measurement technique
 using in-situ diffraction experiments. Below image shows the resulting
