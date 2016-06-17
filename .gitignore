@@ -1,3 +1,11 @@
+*.gz
+*.tar
+*.so
+*.so.*
+*.out
+*.ps
+*.png
+*.log
 *.pdf
 *~
 *.pyc
