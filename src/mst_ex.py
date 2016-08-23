@@ -823,16 +823,16 @@ def influence_of_nbin_scatter(
 #############################################
 
 def wrap_func(
-        sigma,
-        dec_inv_frq,
-        dec_interp,
-        bounds,
-        iwgt,
-        nbins,
-        bragg,
-        ird,
-        nfrq,
-        fnPickle):
+    sigma,
+    dec_inv_frq,
+    dec_interp,
+    bounds,
+    iwgt,
+    nbins,
+    bragg,
+    ird,
+    nfrq,
+    fnPickle):
     """
     Wrap ex_consistency and return x, y
 
@@ -872,7 +872,7 @@ def wrap_func(
     elif type(nfrq).__name__=='int':
         epsilon_vm   = flow_weight.epsilon_vm[::nfrq]
         sigma_vm     = flow_weight.sigma_vm[::nfrq]
-        sigma_weight = flow_weight.sigma[::nfrq]
+        sigma_weight = flow_weight.sigma[:,:,::nfrq]
 
     if len(epsilon_vm) != len(sigma_vm):
         raise IOError, 'epsilon_vm and '+\
@@ -880,16 +880,24 @@ def wrap_func(
     if len(epsilon_vm) != len(flow_dsa.sigma_vm):
         raise IOError, 'epsilon_vm and '+\
             'flow_dsa.sigma_vm should have the same dimension'
+    if len(sigma_weight)!=len(flow_dsa.sigma):
+        raise IOError, 'sigma_weight and '+\
+            'flow_dsa.sigma should have the same dimension'
 
-    x = epsilon_vm
+    x = epsilon_vm ## use it as 'equivalent' strain
 
     # ## Old definition of stress error estimator using von Mises stress
     # y = (sigma_vm - flow_dsa.sigma_vm)/sigma_vm
 
     ## New definition of stress error estimator using norm of stress
     ## tensor...
+
+
     delta_stress = sigma_weight-flow_dsa.sigma
-    y = infinite_norm(delta_stress) / infinite_norm(flow_dsa.sigma)
+    a=infinite_norm(delta_stress)
+    b=infinite_norm(flow_dsa.sigma)
+    y = a/b
+    print 'len(y):', len(y)
     return x, y
 
 def infinite_norm(a):
@@ -905,7 +913,12 @@ def infinite_norm(a):
     nstp = a.shape[-1]
     norm_inf = np.zeros(nstp)
     for istp in xrange(nstp):
-        norm_inf[istp] = np.max(np.abs(a[:,:,istp]))
+        subject_array = a[:,:,istp].flatten()
+        ## find max absolute value
+        ind = np.argmax(np.abs(subject_array))
+        norm_inf[istp] = subject_array[ind]
+
+    # norm_inf[istp] = np.max(np.abs(a[:,:,istp]))
     return norm_inf
 
 def influence_of_cnts_stats(
@@ -1005,11 +1018,12 @@ def influence_of_cnts_stats(
     print '****************\n\n'
     rst=func(
         sin2psimx=bounds[1],
-        iscatter=False,
-        sigma=10e-5,
+        iscatter=True,
+        sigma=sigmas[0],
         psi_nbin=nbins,
         ig_sub=True,
         iwgt=iwgt,
+        theta_b=bragg,
         ilog=True,
         iplot=False, # iplot=True
         dec_inv_frq=ss,
