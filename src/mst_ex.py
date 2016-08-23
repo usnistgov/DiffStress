@@ -142,7 +142,6 @@ def read(hkl='211',prefix=''):
 
 def plot_rsq():
     from MP.lib import mpl_lib
-    import numpy as np
     import matplotlib.pyplot as plt
     from pepshkl import reader2 as reader
     import sfig_class
@@ -225,7 +224,6 @@ def plot_sf(sff_fn='temp.sff',pmargin=0.1):
     sff_fn = 'temp.sff'
     pmargin = 0.1
     """
-    import numpy as np
     import matplotlib.pyplot as plt
     from pepshkl import reader4
     from RS import sff_converter
@@ -274,7 +272,6 @@ def plot_sf(sff_fn='temp.sff',pmargin=0.1):
     return SF,tdat,psis,vdat,ngrd
 
 def test_ig(sff_fn='dum.sff'):
-    import numpy as np
     import matplotlib.pyplot as plt
     from pepshkl import reader4
     from RS import sff_converter
@@ -293,7 +290,6 @@ def plot_sf_psis(
         sff_fn='temp.sff',
         psi_ref=[45.0, 42.4, 39.8, 37.1, 34.3, 31.5,
                  28.5, 25.2, 21.7, 17.5, 12.3, 0]):
-    import numpy as np
     import matplotlib.pyplot as plt
     from pepshkl import reader4
     from RS import sff_converter
@@ -866,16 +862,17 @@ def wrap_func(
         return rst[-1] ## the newly created pickle's file name
     myrs, flow_weight, flow_dsa = rst[0], rst[1], rst[2]
 
-
     ## My objects that quantify the propagated
     ## error to stress.
 
     if type(nfrq).__name__=='NoneType':
-        epsilon_vm = flow_weight.epsilon_vm[::]
-        sigma_vm   = flow_weight.sigma_vm[::]
+        epsilon_vm   = flow_weight.epsilon_vm[::]
+        sigma_vm     = flow_weight.sigma_vm[::]
+        sigma_weight = flow_weight.sigma[::]
     elif type(nfrq).__name__=='int':
-        epsilon_vm = flow_weight.epsilon_vm[::nfrq]
-        sigma_vm   = flow_weight.sigma_vm[::nfrq]
+        epsilon_vm   = flow_weight.epsilon_vm[::nfrq]
+        sigma_vm     = flow_weight.sigma_vm[::nfrq]
+        sigma_weight = flow_weight.sigma[::nfrq]
 
     if len(epsilon_vm) != len(sigma_vm):
         raise IOError, 'epsilon_vm and '+\
@@ -885,9 +882,31 @@ def wrap_func(
             'flow_dsa.sigma_vm should have the same dimension'
 
     x = epsilon_vm
-    y = (sigma_vm - flow_dsa.sigma_vm)/\
-        sigma_vm
+
+    # ## Old definition of stress error estimator using von Mises stress
+    # y = (sigma_vm - flow_dsa.sigma_vm)/sigma_vm
+
+    ## New definition of stress error estimator using norm of stress
+    ## tensor...
+    delta_stress = sigma_weight-flow_dsa.sigma
+    y = infinite_norm(delta_stress) / infinite_norm(flow_dsa.sigma)
     return x, y
+
+def infinite_norm(a):
+    """
+    Argument
+    --------
+    a : array [3,3,nstp]
+
+    Returns
+    -------
+    maximum (absolute value of) component in the given tensor <a>
+    """
+    nstp = a.shape[-1]
+    norm_inf = np.zeros(nstp)
+    for istp in xrange(nstp):
+        norm_inf[istp] = np.max(np.abs(a[:,:,istp]))
+    return norm_inf
 
 def influence_of_cnts_stats(
         ## characteristics of an ensemble for
@@ -957,6 +976,15 @@ def influence_of_cnts_stats(
 
     DEC_freq_sym: Plotting option for where DECs are sampled.
     NCPU        : The number of CPU cores allowed to run
+
+    Returns
+    -------
+    x
+    M
+    S
+    H
+    BE
+    flow_raw
     """
     from RS.rs_ex import ex_consistency as func
     import multiprocessing
@@ -1091,7 +1119,6 @@ def influence_of_cnts_stats(
     return x, M, S, H, BE, flow_raw
 
 def compare_exp_mod(ntot_psi=21):
-    import numpy as np
     import matplotlib.pyplot as plt
     from pepshkl import reader4
     from RS import sff_converter
