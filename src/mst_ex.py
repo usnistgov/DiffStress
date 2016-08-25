@@ -895,7 +895,7 @@ def wrap_func(
 
     delta_stress = sigma_weight-flow_dsa.sigma
     a=infinite_norm(delta_stress)
-    b=infinite_norm(flow_dsa.sigma)
+    b=infinite_norm(sigma_weight)
     y = a/b
     print 'len(y):', len(y)
     return x, y
@@ -917,8 +917,6 @@ def infinite_norm(a):
         ## find max absolute value
         ind = np.argmax(np.abs(subject_array))
         norm_inf[istp] = subject_array[ind]
-
-    # norm_inf[istp] = np.max(np.abs(a[:,:,istp]))
     return norm_inf
 
 def influence_of_cnts_stats(
