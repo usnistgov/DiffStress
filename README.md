@@ -129,15 +129,9 @@ National Institute of Standards and Technology
 This software has been used for the following publications
 ==========================================================
 ------------------------------------------------------------------------
-1. Uncertainty in flow stress measurements using X-ray diffraction for
-sheet metals subjected to large plastic deformations, Y Jeong,
-T Gnaeupel-Herold, M Iadicola, A Creuziger (Submitted to Journal
-of Applied Crystallography)
-2. Multiaxial constitutive behavior of an interstitial-free steel:
-measurements through X-ray and digital image correlation, Y Jeong,
-M Iadicola, T Gnaeupel-Herold, A Creuziger (2016) Acta Materialia
-112, 84-93
-3. Evaluation of biaxial flow stress based on Elasto-Viscoplastic
-Self-Consistent analysis of X-ray Diffraction Measurements, Y Jeong,
-T Gnaeupel-Herold, F Barlat, M Iadicola, A Creuziger, M-G Lee (2015)
-International Journal of Plasticity, 66, 103-118
+1. Uncertainty in flow stress measurements using X-ray diffraction for sheet metals subjected to large plastic deformations,
+ **Y Jeong**, T Gnaeupel-Herold, M Iadicola, A Creuziger, Journal of Applied Crystallography (Accepted)
+2. [Multiaxial constitutive behavior of an interstitial-free steel: measurements through X-ray and digital image correlation](http://dx.doi.org/10.1016/j.actamat.2016.04.013),
+ **Y. Jeong**, T. Gnaeupel-Herold, M. Iadicola, A. Creuziger, Acta Materialia 112, 84-93 (2016)
+3. [Evaluation of biaxial flow stress based on Elasto-Viscoplastic Self-Consistent analysis of X-ray Diffraction Measurements](http://dx.doi.org/10.1016/j.ijplas.2014.06.009),
+ **Y Jeong**, T Gnaeupel-Herold, F Barlat, M Iadicola, A Creuziger, M-G Lee (2015) International Journal of Plasticity, 66, 103-118
