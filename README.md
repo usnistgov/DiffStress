@@ -37,7 +37,7 @@ Application
 - Stress analysis from d-spacings
 
 DiffStress can analyze the d-spacings collected in the form of Proto X-ray system.
-One can obtain a fitting result in various orientation and nicely illustrate the 
+One can obtain a fitting result in various orientation and nicely illustrate the
 goodness of fit. Below is an example of an interstitial-free steel, that shows the
 undulation in d-spacing vs. sin2psi curve. With using experimental DECs obtained
 at various orientation, one can obtain stress by least-square method.
@@ -129,8 +129,8 @@ National Institute of Standards and Technology
 This software has been used for the following publications
 ==========================================================
 ------------------------------------------------------------------------
-1. Uncertainty in flow stress measurements using X-ray diffraction for sheet metals subjected to large plastic deformations,
- **Y Jeong**, T Gnaeupel-Herold, M Iadicola, A Creuziger, Journal of Applied Crystallography (Accepted)
+1. [Uncertainty in flow stress measurements using X-ray diffraction for sheet metals subjected to large plastic deformations](https://doi.org/10.1107/S1600576716013662),
+ **Y Jeong**, T Gnaeupel-Herold, M Iadicola, A Creuziger, Journal of Applied Crystallography 49, (2016)
 2. [Multiaxial constitutive behavior of an interstitial-free steel: measurements through X-ray and digital image correlation](http://dx.doi.org/10.1016/j.actamat.2016.04.013),
  **Y. Jeong**, T. Gnaeupel-Herold, M. Iadicola, A. Creuziger, Acta Materialia 112, 84-93 (2016)
 3. [Evaluation of biaxial flow stress based on Elasto-Viscoplastic Self-Consistent analysis of X-ray Diffraction Measurements](http://dx.doi.org/10.1016/j.ijplas.2014.06.009),
