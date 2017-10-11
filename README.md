@@ -115,13 +115,13 @@ Contact information
 ===================
 
 Youngung Jeong
-youngung.jeong@gmail.com
-younguj@clemson.edu
 
-(2016 March -)
-International Center for Automotive Research
-Clemson University
-(2014 March -)
+Now at Changwon National University
+
+yjeong@changwon.ac.kr
+youngung.jeong@gmail.com
+
+(2014 March - 2016 Feb)
 Center for Automotive Lightweighting
 National Institute of Standards and Technology
 
